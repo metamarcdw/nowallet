@@ -1,0 +1,7 @@
+aiosocks==0.2.4
+beautifulsoup4==4.6.0
+bottom==2.1.0
+connectrum==0.5.3
+pbkdf2==1.3
+pycoin==0.77
+scrypt==0.8.0
