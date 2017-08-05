@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
-#
-# Subscribe to any message stream that the server supports.
-#
+
 import asyncio, random, decimal
 
 from connectrum.client import StratumClient
@@ -26,9 +24,9 @@ class Connection:
                             use_tor=self.server_info.is_onion,
                             disable_cert_verify=True)
 
-        loop.run_until_complete(self.do_connect())
+        loop.run_until_complete(self._do_connect())
 
-    async def do_connect(self):
+    async def _do_connect(self):
         try:
             await self.connection
         except Exception as e:
@@ -40,26 +38,43 @@ class Connection:
     async def listen_RPC(self, method, args):
         return await self.client.RPC(method, *args)
 
-    async def listen_subscribe(self, method, args, cb, queue_cb):
+    async def listen_subscribe(self, method, args,
+                        fut_cb=None, queue_cb=None):
         future, queue = self.client.subscribe(method, *args)
         result = await future
-        if cb:
-            cb(result)
+        if fut_cb:
+            fut_cb(result)
         while True:
             result = await queue.get()
-            queue_cb(result)
+            if queue_cb:
+                queue_cb(result)
+
+class Chain:
+    def __init__(self, netcode, chain_1209k, bip44):
+        self.netcode = netcode
+        self.chain_1209k = chain_1209k
+        self.bip44 = bip44
+
+BTC = Chain(netcode="BTC",
+            chain_1209k="btc",
+            bip44=0)
+TBTC = Chain(netcode="XTN",
+            chain_1209k="tbtc",
+            bip44=1)
 
 class Wallet:
     _COIN = decimal.Decimal("100000000")
     _GAP_LIMIT = 20
 
-    def __init__(self, salt, passphrase, connection):
+    def __init__(self, salt, passphrase, connection, chain, account=0):
         self.connection = connection
 
         (se, cc) = derive_key(salt, passphrase)
-        self.mpk = BIP32Node(netcode="XTN", chain_code=cc, secret_exponent=se)
-        self.root_spend_key = self.mpk.subkey_for_path("44H/1H/0H/0")
-        self.root_change_key = self.mpk.subkey_for_path("44H/1H/0H/1")
+        self.mpk = BIP32Node(netcode=chain.netcode,
+                                chain_code=cc, secret_exponent=se)
+        path = "44H/{}H/{}H/".format(chain.bip44, account)
+        self.root_spend_key = self.mpk.subkey_for_path("{}0".format(path))
+        self.root_change_key = self.mpk.subkey_for_path("{}1".format(path))
         self.balance = decimal.Decimal("0")
 
         # Boolean lists, True = used / False = unused
@@ -82,20 +97,20 @@ class Wallet:
         else:
             return self.root_spend_key.subkey(index)
 
-    def get_history(self, loop, txids):
+    def _get_history(self, loop, txids):
         method = "blockchain.transaction.get"
         futures = [self.connection.listen_RPC(method, [txid]) for txid in txids]
         results = loop.run_until_complete(asyncio.gather(*futures))
         txs = [Tx.from_hex(tx_hex) for tx_hex in results]
         return txs
 
-    def get_balance(self, loop, address):
+    def _get_balance(self, loop, address):
         method = "blockchain.address.get_balance"
         future = self.connection.listen_RPC(method, [address])
         results = loop.run_until_complete(future)
         return decimal.Decimal(str(results["confirmed"])) / Wallet._COIN
 
-    def get_utxos(self, loop, address):
+    def _get_utxos(self, loop, address):
         method = "blockchain.address.listunspent"
         future = self.connection.listen_RPC(method, [address])
         result = loop.run_until_complete(future)
@@ -110,7 +125,7 @@ class Wallet:
             utxos.append(spendables[vout])
         return utxos
 
-    def interpret_history(self, loop, histories, change=False):
+    def _interpret_history(self, loop, histories, change=False):
         indicies = self.change_indicies if change else self.spend_indicies
         is_empty = True
         for history in histories:
@@ -118,9 +133,9 @@ class Wallet:
                 address = self.get_key(len(indicies), change).address()
                 txids = [history[i]["tx_hash"] for i in range(len(history))]
 
-                self.history[address] = self.get_history(loop, txids)
-                self.balance += self.get_balance(loop, address)
-                self.utxos.extend(self.get_utxos(loop, address))
+                self.history[address] = self._get_history(loop, txids)
+                self.balance += self._get_balance(loop, address)
+                self.utxos.extend(self._get_utxos(loop, address))
 
                 indicies.append(True)
                 is_empty = False
@@ -139,39 +154,45 @@ class Wallet:
                 futures.append(self.connection.listen_RPC(method, [addr]))
 
             result = loop.run_until_complete(asyncio.gather(*futures))
-            quit_flag = self.interpret_history(loop, result, change)
+            quit_flag = self._interpret_history(loop, result, change)
             current_index += Wallet._GAP_LIMIT
 
-    def subscribe_to_addresses(self):
-        pass
+    def listen_to_addresses(self, loop, cb):
+        method = "blockchain.address.subscribe"
+        addrs = self.get_all_used_addresses()
+        coros = [self.connection.listen_subscribe(method, [addr], queue_cb=cb)
+                for addr in addrs]
+        loop.run_until_complete(asyncio.wait(coros))
 
-    def future_callback(self):
-        pass
 
-    def query_callback(self):
-        pass
-
-def get_random_onion():
-    servers = scrape_onion_servers()
+def get_random_onion(chain):
+    servers = scrape_onion_servers(chain_1209k=chain.chain_1209k)
     random.shuffle(servers)
     return servers.pop()
+
+def print_result(result):
+    print("DEEZ NUTS")
+    print(result)
 
 def main():
     loop = asyncio.get_event_loop()
 
-#    server, port = get_random_onion()
+    chain = TBTC
+#    server, port = get_random_onion(chain)
 #    connection = Connection(loop, server, port)
     connection = Connection(loop, "192.168.1.200", 50001)
 
     email = input("Enter email: ")
     passphrase = input("Enter passphrase: ")
-    wallet = Wallet(email, passphrase, connection)
+    wallet = Wallet(email, passphrase, connection, chain)
     print("\nXPUB: " + wallet.get_xpub())
 
     wallet.discover_keys(loop)
+    wallet.discover_keys(loop, change=True)
     print("History:\n", wallet.history)
     print("UTXOS:\n", wallet.utxos)
     print("Balance: {} TBTC".format(wallet.balance))
+    wallet.listen_to_addresses(loop, print_result)
 
     loop.close()
 

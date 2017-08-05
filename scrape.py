@@ -1,10 +1,12 @@
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
-def scrape_onion_servers():
-    scrape_page = "https://1209k.com/bitcoin-eye/ele.php?chain=tbtc"
-    print("Scraping URL:", scrape_page)
-    page = urlopen(scrape_page)
+def scrape_onion_servers(chain_1209k="tbtc",
+        scrape_page="https://1209k.com/bitcoin-eye/ele.php?chain={}"):
+    url = scrape_page.format(chain_1209k)
+    print("Scraping URL:", url)
+    
+    page = urlopen(url)
     soup = BeautifulSoup(page, "html.parser")
     table_data = soup.find_all("td")
 
