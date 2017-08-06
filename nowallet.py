@@ -202,7 +202,7 @@ def main():
     wallet.discover_keys(loop, change=True)
     print("History:\n", wallet.history)
     print("UTXOS:\n", wallet.utxos)
-    print("Balance: {} TBTC".format(wallet.balance))
+    print("Balance: {} {}".format(wallet.balance, chain.chain_1209k.upper()))
     wallet.listen_to_addresses(loop, print_result)
 
     loop.close()
