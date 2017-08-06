@@ -97,6 +97,12 @@ class Wallet:
         else:
             return self.root_spend_key.subkey(index)
 
+    def get_next_unused_key(self, change=False):
+        indicies = self.change_indicies if change else self.spend_indicies
+        for i, is_used in enumerate(indicies):
+            if not is_used:
+                return self.get_key(i, change)
+
     def _get_history(self, loop, txids):
         method = "blockchain.transaction.get"
         futures = [self.connection.listen_RPC(method, [txid]) for txid in txids]
@@ -162,7 +168,7 @@ class Wallet:
         addrs = self.get_all_used_addresses()
         coros = [self.connection.listen_subscribe(method, [addr], queue_cb=cb)
                 for addr in addrs]
-        loop.run_until_complete(asyncio.wait(coros))
+        loop.run_until_complete(*coros)
 
 
 def get_random_onion(chain):
