@@ -88,9 +88,6 @@ class Wallet:
     def get_xpub(self):
         return self.mpk.hwif()
 
-    def get_all_used_addresses(self):
-        return list(self.history.keys())
-
     def get_key(self, index, change=False):
         if change:
             return self.root_change_key.subkey(index)
@@ -102,6 +99,15 @@ class Wallet:
         for i, is_used in enumerate(indicies):
             if not is_used:
                 return self.get_key(i, change)
+
+    def get_all_known_addresses(self, change=False):
+        indicies = self.change_indicies if change else self.spend_indicies
+        addrs = [self.get_key(i, change).address()
+                for i in range(len(indicies))]
+        return addrs
+
+    def get_all_used_addresses(self):
+        return list(self.history.keys())
 
     def _get_history(self, loop, txids):
         method = "blockchain.transaction.get"
@@ -165,10 +171,10 @@ class Wallet:
 
     def listen_to_addresses(self, loop, cb):
         method = "blockchain.address.subscribe"
-        addrs = self.get_all_used_addresses()
+        addrs = self.get_all_known_addresses()
         coros = [self.connection.listen_subscribe(method, [addr], queue_cb=cb)
                 for addr in addrs]
-        loop.run_until_complete(*coros)
+        loop.run_until_complete(asyncio.wait(coros))
 
 
 def get_random_onion(chain):
@@ -177,7 +183,6 @@ def get_random_onion(chain):
     return servers.pop()
 
 def print_result(result):
-    print("DEEZ NUTS")
     print(result)
 
 def main():
