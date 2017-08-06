@@ -47,7 +47,7 @@ class Connection:
         while True:
             result = await queue.get()
             if queue_cb:
-                loop.call_soon(queue_cb, result)
+                loop.call_soon(queue_cb, loop, result)
 
 class Chain:
     def __init__(self, netcode, chain_1209k, bip44):
@@ -68,9 +68,10 @@ class Wallet:
 
     def __init__(self, salt, passphrase, connection, chain, account=0):
         self.connection = connection
+        self.chain = chain
 
         (se, cc) = derive_key(salt, passphrase)
-        self.mpk = BIP32Node(netcode=chain.netcode,
+        self.mpk = BIP32Node(netcode=self.chain.netcode,
                                 chain_code=cc, secret_exponent=se)
         path = "44H/{}H/{}H/".format(chain.bip44, account)
         self.root_spend_key = self.mpk.subkey_for_path("{}0".format(path))
@@ -179,12 +180,27 @@ class Wallet:
                 for addr in addrs]
         loop.run_until_complete(asyncio.wait(coros))
 
-    def dispatch_result(self, result):
+    def dispatch_result(self, loop, result):
         json_ = json.dumps(result)
         if json_ not in self.result_cache:
-            print(result)
+            addr = result[0]
+            method = "blockchain.address.get_history"
+            future = self.connection.listen_RPC(method, [addr])
+            result = loop.run_until_complete(future)
+            self._interpret_history(loop, result)
+            print(self)     # DELETE ME
         self.result_cache[json_] = None
 
+    def __str__(self):
+        str_ = list()
+        str_.append("\nXPUB: {}".format(self.get_xpub()))
+        str_.append("\nHistory:\n{}".format(self.history))
+        str_.append("\nUTXOS:\n{}".format(self.utxos))
+        str_.append("\nBalance: {} {}".format(
+                        self.balance, self.chain.chain_1209k.upper()))
+        str_.append("\nYour current address: {}".format(
+                    self.get_next_unused_key().address()))
+        return "".join(str_)
 
 def get_random_onion(chain):
     servers = scrape_onion_servers(chain_1209k=chain.chain_1209k)
@@ -203,14 +219,10 @@ def main():
     passphrase = input("Enter passphrase: ")
     assert email and passphrase, "Email and/or passphrase were blank"
     wallet = Wallet(email, passphrase, connection, chain)
-    print("\nXPUB: " + wallet.get_xpub())
 
     wallet.discover_keys(loop)
     wallet.discover_keys(loop, change=True)
-    print("History:\n", wallet.history)
-    print("UTXOS:\n", wallet.utxos)
-    print("Balance: {} {}".format(wallet.balance, chain.chain_1209k.upper()))
-    print("Your current address:", wallet.get_next_unused_key().address())
+    print(wallet)
     wallet.listen_to_addresses(loop)
 
     loop.close()
