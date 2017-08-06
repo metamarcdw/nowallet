@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import asyncio, random, decimal
+import asyncio, random, decimal, json
 
 from connectrum.client import StratumClient
 from connectrum.svr_info import ServerInfo
@@ -38,16 +38,16 @@ class Connection:
     async def listen_RPC(self, method, args):
         return await self.client.RPC(method, *args)
 
-    async def listen_subscribe(self, method, args,
+    async def listen_subscribe(self, loop, method, args,
                         fut_cb=None, queue_cb=None):
         future, queue = self.client.subscribe(method, *args)
         result = await future
         if fut_cb:
-            fut_cb(result)
+            loop.call_soon(fut_cb, result)
         while True:
             result = await queue.get()
             if queue_cb:
-                queue_cb(result)
+                loop.call_soon(queue_cb, result)
 
 class Chain:
     def __init__(self, netcode, chain_1209k, bip44):
@@ -84,6 +84,7 @@ class Wallet:
         # All wallet TX info. (Does not persist!)
         self.utxos = dict()
         self.history = dict()
+        self.result_cache = dict()
 
     def get_xpub(self):
         return self.mpk.hwif()
@@ -169,21 +170,26 @@ class Wallet:
             quit_flag = self._interpret_history(loop, result, change)
             current_index += Wallet._GAP_LIMIT
 
-    def listen_to_addresses(self, loop, cb):
+    def listen_to_addresses(self, loop):
         method = "blockchain.address.subscribe"
         addrs = self.get_all_known_addresses()
-        coros = [self.connection.listen_subscribe(method, [addr], queue_cb=cb)
+        cb = self.dispatch_result
+        coros = [self.connection.listen_subscribe(
+                    loop, method, [addr], queue_cb=cb)
                 for addr in addrs]
         loop.run_until_complete(asyncio.wait(coros))
+
+    def dispatch_result(self, result):
+        json_ = json.dumps(result)
+        if json_ not in self.result_cache:
+            print(result)
+        self.result_cache[json_] = None
 
 
 def get_random_onion(chain):
     servers = scrape_onion_servers(chain_1209k=chain.chain_1209k)
     random.shuffle(servers)
     return servers.pop()
-
-def print_result(result):
-    print(result)
 
 def main():
     chain = TBTC
@@ -195,6 +201,7 @@ def main():
 
     email = input("Enter email: ")
     passphrase = input("Enter passphrase: ")
+    assert email and passphrase, "Email and/or passphrase were blank"
     wallet = Wallet(email, passphrase, connection, chain)
     print("\nXPUB: " + wallet.get_xpub())
 
@@ -203,7 +210,8 @@ def main():
     print("History:\n", wallet.history)
     print("UTXOS:\n", wallet.utxos)
     print("Balance: {} {}".format(wallet.balance, chain.chain_1209k.upper()))
-    wallet.listen_to_addresses(loop, print_result)
+    print("Your current address:", wallet.get_next_unused_key().address())
+    wallet.listen_to_addresses(loop)
 
     loop.close()
 

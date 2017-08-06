@@ -9,6 +9,7 @@ def and_split(bytes_):
     return (bytes(ba1), bytes(ba2))
 
 def xor_merge(bytes1, bytes2):
+    assert len(bytes1) == len(bytes2), "Length mismatch"
     ba = bytearray()
     for i in range(len(bytes1)):
         ba.append(bytes1[i]^bytes2[i])
