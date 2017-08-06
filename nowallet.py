@@ -82,7 +82,7 @@ class Wallet:
         self.change_indicies = list()
 
         # All wallet TX info. (Does not persist!)
-        self.utxos = list()
+        self.utxos = dict()
         self.history = dict()
 
     def get_xpub(self):
@@ -147,7 +147,7 @@ class Wallet:
 
                 self.history[address] = self._get_history(loop, txids)
                 self.balance += self._get_balance(loop, address)
-                self.utxos.extend(self._get_utxos(loop, address))
+                self.utxos[address] = self._get_utxos(loop, address)
 
                 indicies.append(True)
                 is_empty = False
@@ -186,9 +186,9 @@ def print_result(result):
     print(result)
 
 def main():
+    chain = TBTC
     loop = asyncio.get_event_loop()
 
-    chain = TBTC
 #    server, port = get_random_onion(chain)
 #    connection = Connection(loop, server, port)
     connection = Connection(loop, "192.168.1.200", 50001)
