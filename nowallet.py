@@ -3,10 +3,10 @@
 import asyncio, random, decimal, json
 
 from connectrum.client import StratumClient
-from connectrum.svr_info import ServerInfo
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.tx.Tx import Tx
 
+from subclasses import MyServerInfo
 from keys import derive_key
 from scrape import scrape_onion_servers
 
@@ -15,7 +15,7 @@ class Connection:
         print("Connecting...")
 
         # convert to our datastruct about servers.
-        self.server_info = ServerInfo(server, hostname=server, ports=port)
+        self.server_info = MyServerInfo(server, hostname=server, ports=port)
         print(self.server_info.get_port("t"))
         self.client = StratumClient()
         self.connection = self.client.connect(
@@ -204,6 +204,7 @@ class Wallet:
 
 def get_random_onion(chain):
     servers = scrape_onion_servers(chain_1209k=chain.chain_1209k)
+    assert servers, "No electrum servers found!"
     random.shuffle(servers)
     return servers.pop()
 

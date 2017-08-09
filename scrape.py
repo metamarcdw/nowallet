@@ -13,7 +13,11 @@ def scrape_onion_servers(chain_1209k="tbtc",
     servers = list()
     for i, td in enumerate(table_data):
         if ".onion" in td.text:
-            servers.append((td.text, int(table_data[i+1].text)))
+            host = td.text
+            port = int(table_data[i+1].text)
+            is_running = table_data[i+7].text == "open"
+            if is_running:
+                servers.append((host, port))
     return servers
 
 def main():
