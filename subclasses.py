@@ -3,6 +3,7 @@ from functools import total_ordering
 from connectrum.svr_info import ServerInfo
 from connectrum.constants import DEFAULT_PORTS
 
+from pycoin.tx.Tx import Tx
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 from pycoin.serialize import b2h
@@ -62,7 +63,11 @@ class LexSpendable(Spendable):
             return self_dict["tx_hash_hex"] < other_dict["tx_hash_hex"]
 
 def main():
-    from pycoin.tx.Tx import Tx
+    svr = MyServerInfo("onion",
+                    hostname="fdkhv2bb7hqel2e7.onion",
+                    ports=12345)
+    print(svr.get_port("t"))
+    
     hex =    ["01000000014f2eae2eadabe4e807fad4220a931991590ae31f223ba70bf1",
             "8dd16983005441010000006b483045022100ab33f14e1c3387b68942e1ab",
             "bd4ec0e2d94866529409464e262531c165cc75f0022034482cd3031bb779",
