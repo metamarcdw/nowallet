@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import asyncio, random, decimal, json
+import asyncio, random, decimal
 
 from connectrum.client import StratumClient
 from pycoin.key.BIP32Node import BIP32Node
