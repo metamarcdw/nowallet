@@ -156,20 +156,22 @@ class Wallet:
                 indicies.append(False)
         return is_empty
 
-    async def _interpret_new_history(self, history, change=False):
+    async def _interpret_new_history(self, address, history, change=False):
         indicies = self.change_indicies if change else self.spend_indicies
         is_empty = True
         if history:
-            address = self.get_key(len(indicies), change).address()
             txid = history["tx_hash"]
 
-            self.history[address] = await self._get_history(txid)
+            self.history[address] = await self._get_history([txid])
             self.balance += await self._get_balance(address)
             self.utxos[address] = await self._get_utxos(address)
 
-            for i in indicies:
+            for i, used in enumerate(indicies):
                 if self.get_key(i, change).address() == address:
                     indicies[i] = True
+                    break
+            else:
+                indicies.append(True)
             is_empty = False
         return is_empty
 
@@ -186,11 +188,7 @@ class Wallet:
             result = loop.run_until_complete(asyncio.gather(*futures))
             quit_flag = self._interpret_history(loop, result, change)
             current_index += Wallet._GAP_LIMIT
-
-    def add_address_to_queue(self, addr):
-        method = "blockchain.address.subscribe"
-        future = self.connection.listen_subscribe(method, [addr])
-        loop.run_until_complete(future)
+        self.new_history = True
 
     def listen_to_addresses(self, loop):
         method = "blockchain.address.subscribe"
@@ -205,9 +203,11 @@ class Wallet:
     async def dispatch_result(self, result):
         addr = result[0]
         method = "blockchain.address.get_history"
-        result = await self.connection.listen_RPC(method, [addr])
-        await self._interpret_new_history(result)
-        print(self)
+        history = await self.connection.listen_RPC(method, [addr])
+        empty_flag = await self._interpret_new_history(addr, history[0])
+        if not empty_flag:
+            self.new_history = True
+            print(self)
 
     def __str__(self):
         str_ = list()
