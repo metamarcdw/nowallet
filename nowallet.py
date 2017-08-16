@@ -25,6 +25,7 @@ class Connection:
                             disable_cert_verify=True)
 
         loop.run_until_complete(self._do_connect())
+        self.queue = None
 
     async def _do_connect(self):
         try:
@@ -38,16 +39,13 @@ class Connection:
     async def listen_RPC(self, method, args):
         return await self.client.RPC(method, *args)
 
-    async def listen_subscribe(self, loop, method, args,
-                        fut_cb=None, queue_cb=None):
-        future, queue = self.client.subscribe(method, *args)
-        result = await future
-        if fut_cb:
-            loop.call_soon(fut_cb, result)
+    def listen_subscribe(self, method, args):
+        future, self.queue = self.client.subscribe(method, *args)
+
+    async def consume_queue(self, queue_func):
         while True:
-            result = await queue.get()
-            if queue_cb:
-                loop.call_soon(queue_cb, loop, result)
+            result = await self.queue.get()
+            await queue_func(result)
 
 class Chain:
     def __init__(self, netcode, chain_1209k, bip44):
@@ -111,30 +109,28 @@ class Wallet:
     def get_all_used_addresses(self):
         return list(self.history.keys())
 
-    def _get_history(self, loop, txids):
+    async def _get_history(self, txids):
         method = "blockchain.transaction.get"
-        futures = [self.connection.listen_RPC(method, [txid]) for txid in txids]
-        results = loop.run_until_complete(asyncio.gather(*futures))
+        results = list()
+        for txid in txids:
+            results.append(await self.connection.listen_RPC(method, [txid]))
         txs = [Tx.from_hex(tx_hex) for tx_hex in results]
         return txs
 
-    def _get_balance(self, loop, address):
+    async def _get_balance(self, address):
         method = "blockchain.address.get_balance"
-        future = self.connection.listen_RPC(method, [address])
-        results = loop.run_until_complete(future)
-        return decimal.Decimal(str(results["confirmed"])) / Wallet._COIN
+        result = await self.connection.listen_RPC(method, [address])
+        return decimal.Decimal(str(result["confirmed"])) / Wallet._COIN
 
-    def _get_utxos(self, loop, address):
+    async def _get_utxos(self, address):
         method = "blockchain.address.listunspent"
-        future = self.connection.listen_RPC(method, [address])
-        result = loop.run_until_complete(future)
+        result = await self.connection.listen_RPC(method, [address])
         utxos = list()
         for unspent in result:
             method = "blockchain.transaction.get"
             txid = unspent["tx_hash"]
             vout = unspent["tx_pos"]
-            future = self.connection.listen_RPC(method, [txid])
-            result = loop.run_until_complete(future)
+            result = await self.connection.listen_RPC(method, [txid])
             spendables = Tx.from_hex(result).tx_outs_as_spendable()
             utxos.append(spendables[vout])
         return utxos
@@ -147,14 +143,34 @@ class Wallet:
                 address = self.get_key(len(indicies), change).address()
                 txids = [history[i]["tx_hash"] for i in range(len(history))]
 
-                self.history[address] = self._get_history(loop, txids)
-                self.balance += self._get_balance(loop, address)
-                self.utxos[address] = self._get_utxos(loop, address)
+                self.history[address] = loop.run_until_complete(
+                                            self._get_history(txids))
+                self.balance += loop.run_until_complete(
+                                            self._get_balance(address))
+                self.utxos[address] = loop.run_until_complete(
+                                            self._get_utxos(address))
 
                 indicies.append(True)
                 is_empty = False
             else:
                 indicies.append(False)
+        return is_empty
+
+    async def _interpret_new_history(self, history, change=False):
+        indicies = self.change_indicies if change else self.spend_indicies
+        is_empty = True
+        if history:
+            address = self.get_key(len(indicies), change).address()
+            txid = history["tx_hash"]
+
+            self.history[address] = await self._get_history(txid)
+            self.balance += await self._get_balance(address)
+            self.utxos[address] = await self._get_utxos(address)
+
+            for i in indicies:
+                if self.get_key(i, change).address() == address:
+                    indicies[i] = True
+            is_empty = False
         return is_empty
 
     def discover_keys(self, loop, change=False):
@@ -171,25 +187,27 @@ class Wallet:
             quit_flag = self._interpret_history(loop, result, change)
             current_index += Wallet._GAP_LIMIT
 
+    def add_address_to_queue(self, addr):
+        method = "blockchain.address.subscribe"
+        future = self.connection.listen_subscribe(method, [addr])
+        loop.run_until_complete(future)
+
     def listen_to_addresses(self, loop):
         method = "blockchain.address.subscribe"
         addrs = self.get_all_known_addresses()
-        cb = self.dispatch_result
-        coros = [self.connection.listen_subscribe(
-                    loop, method, [addr], queue_cb=cb)
-                for addr in addrs]
-        loop.run_until_complete(asyncio.wait(coros))
+        for addr in addrs:
+            self.connection.listen_subscribe(method, [addr])
 
-    def dispatch_result(self, loop, result):
-        json_ = json.dumps(result)
-        if json_ not in self.result_cache:
-            addr = result[0]
-            method = "blockchain.address.get_history"
-            future = self.connection.listen_RPC(method, [addr])
-            result = loop.run_until_complete(future)
-            self._interpret_history(loop, result)
-            print(self)     # DELETE ME
-        self.result_cache[json_] = None
+        coro = self.connection.consume_queue(self.dispatch_result)
+        asyncio.ensure_future(coro)
+        loop.run_forever()
+
+    async def dispatch_result(self, result):
+        addr = result[0]
+        method = "blockchain.address.get_history"
+        result = await self.connection.listen_RPC(method, [addr])
+        await self._interpret_new_history(result)
+        print(self)
 
     def __str__(self):
         str_ = list()
@@ -212,9 +230,9 @@ def main():
     chain = TBTC
     loop = asyncio.get_event_loop()
 
-#    server, port = get_random_onion(chain)
-#    connection = Connection(loop, server, port)
-    connection = Connection(loop, "192.168.1.200", 50001)
+    server, port = get_random_onion(chain)
+    connection = Connection(loop, server, port)
+#    connection = Connection(loop, "192.168.1.200", 50001)
 
     email = input("Enter email: ")
     passphrase = input("Enter passphrase: ")
