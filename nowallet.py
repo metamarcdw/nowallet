@@ -190,15 +190,13 @@ class Wallet:
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
 
-    def listen_to_addresses(self, loop):
+    async def listen_to_addresses(self):
         method = "blockchain.address.subscribe"
         addrs = self.get_all_known_addresses()
         for addr in addrs:
             self.connection.listen_subscribe(method, [addr])
 
-        coro = self.connection.consume_queue(self.dispatch_result)
-        asyncio.ensure_future(coro)
-        loop.run_forever()
+        await self.connection.consume_queue(self.dispatch_result)
 
     async def dispatch_result(self, result):
         addr = result[0]
@@ -207,7 +205,6 @@ class Wallet:
         empty_flag = await self._interpret_new_history(addr, history[0])
         if not empty_flag:
             self.new_history = True
-            print(self)
 
     def __str__(self):
         str_ = list()
@@ -226,6 +223,13 @@ def get_random_onion(chain):
     random.shuffle(servers)
     return servers.pop()
 
+async def user_io(wallet):
+    while True:
+        await asyncio.sleep(1)
+        if wallet.new_history:
+            print(wallet)
+            wallet.new_history = False
+
 def main():
     chain = TBTC
     loop = asyncio.get_event_loop()
@@ -241,9 +245,11 @@ def main():
 
     wallet.discover_keys(loop)
     wallet.discover_keys(loop, change=True)
-    print(wallet)
-    wallet.listen_to_addresses(loop)
 
+    asyncio.ensure_future(wallet.listen_to_addresses()),
+    asyncio.ensure_future(user_io(wallet))
+
+    loop.run_forever()
     loop.close()
 
 if __name__ == '__main__':
