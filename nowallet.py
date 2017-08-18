@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import asyncio, random, decimal, collections, getpass
+import sys, asyncio, random, decimal, collections, getpass
 
 from connectrum.client import StratumClient
 from pycoin.key.BIP32Node import BIP32Node
@@ -32,7 +32,7 @@ class Connection:
             await self.connection
         except Exception as e:
             print("Unable to connect to server:", e)
-            return -1
+            sys.exit(1)
 
         print("\nConnected to server")
 
