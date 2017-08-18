@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import asyncio, random, decimal, collections
+import asyncio, random, decimal, collections, getpass
 
 from connectrum.client import StratumClient
 from pycoin.key.BIP32Node import BIP32Node
@@ -234,7 +234,7 @@ def main():
 #    connection = Connection(loop, "192.168.1.200", 50001)
 
     email = input("Enter email: ")
-    passphrase = input("Enter passphrase: ")
+    passphrase = getpass.getpass("Enter passphrase: ")
     assert email and passphrase, "Email and/or passphrase were blank"
     wallet = Wallet(email, passphrase, connection, chain)
 
