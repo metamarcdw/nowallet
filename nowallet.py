@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import asyncio, random, decimal
+import asyncio, random, decimal, collections
 
 from connectrum.client import StratumClient
 from pycoin.key.BIP32Node import BIP32Node
@@ -47,12 +47,7 @@ class Connection:
             result = await self.queue.get()
             await queue_func(result)
 
-class Chain:
-    def __init__(self, netcode, chain_1209k, bip44):
-        self.netcode = netcode
-        self.chain_1209k = chain_1209k
-        self.bip44 = bip44
-
+Chain = collections.namedtuple("Chain", ["netcode", "chain_1209k", "bip44"])
 BTC = Chain(netcode="BTC",
             chain_1209k="btc",
             bip44=0)
