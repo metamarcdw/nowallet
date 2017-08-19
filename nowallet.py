@@ -234,7 +234,7 @@ def get_random_onion(chain):
     random.shuffle(servers)
     return servers.pop()
 
-async def user_io(wallet):
+async def print_loop(wallet):
     while True:
         await asyncio.sleep(1)
         if wallet.new_history:
@@ -267,7 +267,7 @@ def main():
         wallet.spend(spend_amount, spend_addr)
 
     asyncio.ensure_future(wallet.listen_to_addresses()),
-    asyncio.ensure_future(user_io(wallet))
+    asyncio.ensure_future(print_loop(wallet))
 
     loop.run_forever()
     loop.close()
