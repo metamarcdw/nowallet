@@ -201,6 +201,22 @@ class Wallet:
         if not empty_flag:
             self.new_history = True
 
+    def mktx(self, out_addr, amount):
+#        inputs = list()
+#        outputs = list()
+#        in_addrs = list()
+#        total_out = decimal.Decimal("0")
+        pass
+
+    def spend(self, loop, address, amount):
+        tx = self.mktx(address, amount)
+        method = "blockchain.transaction.broadcast"
+        txid = loop.run_until_complete(
+                    self.connection.listen_RPC(method, [tx.as_hex()]))
+        self.balance -= amount
+        self.history[address] = loop.run_until_complete(
+                                    self._get_history([txid]))
+
     def __str__(self):
         str_ = list()
         str_.append("\nXPUB: {}".format(self.get_xpub()))
@@ -240,6 +256,15 @@ def main():
 
     wallet.discover_keys(loop)
     wallet.discover_keys(loop, change=True)
+
+    if sys.argv[1] == "spend":
+        print("\nBalance: {} {}".format(
+                wallet.balance, chain.chain_1209k.upper()))
+        print("Enter a destination address:")
+        spend_addr = input("> ")
+        print("Enter an amount to spend:")
+        spend_amount = decimal.Decimal(input("> "))
+        wallet.spend(spend_amount, spend_addr)
 
     asyncio.ensure_future(wallet.listen_to_addresses()),
     asyncio.ensure_future(user_io(wallet))
