@@ -257,7 +257,7 @@ def main():
     wallet.discover_keys(loop)
     wallet.discover_keys(loop, change=True)
 
-    if sys.argv[1] == "spend":
+    if len(sys.argv) > 1 and sys.argv[1] == "spend":
         print("\nBalance: {} {}".format(
                 wallet.balance, chain.chain_1209k.upper()))
         print("Enter a destination address:")
