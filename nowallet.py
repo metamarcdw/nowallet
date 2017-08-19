@@ -76,7 +76,7 @@ class Wallet:
         self.change_indicies = list()
 
         # All wallet TX info. (Does not persist!)
-        self.utxos = dict()
+        self.utxos = list()
         self.history = dict()
         self.result_cache = dict()
 
@@ -142,8 +142,8 @@ class Wallet:
                                             self._get_history(txids))
                 self.balance += loop.run_until_complete(
                                             self._get_balance(address))
-                self.utxos[address] = loop.run_until_complete(
-                                            self._get_utxos(address))
+                self.utxos.extend(loop.run_until_complete(
+                                            self._get_utxos(address)))
 
                 indicies.append(True)
                 is_empty = False
@@ -159,7 +159,7 @@ class Wallet:
 
             self.history[address] = await self._get_history([txid])
             self.balance += await self._get_balance(address)
-            self.utxos[address] = await self._get_utxos(address)
+            self.utxos.extend(await self._get_utxos(address))
 
             for i, used in enumerate(indicies):
                 if self.get_key(i, change).address() == address:
