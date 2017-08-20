@@ -15,9 +15,16 @@ from scrape import scrape_onion_servers
 
 class Connection:
     def __init__(self, loop, server, port):
+        """
+        Connection object constructor. Connects to an Electrum server.
+
+        :param loop: an asyncio event loop
+        :param server: a string containing a hostname
+        :param port: port number that the server listens on
+        :returns: A new Connection object
+        """
         print("Connecting...")
 
-        # convert to our datastruct about servers.
         self.server_info = MyServerInfo(server, hostname=server, ports=port)
         print(self.server_info.get_port("t"))
         self.client = StratumClient()
@@ -31,6 +38,10 @@ class Connection:
         self.queue = None
 
     async def _do_connect(self):
+        """
+        Coroutine. Establishes a persistent connection to an Electrum server.
+        Awaits the connection because AFAIK an init method can't be async.
+        """
         try:
             await self.connection
         except Exception as e:
@@ -40,12 +51,34 @@ class Connection:
         print("\nConnected to server")
 
     async def listen_RPC(self, method, args):
+        """
+        Coroutine. Sends a normal RPC message to the server and awaits response.
+
+        :param method: The Electrum API method to use
+        :param args: Params associated with current method
+        :returns: Future. Response from server for this method(args)
+        """
         return await self.client.RPC(method, *args)
 
     def listen_subscribe(self, method, args):
+        """
+        Coroutine. Sends a "subscribe" message to the server and 
+        adds to the queue
+
+        :param method: The Electrum API method to use
+        :param args: Params associated with current method
+        :returns: Future. Immediate response from server,
+                    Queue, new queue that will listen for more 
+                    responses associated with this method(args)
+        """
         future, self.queue = self.client.subscribe(method, *args)
 
     async def consume_queue(self, queue_func):
+        """
+        Coroutine. Infinite loop that consumes the current subscription queue.
+
+        :param queue_func: A function to call when new responses arrive
+        """
         while True:
             result = await self.queue.get()
             await queue_func(result)
@@ -59,10 +92,27 @@ TBTC = Chain(netcode="XTN",
             bip44=1)
 
 class Wallet:
-    _COIN = decimal.Decimal("100000000")
+    """
+    Provides all functionality required for a fully functional and secure
+    HD brainwallet based on the Warpwallet technique.
+    """
+    _COIN = 100000000
     _GAP_LIMIT = 20
 
     def __init__(self, salt, passphrase, connection, loop, chain, account=0):
+        """
+        Wallet object constructor. Use discover_keys() and listen_to_addresses()
+        coroutine method to construct wallet data, and listen for new data from
+        the server.
+
+        :param salt: a string to use as a salt for key derivation
+        :param passphrase: a string containing a secure passphrase
+        :param connection: a Connection object
+        :param loop: an asyncio event loop
+        :param chain: a namedtuple containing chain-specific info
+        :param account: account number, defaults to 0
+        :returns: A new, empty Wallet object
+        """
         self.connection = connection
         self.loop = loop
         self.chain = chain
@@ -85,21 +135,46 @@ class Wallet:
         self.result_cache = dict()
 
     def get_xpub(self):
+        """
+        Returns the wallet's extended public key.
+
+        :returns: a string containing the wallet's XPUB.
+        """
         return self.mpk.hwif()
 
     def get_key(self, index, change=False):
+        """
+        Returns a specified pycoin.key object.
+
+        :param index: The index of the desired key
+        :param change: a boolean indicating which key root to use
+        :returns: a key object associated with the given index
+        """
         if change:
             return self.root_change_key.subkey(index)
         else:
             return self.root_spend_key.subkey(index)
 
     def get_next_unused_key(self, change=False):
+        """
+        Returns the next unused key object in the sequence.
+
+        :param change: a boolean indicating which key root to use
+        :returns: a key object associated with the next unused index
+        """
         indicies = self.change_indicies if change else self.spend_indicies
         for i, is_used in enumerate(indicies):
             if not is_used:
                 return self.get_key(i, change)
 
     def get_all_known_addresses(self, change=False):
+        """
+        Returns a list of all addresses currently known to us.
+
+        :param change: a boolean indicating which key root to use
+        :returns: a list of address strings containing all addresses known
+                    for the given root
+        """
         indicies = self.change_indicies if change else self.spend_indicies
         addrs = [self.get_key(i, change).address()
                 for i in range(len(indicies))]
@@ -216,7 +291,7 @@ class Wallet:
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
                             self.connection.listen_RPC(method, [6]))
-        return int((tx_kb_count * coin_per_kb) * int(self._COIN))
+        return int((tx_kb_count * coin_per_kb) * self._COIN)
 
     def mktx(self, out_addr, amount, fee="standard", version=1):
         spendables = list()
