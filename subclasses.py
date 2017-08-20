@@ -32,9 +32,8 @@ class LexTxOut(TxOut):
     def promote(cls, txout):
         return cls(txout.coin_value, txout.script)
 
-    @classmethod
-    def demote(cls, txout):
-        return TxOut(txout.coin_value, txout.script)
+    def demote(self, lexout):
+        return TxOut(lexout.coin_value, lexout.script)
     
     def __eq__(self, other):
         return self.coin_value == other.coin_value and \
