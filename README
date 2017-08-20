@@ -1,0 +1,13 @@
+This project is a secure Bitcoin brainwallet app that will ultimately be 
+meant for desktop and Android platforms. It was inspired by reports of 
+incidences of Bitcoin being seized physically at border crossings. 
+People need an option for a brainwallet that is secure and easy to use.
+
+It's written in Python and depends on the pycoin and connectrum 
+libraries. It uses Electrum servers on the back end, and communicates 
+exclusively over Tor. It uses a variant of the 'WarpWallet' technique, 
+combining PBKDF2 and scrypt with a salt for key derivation, rather than 
+the typical, highly insecure SHA256(passphrase) method that your average 
+brainwallet uses. It also implements a full HD wallet compatible with 
+BIP32/44. The current working title is Nowallet, as in, "I'm sorry 
+officer, I have no wallet!"
