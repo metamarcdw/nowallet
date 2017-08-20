@@ -62,8 +62,7 @@ class Connection:
 
     def listen_subscribe(self, method, args):
         """
-        Coroutine. Sends a "subscribe" message to the server and 
-        adds to the queue
+        Sends a "subscribe" message to the server and adds to the queue
 
         :param method: The Electrum API method to use
         :param args: Params associated with current method
@@ -181,9 +180,22 @@ class Wallet:
         return addrs
 
     def get_all_used_addresses(self):
+        """
+        Returns a list of all addresses that have been used previously.
+
+        :returns: a list of address strings containing all used addresses
+                    for the given root
+        """
         return list(self.history.keys())
 
     async def _get_history(self, txids):
+        """
+        Returns a list of pycoin.tx.Tx objects associated
+                    with the given txids
+
+        :param txids: a list of txid strings to retrieve tx histories for
+        :returns: Future, a list of Tx objects
+        """
         method = "blockchain.transaction.get"
         results = list()
         for txid in txids:
@@ -192,11 +204,24 @@ class Wallet:
         return txs
 
     async def _get_balance(self, address):
+        """
+        Returns the current balance associated with a given adddress.
+
+        :param address: an address string to retrieve a balance for
+        :returns: Future, a Decimal representing the balance
+        """
         method = "blockchain.address.get_balance"
         result = await self.connection.listen_RPC(method, [address])
         return decimal.Decimal(str(result["confirmed"])) / Wallet._COIN
 
     async def _get_utxos(self, address):
+        """
+        Returns a list of pycoin.tx.Spendable objects for all UTXOS associated
+                    with the given address
+
+        :param address: an address string to retrieve a balance for
+        :returns: Future, a Decimal representing the balance
+        """
         method = "blockchain.address.listunspent"
         result = await self.connection.listen_RPC(method, [address])
         utxos = list()
@@ -210,6 +235,14 @@ class Wallet:
         return utxos
 
     def _interpret_history(self, histories, change=False):
+        """
+        Populates the wallet's data structures based on a list of tx histories.
+        Should only be called by discover_keys(),
+
+        :param histories: a list of tx histories from the server
+        :param change: a boolean indicating which key index list to use
+        :returns: A boolean that is true if all given histories were empty
+        """
         indicies = self.change_indicies if change else self.spend_indicies
         is_empty = True
         for history in histories:
@@ -231,6 +264,15 @@ class Wallet:
         return is_empty
 
     async def _interpret_new_history(self, address, history, change=False):
+        """
+        Coroutine, Populates the wallet's data structures based on a new
+        new tx history. Should only be called by dispatch_result(),
+
+        :param address: the address associated with this new tx history
+        :param history: a list of tx histories from the server
+        :param change: a boolean indicating which key index list to use
+        :returns: A boolean that is true if all given histories were empty
+        """
         indicies = self.change_indicies if change else self.spend_indicies
         is_empty = True
         if history:
@@ -254,6 +296,13 @@ class Wallet:
         return is_empty
 
     def discover_keys(self, change=False):
+        """
+        Iterates through key indicies (_GAP_LIMIT) at a time and retrieves tx
+        histories from the server, then populates our data structures using
+        _interpret_history, Should be called manually once for each key root.
+
+        :param change: a boolean indicating which key index list to use
+        """
         method = "blockchain.address.get_history"
         current_index = 0
         quit_flag = False
@@ -269,6 +318,11 @@ class Wallet:
         self.new_history = True
 
     async def listen_to_addresses(self):
+        """
+        Coroutine, adds all known addresses to the subscription queue, and
+        begins consuming the queue so we can recieve new tx histories from
+        the server asynchronously.
+        """
         method = "blockchain.address.subscribe"
         addrs = self.get_all_known_addresses()
         for addr in addrs:
@@ -277,6 +331,13 @@ class Wallet:
         await self.connection.consume_queue(self.dispatch_result)
 
     async def dispatch_result(self, result):
+        """
+        Gets called by the Connection's consume_queue method when a new tx
+        historiy is sent from the server, then populates data structures using
+        _interpret_new_history.
+
+        :param result: an address that has some new tx history
+        """
         addr = result[0]
         method = "blockchain.address.get_history"
         history = await self.connection.listen_RPC(method, [addr])
@@ -285,6 +346,12 @@ class Wallet:
             self.new_history = True
 
     def get_fee(self, tx):
+        """
+        Calculates the size of tx and gets a fee/kb estimate from the server.
+
+        :param tx: a Tx object that we need to estimate a fee for
+        :returns: An int representing the appropriate fee in satoshis
+        """
         s = io.BytesIO()
         tx.stream(s)
         tx_kb_count = len(s.getvalue()) / 1024
@@ -293,7 +360,18 @@ class Wallet:
                             self.connection.listen_RPC(method, [6]))
         return int((tx_kb_count * coin_per_kb) * self._COIN)
 
-    def mktx(self, out_addr, amount, fee="standard", version=1):
+    def mktx(self, out_addr, amount, version=1):
+        """
+        Builds a standard Bitcoin transaction - in the most naive way.
+        Coin selection is basically random. Uses one output and one change
+        address. Takes advantage of our subclasses to implement BIP69. Uses
+        the server's fee estimation through our get_fee() method.
+
+        :param out_addr: an address to send to
+        :param amount: a Decimal amount in whole BTC
+        :param version: an int representing the Tx version
+        :returns: A fully formaed and signed Tx object
+        """
         spendables = list()
         payables = list()
         in_addrs = list()
@@ -337,6 +415,15 @@ class Wallet:
         return tx
 
     def spend(self, address, amount):
+        """
+        Gets a new tx from mktx() and sends it to the server to be broadcast,
+        then inserts the new tx into our tx history and includes our change
+        utxo, which is currently assumed to be the last output in the Tx.
+
+        :param address: an address to send to
+        :param amount: a Decimal amount in whole BTC
+        :returns: The txid of our new tx, given after a successful broadcast
+        """
         tx = self.mktx(address, amount)
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
@@ -351,6 +438,11 @@ class Wallet:
         return txid
 
     def __str__(self):
+        """
+        Special method __str__()
+
+        :returns: The string representation of this wallet object
+        """
         str_ = list()
         str_.append("\nXPUB: {}".format(self.get_xpub()))
         str_.append("\nHistory:\n{}".format(self.history))
