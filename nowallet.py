@@ -152,16 +152,19 @@ class Wallet:
         else:
             return self.root_spend_key.subkey(index)
 
-    def get_next_unused_key(self, change=False):
+    def get_next_unused_key(self, change=False, using=False):
         """
         Returns the next unused key object in the sequence.
 
         :param change: a boolean indicating which key root to use
+        :param using: a boolean indicating whether to mark key as used now
         :returns: a key object associated with the next unused index
         """
         indicies = self.change_indicies if change else self.spend_indicies
         for i, is_used in enumerate(indicies):
             if not is_used:
+                if using:
+                    indicies[i] = True
                 return self.get_key(i, change)
 
     def get_all_known_addresses(self, change=False):
@@ -382,7 +385,8 @@ class Wallet:
                 in_addrs.append(utxo.address(self.chain.netcode))
                 total_out += utxo.coin_value
 
-        change_addr = self.get_next_unused_key(change=True).address()
+        change_addr = self.get_next_unused_key(
+                            change=True, using=True).address()
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
 
