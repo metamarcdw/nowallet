@@ -62,8 +62,9 @@ class Wallet:
     _COIN = decimal.Decimal("100000000")
     _GAP_LIMIT = 20
 
-    def __init__(self, salt, passphrase, connection, chain, account=0):
+    def __init__(self, salt, passphrase, connection, loop, chain, account=0):
         self.connection = connection
+        self.loop = loop
         self.chain = chain
 
         (se, cc) = derive_key(salt, passphrase)
@@ -133,7 +134,7 @@ class Wallet:
             utxos.append(spendables[vout])
         return utxos
 
-    def _interpret_history(self, loop, histories, change=False):
+    def _interpret_history(self, histories, change=False):
         indicies = self.change_indicies if change else self.spend_indicies
         is_empty = True
         for history in histories:
@@ -141,11 +142,11 @@ class Wallet:
                 address = self.get_key(len(indicies), change).address()
                 txids = [history[i]["tx_hash"] for i in range(len(history))]
 
-                self.history[address] = loop.run_until_complete(
+                self.history[address] = self.loop.run_until_complete(
                                             self._get_history(txids))
-                self.balance += loop.run_until_complete(
+                self.balance += self.loop.run_until_complete(
                                             self._get_balance(address))
-                self.utxos.extend(loop.run_until_complete(
+                self.utxos.extend(self.loop.run_until_complete(
                                             self._get_utxos(address)))
 
                 indicies.append(True)
@@ -160,7 +161,11 @@ class Wallet:
         if history:
             txid = history["tx_hash"]
 
-            self.history[address] = await self._get_history([txid])
+            new_history = await self._get_history([txid])
+            if self.history[address]:
+                self.history[address].extend(new_history)
+            else:
+                self.history[address] = new_history
             self.balance += await self._get_balance(address)
             self.utxos.extend(await self._get_utxos(address))
 
@@ -173,7 +178,7 @@ class Wallet:
             is_empty = False
         return is_empty
 
-    def discover_keys(self, loop, change=False):
+    def discover_keys(self, change=False):
         method = "blockchain.address.get_history"
         current_index = 0
         quit_flag = False
@@ -183,8 +188,8 @@ class Wallet:
                 addr = self.get_key(i, change).address()
                 futures.append(self.connection.listen_RPC(method, [addr]))
 
-            result = loop.run_until_complete(asyncio.gather(*futures))
-            quit_flag = self._interpret_history(loop, result, change)
+            result = self.loop.run_until_complete(asyncio.gather(*futures))
+            quit_flag = self._interpret_history(result, change)
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
 
@@ -204,16 +209,16 @@ class Wallet:
         if not empty_flag:
             self.new_history = True
 
-    def get_fee(self, loop, tx):
+    def get_fee(self, tx):
         s = io.BytesIO()
         tx.stream(s)
         tx_kb_count = len(s.getvalue()) / 1024
         method = "blockchain.estimatefee"
-        coin_per_kb = loop.run_until_complete(
+        coin_per_kb = self.loop.run_until_complete(
                             self.connection.listen_RPC(method, [6]))
         return int((tx_kb_count * coin_per_kb) * int(self._COIN))
 
-    def mktx(self, loop, out_addr, amount, fee="standard", version=1):
+    def mktx(self, out_addr, amount, fee="standard", version=1):
         spendables = list()
         payables = list()
         in_addrs = list()
@@ -251,18 +256,20 @@ class Wallet:
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
         tx.set_unspents(spendables)
 
-        fee = self.get_fee(loop, tx)
+        fee = self.get_fee(tx)
         distribute_from_split_pool(tx, fee)
         sign_tx(tx, wifs=wifs, netcode=self.chain.netcode)
         return tx
 
-    def spend(self, loop, address, amount):
-        tx = self.mktx(loop, address, amount)
+    def spend(self, address, amount):
+        tx = self.mktx(address, amount)
         method = "blockchain.transaction.broadcast"
-        txid = loop.run_until_complete(
+        txid = self.loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
-        self.history[address] = loop.run_until_complete(
-                                    self._get_history([txid]))
+        if self.history[address]:
+            self.history[address].append(tx)
+        else:
+            self.history[address] = [tx]
         self.balance -= amount
         self.utxos.append(tx.tx_outs_as_spendable()[-1])
         self.new_history = True
@@ -303,10 +310,10 @@ def main():
     email = input("Enter email: ")
     passphrase = getpass.getpass("Enter passphrase: ")
     assert email and passphrase, "Email and/or passphrase were blank"
-    wallet = Wallet(email, passphrase, connection, chain)
+    wallet = Wallet(email, passphrase, connection, loop, chain)
 
-    wallet.discover_keys(loop)
-    wallet.discover_keys(loop, change=True)
+    wallet.discover_keys()
+    wallet.discover_keys(change=True)
 
     if len(sys.argv) > 1 and sys.argv[1] == "spend":
         print("\nBalance: {} {}".format(
@@ -319,7 +326,7 @@ def main():
                 "Spend address and/or amount were blank"
         assert spend_amount <= wallet.balance, "Insufficient funds"
 
-        txid = wallet.spend(loop, spend_addr, spend_amount)
+        txid = wallet.spend(spend_addr, spend_amount)
         print("Transaction sent!\nID: {}".format(txid))
 
     asyncio.ensure_future(wallet.listen_to_addresses()),
