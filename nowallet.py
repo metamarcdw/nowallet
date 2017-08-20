@@ -162,7 +162,7 @@ class Wallet:
             txid = history["tx_hash"]
 
             new_history = await self._get_history([txid])
-            if self.history[address]:
+            if address in self.history:
                 self.history[address].extend(new_history)
             else:
                 self.history[address] = new_history
@@ -266,7 +266,7 @@ class Wallet:
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
-        if self.history[address]:
+        if address in self.history:
             self.history[address].append(tx)
         else:
             self.history[address] = [tx]
