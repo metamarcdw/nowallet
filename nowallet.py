@@ -1,12 +1,15 @@
 #! /usr/bin/env python3
 
-import sys, asyncio, random, decimal, collections, getpass
+import sys, io, asyncio, random, decimal, collections, getpass
 
 from connectrum.client import StratumClient
 from pycoin.key.BIP32Node import BIP32Node
+from pycoin.ui import standard_tx_out_script
 from pycoin.tx.Tx import Tx
+from pycoin.tx.TxOut import TxOut
+from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 
-from subclasses import MyServerInfo
+from subclasses import MyServerInfo, LexSpendable, LexTxOut
 from keys import derive_key
 from scrape import scrape_onion_servers
 
@@ -201,21 +204,69 @@ class Wallet:
         if not empty_flag:
             self.new_history = True
 
-    def mktx(self, out_addr, amount):
-#        inputs = list()
-#        outputs = list()
-#        in_addrs = list()
-#        total_out = decimal.Decimal("0")
-        pass
+    def get_fee(self, loop, tx):
+        s = io.BytesIO()
+        tx.stream(s)
+        tx_kb_count = len(s.getvalue()) / 1024
+        method = "blockchain.estimatefee"
+        coin_per_kb = loop.run_until_complete(
+                            self.connection.listen_RPC(method, [6]))
+        return int((tx_kb_count * coin_per_kb) * int(self._COIN))
+
+    def mktx(self, loop, out_addr, amount, fee="standard", version=1):
+        spendables = list()
+        payables = list()
+        in_addrs = list()
+        amount *= self._COIN
+        total_out = decimal.Decimal("0")
+
+        for utxo in self.utxos:
+            if total_out < amount:
+                spendables.append(LexSpendable.promote(utxo))
+                in_addrs.append(utxo.address(self.chain.netcode))
+                total_out += utxo.coin_value
+
+        change_addr = self.get_next_unused_key(change=True).address()
+        payables.append((out_addr, amount))
+        payables.append((change_addr, 0))
+
+        wifs = list()
+        for change in (True, False):
+            indicies = self.change_indicies if change else self.spend_indicies
+            for i, used in enumerate(indicies):
+                key = self.get_key(i, change)
+                if key.address() in in_addrs:
+                    wifs.append(key.wif())
+
+        spendables.sort()
+        txs_in = [spendable.tx_in() for spendable in spendables]
+        txs_out = list()
+        for payable in payables:
+            bitcoin_address, coin_value = payable
+            script = standard_tx_out_script(bitcoin_address)
+            txs_out.append(LexTxOut.promote(TxOut(coin_value, script)))
+        txs_out.sort()
+        txs_out = [LexTxOut.demote(txout) for txout in txs_out]
+
+        tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
+        tx.set_unspents(spendables)
+
+        fee = self.get_fee(loop, tx)
+        distribute_from_split_pool(tx, fee)
+        sign_tx(tx, wifs=wifs, netcode=self.chain.netcode)
+        return tx
 
     def spend(self, loop, address, amount):
-        tx = self.mktx(address, amount)
+        tx = self.mktx(loop, address, amount)
         method = "blockchain.transaction.broadcast"
         txid = loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
-        self.balance -= amount
         self.history[address] = loop.run_until_complete(
                                     self._get_history([txid]))
+        self.balance -= amount
+        self.utxos.append(tx.tx_outs_as_spendable()[-1])
+        self.new_history = True
+        return txid
 
     def __str__(self):
         str_ = list()
@@ -264,7 +315,12 @@ def main():
         spend_addr = input("> ")
         print("Enter an amount to spend:")
         spend_amount = decimal.Decimal(input("> "))
-        wallet.spend(spend_amount, spend_addr)
+        assert spend_addr and spend_amount, \
+                "Spend address and/or amount were blank"
+        assert spend_amount <= wallet.balance, "Insufficient funds"
+
+        txid = wallet.spend(loop, spend_addr, spend_amount)
+        print("Transaction sent!\nID: {}".format(txid))
 
     asyncio.ensure_future(wallet.listen_to_addresses()),
     asyncio.ensure_future(print_loop(wallet))
