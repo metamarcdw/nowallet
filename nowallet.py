@@ -62,13 +62,11 @@ class Connection:
 
     def listen_subscribe(self, method, args):
         """
-        Sends a "subscribe" message to the server and adds to the queue
+        Sends a "subscribe" message to the server and adds to the queue.
+        Throws away the immediate future containing the "history" hash.
 
         :param method: The Electrum API method to use
         :param args: Params associated with current method
-        :returns: Future. Immediate response from server,
-                    Queue, new queue that will listen for more 
-                    responses associated with this method(args)
         """
         future, self.queue = self.client.subscribe(method, *args)
 
@@ -454,12 +452,25 @@ class Wallet:
         return "".join(str_)
 
 def get_random_onion(chain):
+    """
+    Grabs a random onion server from a list that it gets from our
+    scrape_onion_servers function.
+
+    :param chain: Our current chain info
+    :returns: A server info tuple for a random .onion Electrum server
+    """
     servers = scrape_onion_servers(chain_1209k=chain.chain_1209k)
     assert servers, "No electrum servers found!"
     random.shuffle(servers)
     return servers.pop()
 
 async def print_loop(wallet):
+    """
+    Coroutine. Prints the wallet's string representation to stdout if
+    wallet.new_history is True. Checks every second.
+
+    :param wallet: a wallet object
+    """
     while True:
         await asyncio.sleep(1)
         if wallet.new_history:
@@ -467,6 +478,10 @@ async def print_loop(wallet):
             wallet.new_history = False
 
 def main():
+    """
+    Builds a wallet object, discovers keys and listens to addresses.
+    Also handles all user IO with help from the print_loop() coroutine function.
+    """
     chain = TBTC
     loop = asyncio.get_event_loop()
 
