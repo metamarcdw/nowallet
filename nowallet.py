@@ -129,7 +129,6 @@ class Wallet:
         # All wallet TX info. (Does not persist!)
         self.utxos = list()
         self.history = dict()
-        self.result_cache = dict()
 
     def get_xpub(self):
         """
