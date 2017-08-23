@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
-import sys, io, asyncio, random, decimal, collections, getpass
+import sys, io, asyncio, random, decimal, collections, getpass, pprint
+
 
 from connectrum.client import StratumClient
 from pycoin.key.BIP32Node import BIP32Node
@@ -378,11 +379,12 @@ class Wallet:
         amount *= self._COIN
         total_out = decimal.Decimal("0")
 
-        for utxo in self.utxos:
+        for i, utxo in enumerate(self.utxos):
             if total_out < amount:
                 spendables.append(LexSpendable.promote(utxo))
                 in_addrs.append(utxo.address(self.chain.netcode))
                 total_out += utxo.coin_value
+                del(self.utxos[i])
 
         change_addr = self.get_next_unused_key(
                             change=True, using=True).address()
@@ -411,6 +413,7 @@ class Wallet:
         tx.set_unspents(spendables)
 
         fee = self.get_fee(tx)
+        assert amount + fee <= self.balance, "Insufficient funds to cover fee"
         distribute_from_split_pool(tx, fee)
         sign_tx(tx, wifs=wifs, netcode=self.chain.netcode)
         return tx
@@ -444,10 +447,13 @@ class Wallet:
 
         :returns: The string representation of this wallet object
         """
+        pp = pprint.PrettyPrinter(indent=4)
         str_ = list()
         str_.append("\nXPUB: {}".format(self.get_xpub()))
-        str_.append("\nHistory:\n{}".format(self.history))
-        str_.append("\nUTXOS:\n{}".format(self.utxos))
+        str_.append("\nHistory:\n{}".format(
+                        pp.pformat(self.history)))
+        str_.append("\nUTXOS:\n{}".format(
+                        pp.pformat(self.utxos)))
         str_.append("\nBalance: {} {}".format(
                         self.balance, self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
