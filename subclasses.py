@@ -28,9 +28,8 @@ class MyServerInfo(ServerInfo):
 
 @total_ordering
 class LexTxOut(TxOut):
-    @classmethod
-    def promote(cls, txout):
-        return cls(txout.coin_value, txout.script)
+    def __init__(self, coin_value, script):
+        super().__init__(coin_value, script)
 
     @staticmethod
     def demote(lexout):
@@ -87,7 +86,7 @@ def main():
     utxos.sort()
     print(utxos)
     
-    txouts = [LexTxOut.promote(txout) for txout in tx.txs_out]
+    txouts = [LexTxOut(txout.coin_value, txout.script) for txout in tx.txs_out]
     txouts.sort()
     print([str(txout) for txout in txouts])
 

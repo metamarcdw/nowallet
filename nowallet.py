@@ -373,21 +373,26 @@ class Wallet:
         :param version: an int representing the Tx version
         :returns: A fully formaed and signed Tx object
         """
-        spendables = list()
-        payables = list()
-        in_addrs = list()
         amount *= self._COIN
+        fee_highball = 10000
         total_out = decimal.Decimal("0")
 
+        spendables = list()
+        in_addrs = set()
+        del_indexes = list()
         for i, utxo in enumerate(self.utxos):
-            if total_out < amount:
+            if total_out < amount + fee_highball:
                 spendables.append(LexSpendable.promote(utxo))
-                in_addrs.append(utxo.address(self.chain.netcode))
+                in_addrs.add(utxo.address(self.chain.netcode))
+                del_indexes.append(i)
                 total_out += utxo.coin_value
-                del(self.utxos[i])
+        spendables.sort()
+        self.utxos = [utxo for i, utxo in enumerate(self.utxos)
+                        if i not in del_indexes]
 
         change_addr = self.get_next_unused_key(
                             change=True, using=True).address()
+        payables = list()
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
 
@@ -396,16 +401,15 @@ class Wallet:
             indicies = self.change_indicies if change else self.spend_indicies
             for i, used in enumerate(indicies):
                 key = self.get_key(i, change)
-                if key.address() in in_addrs:
+                if used and key.address() in in_addrs:
                     wifs.append(key.wif())
 
-        spendables.sort()
         txs_in = [spendable.tx_in() for spendable in spendables]
         txs_out = list()
         for payable in payables:
             bitcoin_address, coin_value = payable
             script = standard_tx_out_script(bitcoin_address)
-            txs_out.append(LexTxOut.promote(TxOut(coin_value, script)))
+            txs_out.append(LexTxOut(coin_value, script))
         txs_out.sort()
         txs_out = [LexTxOut.demote(txout) for txout in txs_out]
 
@@ -413,7 +417,12 @@ class Wallet:
         tx.set_unspents(spendables)
 
         fee = self.get_fee(tx)
-        assert amount + fee <= self.balance, "Insufficient funds to cover fee"
+        decimal_fee = decimal.Decimal(str(fee)) / self._COIN
+        # TODO Remove this print line
+        print("Adding a miner fee of: {} {}".format(
+                    decimal_fee, self.chain.chain_1209k.upper()))
+        assert amount / self._COIN + decimal_fee <= self.balance, \
+                    "Insufficient funds to cover fee"
         distribute_from_split_pool(tx, fee)
         sign_tx(tx, wifs=wifs, netcode=self.chain.netcode)
         return tx
