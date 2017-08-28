@@ -6,9 +6,8 @@ import sys, io, asyncio, random, decimal, collections, getpass, pprint
 from connectrum.client import StratumClient
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import standard_tx_out_script
-from pycoin.tx.Tx import Tx
-from pycoin.tx.TxOut import TxOut
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
+from pycoin.tx.Tx import Tx
 
 from subclasses import MyServerInfo, LexSpendable, LexTxOut
 from keys import derive_key

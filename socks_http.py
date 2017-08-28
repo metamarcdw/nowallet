@@ -3,6 +3,9 @@ import aiohttp
 import aiosocks
 from aiosocks.connector import ProxyConnector, ProxyClientRequest
 
+class SocksHTTPError(Exception):
+    pass
+
 async def urlopen(url):
     auth5 = aiosocks.Socks5Auth('proxyuser1', password='pwd')
     conn = ProxyConnector(remote_resolve=False)
@@ -15,7 +18,9 @@ async def urlopen(url):
                                     proxy_auth=auth5) as resp:
                 if resp.status == 200:
                     return await resp.text()
-    except aiohttp.ProxyConnectionError:
+                else:
+                    raise SocksHTTPError("HTTP response not OK")
+    except aiohttp.ClientProxyConnectionError:
         # connection problem
         pass
     except aiosocks.SocksError:
