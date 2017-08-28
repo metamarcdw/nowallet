@@ -454,7 +454,7 @@ class Wallet:
                     self.get_next_unused_key().address()))
         return "".join(str_)
 
-def get_random_onion(chain):
+def get_random_onion(loop, chain):
     """
     Grabs a random onion server from a list that it gets from our
     scrape_onion_servers function.
@@ -462,7 +462,8 @@ def get_random_onion(chain):
     :param chain: Our current chain info
     :returns: A server info tuple for a random .onion Electrum server
     """
-    servers = scrape_onion_servers(chain_1209k=chain.chain_1209k)
+    servers = loop.run_until_complete(
+                    scrape_onion_servers(chain_1209k=chain.chain_1209k))
     assert servers, "No electrum servers found!"
     random.shuffle(servers)
     return servers.pop()
@@ -488,7 +489,7 @@ def main():
     chain = TBTC
     loop = asyncio.get_event_loop()
 
-    server, port = get_random_onion(chain)
+    server, port = get_random_onion(loop, chain)
     connection = Connection(loop, server, port)
 #    connection = Connection(loop, "192.168.1.200", 50001)
 

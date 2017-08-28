@@ -1,12 +1,14 @@
-from urllib.request import urlopen
+import asyncio
+
+from socks_http import urlopen
 from bs4 import BeautifulSoup
 
-def scrape_onion_servers(chain_1209k="tbtc",
-        scrape_page="https://1209k.com/bitcoin-eye/ele.php?chain={}"):
+async def scrape_onion_servers(chain_1209k="tbtc",
+            scrape_page="https://1209k.com/bitcoin-eye/ele.php?chain={}"):
     url = scrape_page.format(chain_1209k)
     print("Scraping URL:", url)
-    
-    page = urlopen(url)
+
+    page = await urlopen(url)
     soup = BeautifulSoup(page, "html.parser")
     table_data = soup.find_all("td")
 
@@ -21,7 +23,10 @@ def scrape_onion_servers(chain_1209k="tbtc",
     return servers
 
 def main():
-    print(scrape_onion_servers())
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(scrape_onion_servers())
+    print(result)
+    loop.close()
 
 if __name__ == "__main__":
     main()
