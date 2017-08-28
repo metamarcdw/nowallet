@@ -267,7 +267,7 @@ class Wallet:
     async def _interpret_new_history(self, address, history, change=False):
         """
         Coroutine, Populates the wallet's data structures based on a new
-        new tx history. Should only be called by dispatch_result(),
+        new tx history. Should only be called by _dispatch_result(),
 
         :param address: the address associated with this new tx history
         :param history: a list of tx histories from the server
@@ -329,9 +329,9 @@ class Wallet:
         for addr in addrs:
             self.connection.listen_subscribe(method, [addr])
 
-        await self.connection.consume_queue(self.dispatch_result)
+        await self.connection.consume_queue(self._dispatch_result)
 
-    async def dispatch_result(self, result):
+    async def _dispatch_result(self, result):
         """
         Gets called by the Connection's consume_queue method when a new tx
         historiy is sent from the server, then populates data structures using
@@ -346,7 +346,7 @@ class Wallet:
         if not empty_flag:
             self.new_history = True
 
-    def get_fee(self, tx):
+    def _get_fee(self, tx):
         """
         Calculates the size of tx and gets a fee/kb estimate from the server.
 
@@ -361,12 +361,12 @@ class Wallet:
                             self.connection.listen_RPC(method, [6]))
         return int((tx_kb_count * coin_per_kb) * self._COIN)
 
-    def mktx(self, out_addr, amount, version=1):
+    def _mktx(self, out_addr, amount, version=1):
         """
         Builds a standard Bitcoin transaction - in the most naive way.
         Coin selection is basically random. Uses one output and one change
         address. Takes advantage of our subclasses to implement BIP69. Uses
-        the server's fee estimation through our get_fee() method.
+        the server's fee estimation through our _get_fee() method.
 
         :param out_addr: an address to send to
         :param amount: a Decimal amount in whole BTC
@@ -416,20 +416,21 @@ class Wallet:
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
         tx.set_unspents(spendables)
 
-        fee = self.get_fee(tx)
+        fee = self._get_fee(tx)
         decimal_fee = decimal.Decimal(str(fee)) / self._COIN
         # TODO Remove this print line
         print("Adding a miner fee of: {} {}".format(
                     decimal_fee, self.chain.chain_1209k.upper()))
         assert amount / self._COIN + decimal_fee <= self.balance, \
                     "Insufficient funds to cover fee"
+
         distribute_from_split_pool(tx, fee)
         sign_tx(tx, wifs=wifs, netcode=self.chain.netcode)
         return tx
 
     def spend(self, address, amount):
         """
-        Gets a new tx from mktx() and sends it to the server to be broadcast,
+        Gets a new tx from _mktx() and sends it to the server to be broadcast,
         then inserts the new tx into our tx history and includes our change
         utxo, which is currently assumed to be the last output in the Tx.
 
@@ -437,7 +438,7 @@ class Wallet:
         :param amount: a Decimal amount in whole BTC
         :returns: The txid of our new tx, given after a successful broadcast
         """
-        tx = self.mktx(address, amount)
+        tx = self._mktx(address, amount)
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
