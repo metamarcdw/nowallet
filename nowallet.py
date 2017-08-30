@@ -412,20 +412,23 @@ class Wallet:
         txs_out.sort()
         txs_out = [LexTxOut.demote(txout) for txout in txs_out]
 
+        chg_vout = None
+        for i, txout in enumerate(txs_out):
+            if txout.address(self.chain.netcode) == change_addr:
+                chg_vout = i
+                break
+
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
         tx.set_unspents(spendables)
 
         fee = self._get_fee(tx)
         decimal_fee = decimal.Decimal(str(fee)) / self._COIN
-        # TODO Remove this print line
-        print("Adding a miner fee of: {} {}".format(
-                    decimal_fee, self.chain.chain_1209k.upper()))
         assert amount / self._COIN + decimal_fee <= self.balance, \
                     "Insufficient funds to cover fee"
 
         distribute_from_split_pool(tx, fee)
         sign_tx(tx, wifs=wifs, netcode=self.chain.netcode)
-        return tx
+        return (tx, chg_vout, fee)
 
     def spend(self, address, amount):
         """
@@ -437,7 +440,7 @@ class Wallet:
         :param amount: a Decimal amount in whole BTC
         :returns: The txid of our new tx, given after a successful broadcast
         """
-        tx = self._mktx(address, amount)
+        tx, chg_vout, fee = self._mktx(address, amount)
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
@@ -449,9 +452,9 @@ class Wallet:
         else:
             self.history[address] = [tx]
         self.balance -= amount
-        self.utxos.append(tx.tx_outs_as_spendable()[-1])
+        self.utxos.append(tx.tx_outs_as_spendable()[chg_vout])
         self.new_history = True
-        return txid
+        return (txid, fee)
 
     def __str__(self):
         """
@@ -530,7 +533,10 @@ def main():
                 "Spend address and/or amount were blank"
         assert spend_amount <= wallet.balance, "Insufficient funds"
 
-        txid = wallet.spend(spend_addr, spend_amount)
+        txid, fee = wallet.spend(spend_addr, spend_amount)
+        decimal_fee = decimal.Decimal(str(fee)) / Wallet._COIN
+        print("Added a miner fee of: {} {}".format(
+                    decimal_fee, chain.chain_1209k.upper()))
         print("Transaction sent!\nID: {}".format(txid))
 
     asyncio.ensure_future(wallet.listen_to_addresses()),
