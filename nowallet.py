@@ -441,6 +441,9 @@ class Wallet:
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
+        method = "blockchain.address.subscribe"
+        self.connection.listen_subscribe(method, [address])
+
         if address in self.history:
             self.history[address].append(tx)
         else:
