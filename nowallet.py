@@ -373,7 +373,7 @@ class Wallet:
         :returns: A fully formaed and signed Tx object
         """
         amount *= self._COIN
-        fee_highball = 10000
+        fee_highball = 100000
         total_out = decimal.Decimal("0")
 
         spendables = list()
