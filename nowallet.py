@@ -4,12 +4,13 @@ import sys, io, asyncio, random, decimal, collections, getpass, pprint
 
 
 from connectrum.client import StratumClient
-from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import standard_tx_out_script
+from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
+from pycoin.encoding import hash160
 
-from subclasses import MyServerInfo, LexSpendable, LexTxOut
+from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
 from keys import derive_key
 from scrape import scrape_onion_servers
 
@@ -115,9 +116,9 @@ class Wallet:
         self.chain = chain
 
         (se, cc) = derive_key(salt, passphrase)
-        self.mpk = BIP32Node(netcode=self.chain.netcode,
+        self.mpk = SegwitBIP32Node(netcode=self.chain.netcode,
                                 chain_code=cc, secret_exponent=se)
-        path = "44H/{}H/{}H/".format(chain.bip44, account)
+        path = "49H/{}H/{}H/".format(chain.bip44, account)
         self.root_spend_key = self.mpk.subkey_for_path("{}0".format(path))
         self.root_change_key = self.mpk.subkey_for_path("{}1".format(path))
         self.balance = decimal.Decimal("0")
@@ -175,7 +176,7 @@ class Wallet:
                     for the given root
         """
         indicies = self.change_indicies if change else self.spend_indicies
-        addrs = [self.get_key(i, change).address()
+        addrs = [self.get_key(i, change).p2sh_p2wpkh(self.chain.netcode)
                 for i in range(len(indicies))]
         return addrs
 
@@ -247,7 +248,8 @@ class Wallet:
         is_empty = True
         for history in histories:
             if history:
-                address = self.get_key(len(indicies), change).address()
+                key = self.get_key(len(indicies), change)
+                address = key.p2sh_p2wpkh(self.chain.netcode)
                 txids = [history[i]["tx_hash"] for i in range(len(history))]
 
                 self.history[address] = self.loop.run_until_complete(
@@ -287,7 +289,8 @@ class Wallet:
             self.utxos.extend(await self._get_utxos(address))
 
             for i, used in enumerate(indicies):
-                if self.get_key(i, change).address() == address:
+                if self.get_key(i, change).p2sh_p2wpkh(
+                                self.chain.netcode) == address:
                     indicies[i] = True
                     break
             else:
@@ -309,7 +312,7 @@ class Wallet:
         while not quit_flag:
             futures = list()
             for i in range(current_index, current_index + Wallet._GAP_LIMIT):
-                addr = self.get_key(i, change).address()
+                addr = self.get_key(i, change).p2sh_p2wpkh(self.chain.netcode)
                 futures.append(self.connection.listen_RPC(method, [addr]))
 
             result = self.loop.run_until_complete(asyncio.gather(*futures))
@@ -389,18 +392,23 @@ class Wallet:
         self.utxos = [utxo for i, utxo in enumerate(self.utxos)
                         if i not in del_indexes]
 
-        change_addr = self.get_next_unused_key(
-                            change=True, using=True).address()
+        change_key = self.get_next_unused_key(change=True, using=True)
+        change_addr = change_key.p2sh_p2wpkh(self.chain.netcode)
         payables = list()
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
 
+        redeem_scripts = dict()
         wifs = list()
         for change in (True, False):
             indicies = self.change_indicies if change else self.spend_indicies
             for i, used in enumerate(indicies):
                 key = self.get_key(i, change)
-                if used and key.address() in in_addrs:
+                if used and key.p2sh_p2wpkh(self.chain.netcode) in in_addrs:
+                    hash160_c = key.hash160(use_uncompressed=False)
+                    p2aw_script = ScriptPayToAddressWit(b'\0', hash160_c)
+                    script_hash = hash160(p2aw_script.script())
+                    redeem_scripts[script_hash] = p2aw_script.script()
                     wifs.append(key.wif())
 
         txs_in = [spendable.tx_in() for spendable in spendables]
@@ -427,7 +435,9 @@ class Wallet:
                     "Insufficient funds to cover fee"
 
         distribute_from_split_pool(tx, fee)
-        sign_tx(tx, wifs=wifs, netcode=self.chain.netcode)
+        sign_tx(tx, wifs=wifs,
+                netcode=self.chain.netcode,
+                p2sh_lookup=redeem_scripts)
         return (tx, chg_vout, fee)
 
     def spend(self, address, amount):
@@ -472,7 +482,7 @@ class Wallet:
         str_.append("\nBalance: {} {}".format(
                         self.balance, self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
-                    self.get_next_unused_key().address()))
+                    self.get_next_unused_key().p2sh_p2wpkh(self.chain.netcode)))
         return "".join(str_)
 
 def get_random_onion(loop, chain):

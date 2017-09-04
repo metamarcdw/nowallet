@@ -6,6 +6,9 @@ from connectrum.constants import DEFAULT_PORTS
 from pycoin.tx.Tx import Tx
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
+from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
+from pycoin.key.BIP32Node import BIP32Node
+from pycoin.ui import address_for_pay_to_script
 from pycoin.serialize import b2h
 
 class MyServerInfo(ServerInfo):
@@ -65,6 +68,12 @@ class LexSpendable(Spendable):
         else:
             return self_dict["tx_hash_hex"] < other_dict["tx_hash_hex"]
 
+class SegwitBIP32Node(BIP32Node):
+    def p2sh_p2wpkh(self, netcode):
+        hash160_c = self.hash160(use_uncompressed=False)
+        p2aw_script = ScriptPayToAddressWit(b'\0', hash160_c)
+        return address_for_pay_to_script(p2aw_script.script(), netcode=netcode)
+
 def main():
     svr = MyServerInfo("onion",
                     hostname="fdkhv2bb7hqel2e7.onion",
@@ -89,6 +98,10 @@ def main():
     txouts = [LexTxOut(txout.coin_value, txout.script) for txout in tx.txs_out]
     txouts.sort()
     print([str(txout) for txout in txouts])
+
+    secret = "CORRECT HORSE BATTERY STAPLE"
+    mpk = SegwitBIP32Node.from_master_secret(secret.encode("utf-8"))
+    print(mpk.p2sh_p2wpkh(netcode="BTC"))
 
 if __name__ == "__main__":
     main()
