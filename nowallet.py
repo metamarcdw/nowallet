@@ -525,6 +525,8 @@ def main():
 
     email = input("Enter email: ")
     passphrase = getpass.getpass("Enter passphrase: ")
+    confirm = getpass.getpass("Confirm your passphrase: ")
+    assert passphrase == confirm, "Passphrase and confirmation did not match"
     assert email and passphrase, "Email and/or passphrase were blank"
     wallet = Wallet(email, passphrase, connection, loop, chain)
 
