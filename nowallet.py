@@ -5,10 +5,8 @@ import sys, io, asyncio, random, decimal, collections, getpass, pprint
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
-from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
-from pycoin.encoding import hash160
 
 from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
 from keys import derive_key
@@ -176,7 +174,7 @@ class Wallet:
                     for the given root
         """
         indicies = self.change_indicies if change else self.spend_indicies
-        addrs = [self.get_key(i, change).p2sh_p2wpkh(self.chain.netcode)
+        addrs = [self.get_key(i, change).p2sh_p2wpkh_address()
                 for i in range(len(indicies))]
         return addrs
 
@@ -249,7 +247,7 @@ class Wallet:
         for history in histories:
             if history:
                 key = self.get_key(len(indicies), change)
-                address = key.p2sh_p2wpkh(self.chain.netcode)
+                address = key.p2sh_p2wpkh_address()
                 txids = [history[i]["tx_hash"] for i in range(len(history))]
 
                 self.history[address] = self.loop.run_until_complete(
@@ -289,8 +287,7 @@ class Wallet:
             self.utxos.extend(await self._get_utxos(address))
 
             for i, used in enumerate(indicies):
-                if self.get_key(i, change).p2sh_p2wpkh(
-                                self.chain.netcode) == address:
+                if self.get_key(i, change).p2sh_p2wpkh_address() == address:
                     indicies[i] = True
                     break
             else:
@@ -312,7 +309,7 @@ class Wallet:
         while not quit_flag:
             futures = list()
             for i in range(current_index, current_index + Wallet._GAP_LIMIT):
-                addr = self.get_key(i, change).p2sh_p2wpkh(self.chain.netcode)
+                addr = self.get_key(i, change).p2sh_p2wpkh_address()
                 futures.append(self.connection.listen_RPC(method, [addr]))
 
             result = self.loop.run_until_complete(asyncio.gather(*futures))
@@ -393,7 +390,7 @@ class Wallet:
                         if i not in del_indexes]
 
         change_key = self.get_next_unused_key(change=True, using=True)
-        change_addr = change_key.p2sh_p2wpkh(self.chain.netcode)
+        change_addr = change_key.p2sh_p2wpkh_address()
         payables = list()
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
@@ -404,11 +401,10 @@ class Wallet:
             indicies = self.change_indicies if change else self.spend_indicies
             for i, used in enumerate(indicies):
                 key = self.get_key(i, change)
-                if used and key.p2sh_p2wpkh(self.chain.netcode) in in_addrs:
-                    hash160_c = key.hash160(use_uncompressed=False)
-                    p2aw_script = ScriptPayToAddressWit(b'\0', hash160_c)
-                    script_hash = hash160(p2aw_script.script())
-                    redeem_scripts[script_hash] = p2aw_script.script()
+                if used and key.p2sh_p2wpkh_address() in in_addrs:
+                    p2aw_script = key.p2sh_p2wpkh_script()
+                    script_hash = key.p2sh_p2wpkh_script_hash()
+                    redeem_scripts[script_hash] = p2aw_script
                     wifs.append(key.wif())
 
         txs_in = [spendable.tx_in() for spendable in spendables]
@@ -454,16 +450,19 @@ class Wallet:
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
-        method = "blockchain.address.subscribe"
-        self.connection.listen_subscribe(method, [address])
 
         if address in self.history:
             self.history[address].append(tx)
         else:
             self.history[address] = [tx]
         self.balance -= amount
-        self.utxos.append(tx.tx_outs_as_spendable()[chg_vout])
+        new_utxo = tx.tx_outs_as_spendable()[chg_vout]
+        self.utxos.append(new_utxo)
         self.new_history = True
+
+        method = "blockchain.address.subscribe"
+        change_address = new_utxo.address(netcode=self.chain.netcode)
+        self.connection.listen_subscribe(method, [change_address])
         return (txid, fee)
 
     def __str__(self):
@@ -482,7 +481,7 @@ class Wallet:
         str_.append("\nBalance: {} {}".format(
                         self.balance, self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
-                    self.get_next_unused_key().p2sh_p2wpkh(self.chain.netcode)))
+                    self.get_next_unused_key().p2sh_p2wpkh_address()))
         return "".join(str_)
 
 def get_random_onion(loop, chain):
