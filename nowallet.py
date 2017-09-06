@@ -345,6 +345,25 @@ class Wallet:
         if not empty_flag:
             self.new_history = True
 
+    def _calculate_vsize(self, tx):
+        """
+        Calculates the virtual size of tx in bytes.
+
+        :param tx: a Tx object that we need to get the vsize for
+        :returns: An int representing the vsize of the given Tx
+        """
+        def _total_size(tx):
+            ins = len(tx.txs_in)
+            outs = len(tx.txs_out)
+            return (ins * 180 + outs * 34) + (10 + ins)
+        def _base_size(tx):
+            s = io.BytesIO()
+            tx.stream(s)
+            return len(s.getvalue())
+
+        weight = 3 * _base_size(tx) + _total_size(tx)
+        return weight // 4
+
     def _get_fee(self, tx):
         """
         Calculates the size of tx and gets a fee/kb estimate from the server.
@@ -352,9 +371,7 @@ class Wallet:
         :param tx: a Tx object that we need to estimate a fee for
         :returns: An int representing the appropriate fee in satoshis
         """
-        s = io.BytesIO()
-        tx.stream(s)
-        tx_kb_count = len(s.getvalue()) / 1024
+        tx_kb_count = self._calculate_vsize(tx) // 1024
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
                             self.connection.listen_RPC(method, [6]))
