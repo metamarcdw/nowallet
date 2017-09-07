@@ -127,6 +127,7 @@ class Wallet:
 
         # All wallet TX info. (Does not persist!)
         self.utxos = list()
+        self.spent_utxos = list()
         self.history = dict()
 
     def get_xpub(self):
@@ -278,13 +279,20 @@ class Wallet:
         if history:
             txid = history["tx_hash"]
 
-            new_history = await self._get_history([txid])
+            new_history_list = await self._get_history([txid])
+            new_history = new_history_list.pop()
             if address in self.history:
-                self.history[address].extend(new_history)
+                if str(new_history) not in \
+                        [str(hist) for hist in self.history[address]]:
+                    self.history[address].append(new_history)
             else:
-                self.history[address] = new_history
-            self.balance += await self._get_balance(address)
-            self.utxos.extend(await self._get_utxos(address))
+                self.history[address] = [new_history]
+
+            new_utxos = await self._get_utxos(address)
+            for utxo in new_utxos:
+                if str(utxo) not in [str(spent) for spent in self.spent_utxos]:
+                    self.utxos.append(utxo)
+                    self.balance += await self._get_balance(address)
 
             for i, used in enumerate(indicies):
                 if self.get_key(i, change).p2sh_p2wpkh_address() == address:
@@ -371,7 +379,7 @@ class Wallet:
         :param tx: a Tx object that we need to estimate a fee for
         :returns: An int representing the appropriate fee in satoshis
         """
-        tx_kb_count = self._calculate_vsize(tx) // 1024
+        tx_kb_count = self._calculate_vsize(tx) / 1024
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
                             self.connection.listen_RPC(method, [6]))
@@ -398,6 +406,7 @@ class Wallet:
         del_indexes = list()
         for i, utxo in enumerate(self.utxos):
             if total_out < amount + fee_highball:
+                self.spent_utxos.append(utxo)
                 spendables.append(LexSpendable.promote(utxo))
                 in_addrs.add(utxo.address(self.chain.netcode))
                 del_indexes.append(i)
@@ -468,17 +477,15 @@ class Wallet:
         txid = self.loop.run_until_complete(
                     self.connection.listen_RPC(method, [tx.as_hex()]))
 
-        if address in self.history:
-            self.history[address].append(tx)
-        else:
-            self.history[address] = [tx]
-        self.balance -= amount
         new_utxo = tx.tx_outs_as_spendable()[chg_vout]
+        change_address = new_utxo.address(netcode=self.chain.netcode)
+
+        self.history[change_address] = [tx]
+        self.balance -= amount
         self.utxos.append(new_utxo)
         self.new_history = True
 
         method = "blockchain.address.subscribe"
-        change_address = new_utxo.address(netcode=self.chain.netcode)
         self.connection.listen_subscribe(method, [change_address])
         return (txid, fee)
 
