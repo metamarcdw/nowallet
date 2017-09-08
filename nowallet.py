@@ -272,7 +272,6 @@ class Wallet:
         :param change: a boolean indicating which key index list to use
         :returns: A boolean that is true if all given histories were empty
         """
-        indicies = self.spend_indicies
         is_empty = True
         if history:
             txid = history["tx_hash"]
@@ -292,13 +291,11 @@ class Wallet:
                     self.utxos.append(utxo)
                     self.balance += await self._get_balance(address)
 
-            for i, used in enumerate(indicies):
+            for i, used in enumerate(self.spend_indicies):
                 key = self.get_key(i, change=False)
                 if key.p2sh_p2wpkh_address() == address:
-                    indicies[i] = True
+                    self.spend_indicies[i] = True
                     break
-            else:
-                indicies.append(True)
             is_empty = False
         return is_empty
 
