@@ -262,7 +262,7 @@ class Wallet:
                 indicies.append(False)
         return is_empty
 
-    async def _interpret_new_history(self, address, history, change=False):
+    async def _interpret_new_history(self, address, history):
         """
         Coroutine, Populates the wallet's data structures based on a new
         new tx history. Should only be called by _dispatch_result(),
@@ -272,7 +272,7 @@ class Wallet:
         :param change: a boolean indicating which key index list to use
         :returns: A boolean that is true if all given histories were empty
         """
-        indicies = self.change_indicies if change else self.spend_indicies
+        indicies = self.spend_indicies
         is_empty = True
         if history:
             txid = history["tx_hash"]
@@ -293,7 +293,8 @@ class Wallet:
                     self.balance += await self._get_balance(address)
 
             for i, used in enumerate(indicies):
-                if self.get_key(i, change).p2sh_p2wpkh_address() == address:
+                key = self.get_key(i, change=False)
+                if key.p2sh_p2wpkh_address() == address:
                     indicies[i] = True
                     break
             else:
