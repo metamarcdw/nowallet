@@ -146,10 +146,8 @@ class Wallet:
         :param change: a boolean indicating which key root to use
         :returns: a key object associated with the given index
         """
-        if change:
-            return self.root_change_key.subkey(index)
-        else:
-            return self.root_spend_key.subkey(index)
+        root_key = self.root_change_key if change else self.root_spend_key
+        return root_key.subkey(index)
 
     def get_next_unused_key(self, change=False, using=False):
         """
