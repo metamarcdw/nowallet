@@ -381,7 +381,7 @@ class Wallet:
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
                             self.connection.listen_RPC(method, [6]))
-        return int((tx_kb_count * coin_per_kb) * self._COIN)
+        return int((tx_kb_count * coin_per_kb) * Wallet._COIN)
 
     def _mktx(self, out_addr, amount, version=1):
         """
@@ -395,7 +395,7 @@ class Wallet:
         :param version: an int representing the Tx version
         :returns: A fully formaed and signed Tx object
         """
-        amount *= self._COIN
+        amount *= Wallet._COIN
         fee_highball = 100000
         total_out = decimal.Decimal("0")
 
@@ -450,8 +450,8 @@ class Wallet:
         tx.set_unspents(spendables)
 
         fee = self._get_fee(tx)
-        decimal_fee = decimal.Decimal(str(fee)) / self._COIN
-        assert amount / self._COIN + decimal_fee <= self.balance, \
+        decimal_fee = decimal.Decimal(str(fee)) / Wallet._COIN
+        assert amount / Wallet._COIN + decimal_fee <= self.balance, \
                     "Insufficient funds to cover fee"
 
         distribute_from_split_pool(tx, fee)
