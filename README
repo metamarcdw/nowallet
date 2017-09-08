@@ -11,3 +11,27 @@ the typical, highly insecure SHA256(passphrase) method that your average
 brainwallet uses. It also implements a full HD wallet compatible with 
 BIP32/44. The current working title is Nowallet, as in, "I'm sorry 
 officer, I have no wallet!"
+
+We are currently in a pre-alpha state. All testers must be able to
+install dependecies and run from the simple command line interface.
+
+
+INSTALLATION:
+Make sure you have Git, Python3.5 (or higher), and pip installed
+
+REQUIREMENTS:
+Install Tor for your specific operating system (Not Tor browser, just Tor),
+and make sure your Tor client is running before attempting to use Nowallet.
+https://www.torproject.org
+
+Clone the Nowallet Github repository:
+git clone https://github.com/metamarcdw/nowallet.git
+
+Install all dependencies:
+cd nowallet
+sudo pip3 install -r requirements.txt
+
+Run nowallet from the command line:
+python nowallet.py
+OR
+python nowallet.py spend
