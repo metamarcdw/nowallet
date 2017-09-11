@@ -379,6 +379,8 @@ class Wallet:
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
                             self.connection.listen_RPC(method, [6]))
+        if coin_per_kb < 0:
+            raise Exception("Cannot get a fee estimate")
         return int((tx_kb_count * coin_per_kb) * Wallet._COIN)
 
     def _mktx(self, out_addr, amount, version=1):
@@ -449,8 +451,8 @@ class Wallet:
 
         fee = self._get_fee(tx)
         decimal_fee = decimal.Decimal(str(fee)) / Wallet._COIN
-        assert amount / Wallet._COIN + decimal_fee <= self.balance, \
-                    "Insufficient funds to cover fee"
+        if not amount / Wallet._COIN + decimal_fee <= self.balance:
+            raise Exception("Insufficient funds to cover fee")
 
         distribute_from_split_pool(tx, fee)
         sign_tx(tx, wifs=wifs,
