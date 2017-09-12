@@ -1,3 +1,4 @@
+import logging
 import asyncio
 
 from socks_http import urlopen
@@ -6,7 +7,7 @@ from bs4 import BeautifulSoup
 async def scrape_onion_servers(chain_1209k="tbtc",
             scrape_page="https://1209k.com/bitcoin-eye/ele.php?chain={}"):
     url = scrape_page.format(chain_1209k)
-    print("Scraping URL:", url)
+    logging.info("Scraping URL: %s", url)
 
     page = await urlopen(url)
     soup = BeautifulSoup(page, "html.parser")

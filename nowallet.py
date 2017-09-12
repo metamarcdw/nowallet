@@ -1,7 +1,14 @@
 #! /usr/bin/env python3
 
-import sys, io, asyncio, random, decimal, collections, getpass, pprint
+import logging, sys
+stdout_hdlr = logging.StreamHandler(sys.stdout)
+format = "%(asctime)s %(levelname)s %(message)s"
+stdout_hdlr.setFormatter(logging.Formatter(format))
+stdout_hdlr.setLevel(logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    handlers=[stdout_hdlr])
 
+import asyncio, io, random, decimal, collections, getpass, pprint
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
@@ -22,10 +29,10 @@ class Connection:
         :param port: port number that the server listens on
         :returns: A new Connection object
         """
-        print("Connecting...")
+        logging.info("Connecting...")
 
         self.server_info = MyServerInfo(server, hostname=server, ports=port)
-        print(self.server_info.get_port("t"))
+        logging.info(self.server_info.get_port("t"))
         self.client = StratumClient()
         self.connection = self.client.connect(
                             self.server_info,
@@ -44,10 +51,10 @@ class Connection:
         try:
             await self.connection
         except Exception as e:
-            print("Unable to connect to server:", e)
+            logging.info("Unable to connect to server:", exc_info=True)
             sys.exit(1)
 
-        print("\nConnected to server")
+        logging.info("Connected to server")
 
     async def listen_RPC(self, method, args):
         """
