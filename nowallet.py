@@ -518,7 +518,8 @@ def get_random_onion(loop, chain):
     """
     servers = loop.run_until_complete(
                     scrape_onion_servers(chain_1209k=chain.chain_1209k))
-    assert servers, "No electrum servers found!"
+    if not servers:
+        raise Exception("No electrum servers found!")
     random.shuffle(servers)
     return servers.pop()
 
