@@ -116,10 +116,11 @@ class Wallet:
         (se, cc) = derive_key(salt, passphrase)
         self.mpk = SegwitBIP32Node(netcode=self.chain.netcode,
                                 chain_code=cc, secret_exponent=se)
-        path = "49H/{}H/{}H/".format(chain.bip44, account)
-        self.root_spend_key = self.mpk.subkey_for_path("{}0".format(path))
-        self.root_change_key = self.mpk.subkey_for_path("{}1".format(path))
-        self.balance = decimal.Decimal("0")
+
+        path = "49H/{}H/{}H".format(chain.bip44, account)
+        self.account_master = self.mpk.subkey_for_path(path)
+        self.root_spend_key = self.account_master.subkey_for_path("0")
+        self.root_change_key = self.account_master.subkey_for_path("1")
 
         # Boolean lists, True = used / False = unused
         self.spend_indicies = list()
@@ -129,14 +130,15 @@ class Wallet:
         self.utxos = list()
         self.spent_utxos = list()
         self.history = dict()
+        self.balance = decimal.Decimal("0")
 
     def get_xpub(self):
         """
-        Returns the wallet's extended public key.
+        Returns this account's extended public key.
 
-        :returns: a string containing the wallet's XPUB.
+        :returns: a string containing the account's XPUB.
         """
-        return self.mpk.hwif()
+        return self.account_master.hwif()
 
     def get_key(self, index, change=False):
         """
