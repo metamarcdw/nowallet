@@ -256,7 +256,7 @@ class Wallet:
             if history:
                 key = self.get_key(len(indicies), change)
                 address = key.p2sh_p2wpkh_address()
-                txids = [history[i]["tx_hash"] for i in range(len(history))]
+                txids = [tx["tx_hash"] for tx in history]
 
                 self.history[address] = self.loop.run_until_complete(
                                             self._get_history(txids))
