@@ -128,6 +128,7 @@ class Wallet:
         self.account_master = self.mpk.subkey_for_path(path)
         self.root_spend_key = self.account_master.subkey(0)
         self.root_change_key = self.account_master.subkey(1)
+        logging.info("Keys successfully derived")
 
         # Boolean lists, True = used / False = unused
         self.spend_indicies = list()
@@ -316,6 +317,7 @@ class Wallet:
 
         :param change: a boolean indicating which key index list to use
         """
+        logging.info("Discovering transaction history. change=%s", change)
         method = "blockchain.address.get_history"
         current_index = 0
         quit_flag = False
