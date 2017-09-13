@@ -51,7 +51,7 @@ class Connection:
         try:
             await self.connection
         except Exception as e:
-            logging.info("Unable to connect to server:", exc_info=True)
+            logging.error("Unable to connect to server:", exc_info=True)
             sys.exit(1)
 
         logging.info("Connected to server")
