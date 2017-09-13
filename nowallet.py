@@ -126,8 +126,8 @@ class Wallet:
 
         path = "49H/{}H/{}H".format(chain.bip44, account)
         self.account_master = self.mpk.subkey_for_path(path)
-        self.root_spend_key = self.account_master.subkey_for_path("0")
-        self.root_change_key = self.account_master.subkey_for_path("1")
+        self.root_spend_key = self.account_master.subkey(0)
+        self.root_change_key = self.account_master.subkey(1)
 
         # Boolean lists, True = used / False = unused
         self.spend_indicies = list()
