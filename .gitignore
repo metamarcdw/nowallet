@@ -1,3 +1,4 @@
-.eric6project
+*.log
+*.eric6project
 __pycache__
 nowallet.e4p

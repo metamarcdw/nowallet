@@ -1,12 +1,18 @@
 #! /usr/bin/env python3
 
 import logging, sys
+format = "%(asctime)s %(levelname)s: %(message)s"
+
 stdout_hdlr = logging.StreamHandler(sys.stdout)
-format = "%(asctime)s %(levelname)s %(message)s"
 stdout_hdlr.setFormatter(logging.Formatter(format))
 stdout_hdlr.setLevel(logging.INFO)
-logging.basicConfig(level=logging.INFO,
-                    handlers=[stdout_hdlr])
+
+file_hdlr = logging.FileHandler(filename="nowallet.log", mode="w")
+file_hdlr.setFormatter(logging.Formatter(format))
+file_hdlr.setLevel(logging.DEBUG)
+
+logging.basicConfig(level=logging.DEBUG,
+                    handlers=[stdout_hdlr, file_hdlr])
 
 import asyncio, io, random, decimal, collections, getpass, pprint
 
