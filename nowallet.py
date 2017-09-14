@@ -265,8 +265,9 @@ class Wallet:
                 address = key.p2sh_p2wpkh_address()
                 txids = [tx["tx_hash"] for tx in history]
 
-                self.history[address] = self.loop.run_until_complete(
-                                            self._get_history(txids))
+                if not change:
+                    self.history[address] = self.loop.run_until_complete(
+                                                self._get_history(txids))
                 self.balance += self.loop.run_until_complete(
                                             self._get_balance(address))
                 self.utxos.extend(self.loop.run_until_complete(
