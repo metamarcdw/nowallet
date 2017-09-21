@@ -41,6 +41,7 @@ Builder.load_string("""
             ActionView:
                 use_separator: True
                 ActionPrevious:
+                    app_icon: "icon.jpg"
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
@@ -85,6 +86,7 @@ Builder.load_string("""
         ActionView:
             use_separator: True
             ActionPrevious:
+                app_icon: "icon.jpg"
                 title: "NOWALLET"
                 with_previous: False
             ActionOverflow:
