@@ -28,6 +28,7 @@ you individually, rather than netting you in a wider, generic sweep. And
 your email is trivial to remember, so why not?"
 (Note: Salting is not optional in our case.)
 
+
 Basically, you get a secure brainwallet in a convenient app (now with 
 SegWit address support) and only need to remember an email address/password
 combination rather than an entire 12/24 word seed. People are typically 
