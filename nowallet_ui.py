@@ -31,7 +31,6 @@ Builder.load_string("""
             data: "ballsagna"
         Button:
             text: "Back"
-            size_hint: 1, 0.2
             on_press: root.manager.current = "main"
 
 <MainScreen>:
