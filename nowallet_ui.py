@@ -10,6 +10,8 @@ from kivy.core.window import Window
 Window.size = (350, 600)
 
 Builder.load_string("""
+#:import QRCodeWidget kivy.garden.qrcode
+
 <SendScreen>:
     BoxLayout:
         orientation: "vertical"
@@ -25,6 +27,8 @@ Builder.load_string("""
         orientation: "vertical"
         Label:
             text: "UNDER CONSTRUCTION"
+        QRCodeWidget:
+            data: "ballsagna"
         Button:
             text: "Back"
             size_hint: 1, 0.2
@@ -96,16 +100,19 @@ Builder.load_string("""
                 text: "Email/Salt"
             TextInput:
                 hint_text: "email@domain.tld"
+                write_tab: False
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "Passphrase"
             TextInput:
                 password: True
+                write_tab: False
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "Confirm Passphrase"
             TextInput:
                 password: True
+                write_tab: False
                 padding_y: ( self.height - self.line_height ) / 2
             Button:
                 text: "Create Wallet"
