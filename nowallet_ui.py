@@ -25,11 +25,35 @@ Builder.load_string("""
 <RecieveScreen>:
     BoxLayout:
         orientation: "vertical"
+        ActionBar:
+            pos_hint: {'top':1}
+            ActionView:
+                use_separator: True
+                ActionPrevious:
+                    app_icon: "icon.jpg"
+                    title: "NOWALLET"
+                    with_previous: False
+                ActionOverflow:
+                ActionButton:
+                    text: "?"
+        BoxLayout:
+            size_hint: 1, 0.15
+            TextInput:
+                padding_y: ( self.height - self.line_height ) / 2
+            Label:
+                text: "BTC / USD"
+            TextInput:
+                padding_y: ( self.height - self.line_height ) / 2
+        AnchorLayout:
+            QRCodeWidget:
+                size_hint: 0.8, 0.8
+                show_border: False
+                data: "bitcoin://129834hg2uin20eifvnjf0eifcmvdkv2d"
         Label:
-            text: "UNDER CONSTRUCTION"
-        QRCodeWidget:
-            data: "ballsagna"
+            size_hint: 1, 0.3
+            text: "Address: 129834hg2uin20eifvnjf0eifcmvdkv2d"
         Button:
+            size_hint: 1, 0.2
             text: "Back"
             on_press: root.manager.current = "main"
 
