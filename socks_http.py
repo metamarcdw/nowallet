@@ -11,11 +11,11 @@ async def urlopen(url):
     conn = ProxyConnector(remote_resolve=False)
 
     try:
-        with aiohttp.ClientSession(connector=conn, 
-                        request_class=ProxyClientRequest) as session:
+        with aiohttp.ClientSession(connector=conn,
+                                   request_class=ProxyClientRequest) as session:
             async with session.get(url,     # Always connects through Tor.
-                                    proxy='socks5://127.0.0.1:9050',
-                                    proxy_auth=auth5) as resp:
+                                   proxy='socks5://127.0.0.1:9050',
+                                   proxy_auth=auth5) as resp:
                 if resp.status == 200:
                     return await resp.text()
                 else:
@@ -27,8 +27,11 @@ async def urlopen(url):
         # communication problem
         pass
 
-if __name__ == '__main__':
+def main():
     loop = asyncio.get_event_loop()
     html = loop.run_until_complete(urlopen("https://github.com/"))
     print(html)
     loop.close()
+
+if __name__ == '__main__':
+    main()

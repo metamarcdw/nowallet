@@ -24,7 +24,7 @@ class MyServerInfo(ServerInfo):
         if len(rv) < 2:
             try:
                 port = int(rv[0][1:])
-            except:
+            except Exception:
                 pass
         port = port or DEFAULT_PORTS[for_protocol]
         use_ssl = for_protocol in ('s', 'g')
@@ -32,9 +32,6 @@ class MyServerInfo(ServerInfo):
 
 @total_ordering
 class LexTxOut(TxOut):
-    def __init__(self, coin_value, script):
-        super().__init__(coin_value, script)
-
     @staticmethod
     def demote(lexout):
         return TxOut(lexout.coin_value, lexout.script)
@@ -46,8 +43,7 @@ class LexTxOut(TxOut):
     def __lt__(self, other):
         if self.coin_value == other.coin_value:
             return b2h(self.script) < b2h(self.script)
-        else:
-            return self.coin_value < other.coin_value
+        return self.coin_value < other.coin_value
 
 @total_ordering
 class LexSpendable(Spendable):
@@ -59,15 +55,14 @@ class LexSpendable(Spendable):
         self_dict = self.as_dict()
         other_dict = other.as_dict()
         return self_dict["tx_hash_hex"] == other_dict["tx_hash_hex"] and \
-                self_dict["tx_out_index"] == other_dict["tx_out_index"]
+            self_dict["tx_out_index"] == other_dict["tx_out_index"]
 
     def __lt__(self, other):
         self_dict = self.as_dict()
         other_dict = other.as_dict()
         if self_dict["tx_hash_hex"] == other_dict["tx_hash_hex"]:
             return self_dict["tx_out_index"] < other_dict["tx_out_index"]
-        else:
-            return self_dict["tx_hash_hex"] < other_dict["tx_hash_hex"]
+        return self_dict["tx_hash_hex"] < other_dict["tx_hash_hex"]
 
 class SegwitBIP32Node(BIP32Node):
     def p2sh_p2wpkh_address(self):
@@ -84,11 +79,11 @@ class SegwitBIP32Node(BIP32Node):
 
 def main():
     svr = MyServerInfo("onion",
-                    hostname="fdkhv2bb7hqel2e7.onion",
-                    ports=12345)
+                       hostname="fdkhv2bb7hqel2e7.onion",
+                       ports=12345)
     print(svr.get_port("t"))
 
-    hex =    ["01000000014f2eae2eadabe4e807fad4220a931991590ae31f223ba70bf1",
+    hex_ = ["01000000014f2eae2eadabe4e807fad4220a931991590ae31f223ba70bf1",
             "8dd16983005441010000006b483045022100ab33f14e1c3387b68942e1ab",
             "bd4ec0e2d94866529409464e262531c165cc75f0022034482cd3031bb779",
             "852baaedae91c43b61c84ca3eecad6220e91c24e1227e30a0121022798d6",
@@ -96,7 +91,7 @@ def main():
             "ffffff02873e0800000000001976a914c8f91ed83b0e345751e62e392be8",
             "be0494d0617b88ac538e4c39000000001976a9149b004c3bdcfaa929c336",
             "8d221deb26303d7e72c788ac00000000"]
-    tx_hex = "".join(hex)
+    tx_hex = "".join(hex_)
     tx = Tx.from_hex(tx_hex)
 
     utxos = [LexSpendable.promote(utxo) for utxo in tx.tx_outs_as_spendable()]

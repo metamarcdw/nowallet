@@ -1,14 +1,14 @@
 #! /usr/bin/env python3
 
 import logging, sys
-format = "%(asctime)s %(levelname)s: %(message)s"
+format_ = "%(asctime)s %(levelname)s: %(message)s"
 
 stdout_hdlr = logging.StreamHandler(sys.stdout)
-stdout_hdlr.setFormatter(logging.Formatter(format))
+stdout_hdlr.setFormatter(logging.Formatter(format_))
 stdout_hdlr.setLevel(logging.INFO)
 
 file_hdlr = logging.FileHandler(filename="nowallet.log", mode="w")
-file_hdlr.setFormatter(logging.Formatter(format))
+file_hdlr.setFormatter(logging.Formatter(format_))
 file_hdlr.setLevel(logging.DEBUG)
 
 logging.basicConfig(level=logging.DEBUG,
@@ -41,10 +41,10 @@ class Connection:
         logging.info(self.server_info.get_port("t"))
         self.client = StratumClient()
         self.connection = self.client.connect(
-                            self.server_info,
-                            proto_code="t",
-                            use_tor=self.server_info.is_onion,
-                            disable_cert_verify=True)
+            self.server_info,
+            proto_code="t",
+            use_tor=self.server_info.is_onion,
+            disable_cert_verify=True)
 
         loop.run_until_complete(self._do_connect())
         self.queue = None
@@ -56,13 +56,13 @@ class Connection:
         """
         try:
             await self.connection
-        except Exception as e:
+        except Exception:
             logging.error("Unable to connect to server:", exc_info=True)
             sys.exit(1)
 
         logging.info("Connected to server")
 
-    async def listen_RPC(self, method, args):
+    async def listen_rpc(self, method, args):
         """
         Coroutine. Sends a normal RPC message to the server and awaits response.
 
@@ -97,15 +97,15 @@ BTC = Chain(netcode="BTC",
             chain_1209k="btc",
             bip44=0)
 TBTC = Chain(netcode="XTN",
-            chain_1209k="tbtc",
-            bip44=1)
+             chain_1209k="tbtc",
+             bip44=1)
 
 class Wallet:
     """
     Provides all functionality required for a fully functional and secure
     HD brainwallet based on the Warpwallet technique.
     """
-    _COIN = 100000000
+    COIN = 100000000
     _GAP_LIMIT = 20
 
     def __init__(self, salt, passphrase, connection, loop, chain, account=0):
@@ -126,9 +126,11 @@ class Wallet:
         self.loop = loop
         self.chain = chain
 
-        (se, cc) = derive_key(salt, passphrase)
+        logging.info("Deriving keys...")
+        secret_exp, chain_code = derive_key(salt, passphrase)
         self.mpk = SegwitBIP32Node(netcode=self.chain.netcode,
-                                chain_code=cc, secret_exponent=se)
+                                   chain_code=chain_code,
+                                   secret_exponent=secret_exp)
 
         path = "49H/{}H/{}H".format(chain.bip44, account)
         self.account_master = self.mpk.subkey_for_path(path)
@@ -145,6 +147,7 @@ class Wallet:
         self.spent_utxos = list()
         self.history = dict()
         self.balance = decimal.Decimal("0")
+        self.new_history = False
 
     def get_xpub(self):
         """
@@ -190,7 +193,7 @@ class Wallet:
         """
         indicies = self.change_indicies if change else self.spend_indicies
         addrs = [self.get_key(i, change).p2sh_p2wpkh_address()
-                for i in range(len(indicies))]
+                 for i in range(len(indicies))]
         return addrs
 
     def get_all_used_addresses(self):
@@ -213,7 +216,7 @@ class Wallet:
         method = "blockchain.transaction.get"
         results = list()
         for txid in txids:
-            results.append(await self.connection.listen_RPC(method, [txid]))
+            results.append(await self.connection.listen_rpc(method, [txid]))
         txs = [Tx.from_hex(tx_hex) for tx_hex in results]
         return txs
 
@@ -225,8 +228,8 @@ class Wallet:
         :returns: Future, a Decimal representing the balance
         """
         method = "blockchain.address.get_balance"
-        result = await self.connection.listen_RPC(method, [address])
-        return decimal.Decimal(str(result["confirmed"])) / Wallet._COIN
+        result = await self.connection.listen_rpc(method, [address])
+        return decimal.Decimal(str(result["confirmed"])) / Wallet.COIN
 
     async def _get_utxos(self, address):
         """
@@ -237,13 +240,13 @@ class Wallet:
         :returns: Future, a Decimal representing the balance
         """
         method = "blockchain.address.listunspent"
-        result = await self.connection.listen_RPC(method, [address])
+        result = await self.connection.listen_rpc(method, [address])
         utxos = list()
         for unspent in result:
             method = "blockchain.transaction.get"
             txid = unspent["tx_hash"]
             vout = unspent["tx_pos"]
-            result = await self.connection.listen_RPC(method, [txid])
+            result = await self.connection.listen_rpc(method, [txid])
             spendables = Tx.from_hex(result).tx_outs_as_spendable()
             utxos.append(spendables[vout])
         return utxos
@@ -267,11 +270,11 @@ class Wallet:
 
                 if not change:
                     self.history[address] = self.loop.run_until_complete(
-                                                self._get_history(txids))
+                        self._get_history(txids))
                 self.balance += self.loop.run_until_complete(
-                                            self._get_balance(address))
+                    self._get_balance(address))
                 self.utxos.extend(self.loop.run_until_complete(
-                                            self._get_utxos(address)))
+                    self._get_utxos(address)))
 
                 indicies.append(True)
                 is_empty = False
@@ -308,7 +311,7 @@ class Wallet:
                     self.utxos.append(utxo)
                     self.balance += await self._get_balance(address)
 
-            for i, used in enumerate(self.spend_indicies):
+            for i in range(len(self.spend_indicies)):
                 key = self.get_key(i, change=False)
                 if key.p2sh_p2wpkh_address() == address:
                     self.spend_indicies[i] = True
@@ -332,7 +335,7 @@ class Wallet:
             futures = list()
             for i in range(current_index, current_index + Wallet._GAP_LIMIT):
                 addr = self.get_key(i, change).p2sh_p2wpkh_address()
-                futures.append(self.connection.listen_RPC(method, [addr]))
+                futures.append(self.connection.listen_rpc(method, [addr]))
 
             result = self.loop.run_until_complete(asyncio.gather(*futures))
             quit_flag = self._interpret_history(result, change)
@@ -362,12 +365,13 @@ class Wallet:
         """
         addr = result[0]
         method = "blockchain.address.get_history"
-        history = await self.connection.listen_RPC(method, [addr])
+        history = await self.connection.listen_rpc(method, [addr])
         empty_flag = await self._interpret_new_history(addr, history[0])
         if not empty_flag:
             self.new_history = True
 
-    def _calculate_vsize(self, tx):
+    @staticmethod
+    def _calculate_vsize(tx):
         """
         Calculates the virtual size of tx in bytes.
 
@@ -379,9 +383,9 @@ class Wallet:
             outs = len(tx.txs_out)
             return (ins * 180 + outs * 34) + (10 + ins)
         def _base_size(tx):
-            s = io.BytesIO()
-            tx.stream(s)
-            return len(s.getvalue())
+            buffer = io.BytesIO()
+            tx.stream(buffer)
+            return len(buffer.getvalue())
 
         weight = 3 * _base_size(tx) + _total_size(tx)
         return weight // 4
@@ -396,10 +400,10 @@ class Wallet:
         tx_kb_count = self._calculate_vsize(tx) / 1024
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
-                            self.connection.listen_RPC(method, [6]))
+            self.connection.listen_rpc(method, [6]))
         if coin_per_kb < 0:
             raise Exception("Cannot get a fee estimate")
-        return int((tx_kb_count * coin_per_kb) * Wallet._COIN)
+        return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
     def _mktx(self, out_addr, amount, version=1):
         """
@@ -413,7 +417,7 @@ class Wallet:
         :param version: an int representing the Tx version
         :returns: A fully formaed and signed Tx object
         """
-        amount *= Wallet._COIN
+        amount *= Wallet.COIN
         fee_highball = 100000
         total_out = decimal.Decimal("0")
 
@@ -429,7 +433,7 @@ class Wallet:
                 total_out += utxo.coin_value
         spendables.sort()
         self.utxos = [utxo for i, utxo in enumerate(self.utxos)
-                        if i not in del_indexes]
+                      if i not in del_indexes]
 
         change_key = self.get_next_unused_key(change=True, using=True)
         change_addr = change_key.p2sh_p2wpkh_address()
@@ -468,8 +472,8 @@ class Wallet:
         tx.set_unspents(spendables)
 
         fee = self._get_fee(tx)
-        decimal_fee = decimal.Decimal(str(fee)) / Wallet._COIN
-        if not amount / Wallet._COIN + decimal_fee <= self.balance:
+        decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
+        if not amount / Wallet.COIN + decimal_fee <= self.balance:
             raise Exception("Insufficient funds to cover fee")
 
         distribute_from_split_pool(tx, fee)
@@ -491,7 +495,7 @@ class Wallet:
         tx, chg_vout, fee = self._mktx(address, amount)
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
-                    self.connection.listen_RPC(method, [tx.as_hex()]))
+            self.connection.listen_rpc(method, [tx.as_hex()]))
 
         new_utxo = tx.tx_outs_as_spendable()[chg_vout]
         change_address = new_utxo.address(netcode=self.chain.netcode)
@@ -511,17 +515,17 @@ class Wallet:
 
         :returns: The string representation of this wallet object
         """
-        pp = pprint.PrettyPrinter(indent=4)
+        pprinter = pprint.PrettyPrinter(indent=4)
         str_ = list()
         str_.append("\nXPUB: {}".format(self.get_xpub()))
         str_.append("\nHistory:\n{}".format(
-                        pp.pformat(self.history)))
+            pprinter.pformat(self.history)))
         str_.append("\nUTXOS:\n{}".format(
-                        pp.pformat(self.utxos)))
+            pprinter.pformat(self.utxos)))
         str_.append("\nBalance: {} {}".format(
-                        self.balance, self.chain.chain_1209k.upper()))
+            self.balance, self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
-                    self.get_next_unused_key().p2sh_p2wpkh_address()))
+            self.get_next_unused_key().p2sh_p2wpkh_address()))
         return "".join(str_)
 
 def get_random_onion(loop, chain):
@@ -533,7 +537,7 @@ def get_random_onion(loop, chain):
     :returns: A server info tuple for a random .onion Electrum server
     """
     servers = loop.run_until_complete(
-                    scrape_onion_servers(chain_1209k=chain.chain_1209k))
+        scrape_onion_servers(chain_1209k=chain.chain_1209k))
     if not servers:
         raise Exception("No electrum servers found!")
     random.shuffle(servers)
@@ -576,7 +580,7 @@ def main():
 
     if len(sys.argv) > 1 and sys.argv[1] == "spend":
         print("\nBalance: {} {}".format(
-                wallet.balance, chain.chain_1209k.upper()))
+            wallet.balance, chain.chain_1209k.upper()))
         print("Enter a destination address:")
         spend_addr = input("> ")
         print("Enter an amount to spend:")
@@ -586,12 +590,12 @@ def main():
         assert spend_amount <= wallet.balance, "Insufficient funds"
 
         txid, fee = wallet.spend(spend_addr, spend_amount)
-        decimal_fee = decimal.Decimal(str(fee)) / Wallet._COIN
+        decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
         print("Added a miner fee of: {} {}".format(
-                    decimal_fee, chain.chain_1209k.upper()))
+            decimal_fee, chain.chain_1209k.upper()))
         print("Transaction sent!\nID: {}".format(txid))
 
-    asyncio.ensure_future(wallet.listen_to_addresses()),
+    asyncio.ensure_future(wallet.listen_to_addresses())
     asyncio.ensure_future(print_loop(wallet))
 
     loop.run_forever()
