@@ -14,7 +14,7 @@ file_hdlr.setLevel(logging.DEBUG)
 logging.basicConfig(level=logging.DEBUG,
                     handlers=[stdout_hdlr, file_hdlr])
 
-import asyncio, io, random, decimal, collections, getpass, pprint
+import asyncio, io, random, decimal, collections, getpass, pprint, time
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
@@ -126,7 +126,9 @@ class Wallet:
         self.loop = loop
         self.chain = chain
 
+        start_derivation = time.time()
         logging.info("Deriving keys...")
+
         secret_exp, chain_code = derive_key(salt, passphrase)
         self.mpk = SegwitBIP32Node(netcode=self.chain.netcode,
                                    chain_code=chain_code,
@@ -136,7 +138,10 @@ class Wallet:
         self.account_master = self.mpk.subkey_for_path(path)
         self.root_spend_key = self.account_master.subkey(0)
         self.root_change_key = self.account_master.subkey(1)
-        logging.info("Keys successfully derived")
+
+        end_derivation = time.time()
+        seconds = end_derivation - start_derivation
+        logging.info("Keys derived in {0:.3f} seconds".format(seconds))
 
         # Boolean lists, True = used / False = unused
         self.spend_indicies = list()
