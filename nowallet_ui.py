@@ -15,27 +15,76 @@ Builder.load_string("""
 <SendScreen>:
     BoxLayout:
         orientation: "vertical"
+        spacing: 3
+        ActionBar:
+            pos_hint: {'top':1}
+            ActionView:
+                use_separator: True
+                ActionPrevious:
+                    app_icon: "icons/MM_icon.jpg"
+                    title: "NOWALLET"
+                    with_previous: False
+                ActionOverflow:
+                ActionButton:
+                    Image:
+                        source: 'icons/settings.png'
+                        y: self.parent.y + 5
+                        x: self.parent.x + 5
+                        width: self.parent.width - 10
+                        height: self.parent.height - 10
+        BoxLayout:
+            size_hint: 1, 0.15
+            TextInput:
+                padding_y: ( self.height - self.line_height ) / 2
+            Label:
+                text: "BTC / USD"
+            TextInput:
+                padding_y: ( self.height - self.line_height ) / 2
         Label:
-            text: "UNDER CONSTRUCTION"
+            size_hint: 1, 0.2
+            text: "Available balance: 1.20049387 BTC"
+        BoxLayout:
+            size_hint: 1, 0.15
+            TextInput:
+                hint_text: "Enter Address:"
+                padding_y: ( self.height - self.line_height ) / 2
+            Button:
+                size_hint_x: 0.2
+                text: "QR"
+        BoxLayout:
+            size_hint: 1, 0.15
+            TextInput:
+                hint_text: "Fee: 50 sat/byte"
+                padding_y: ( self.height - self.line_height ) / 2
+            ToggleButton:
+                text: "Customize Fee"
+        Label:
+            text: ""
         Button:
             text: "Back"
-            size_hint: 1, 0.2
+            size_hint: 1, 0.23
             on_press: root.manager.current = "main"
 
 <RecieveScreen>:
     BoxLayout:
+        spacing: 3
         orientation: "vertical"
         ActionBar:
             pos_hint: {'top':1}
             ActionView:
                 use_separator: True
                 ActionPrevious:
-                    app_icon: "icon.jpg"
+                    app_icon: "icons/MM_icon.jpg"
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
                 ActionButton:
-                    text: "?"
+                    Image:
+                        source: 'icons/settings.png'
+                        y: self.parent.y + 5
+                        x: self.parent.x + 5
+                        width: self.parent.width - 10
+                        height: self.parent.height - 10
         BoxLayout:
             size_hint: 1, 0.15
             TextInput:
@@ -65,12 +114,17 @@ Builder.load_string("""
             ActionView:
                 use_separator: True
                 ActionPrevious:
-                    app_icon: "icon.jpg"
+                    app_icon: "icons/MM_icon.jpg"
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
                 ActionButton:
-                    text: "?"
+                    Image:
+                        source: 'icons/settings.png'
+                        y: self.parent.y + 5
+                        x: self.parent.x + 5
+                        width: self.parent.width - 10
+                        height: self.parent.height - 10
         Label:
             size_hint: 1, 0.3
             font_size: "30sp"
@@ -94,7 +148,7 @@ Builder.load_string("""
                     height: 50
                     text: "Sent 0.299 BTC"
         BoxLayout:
-            size_hint: 1, 0.2
+            size_hint: 1, 0.18
             Button:
                 font_size: "30sp"
                 text: "Recieve"
@@ -110,12 +164,17 @@ Builder.load_string("""
         ActionView:
             use_separator: True
             ActionPrevious:
-                app_icon: "icon.jpg"
+                app_icon: "icons/MM_icon.jpg"
                 title: "NOWALLET"
                 with_previous: False
             ActionOverflow:
             ActionButton:
-                text: "?"
+                Image:
+                    source: 'icons/settings.png'
+                    y: self.parent.y + 5
+                    x: self.parent.x + 5
+                    width: self.parent.width - 10
+                    height: self.parent.height - 10
     AnchorLayout:
         BoxLayout:
             size_hint: 0.8, 0.5
