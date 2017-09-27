@@ -11,6 +11,7 @@ Window.size = (350, 600)
 
 Builder.load_string("""
 #:import QRCodeWidget kivy.garden.qrcode
+# import ZbarQrcodeDetector android-zbar-qrcode.main
 
 <SendScreen>:
     BoxLayout:
@@ -21,7 +22,7 @@ Builder.load_string("""
             ActionView:
                 use_separator: True
                 ActionPrevious:
-                    app_icon: "icons/MM_icon.jpg"
+                    app_icon: "icons/brain.png"
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
@@ -35,10 +36,12 @@ Builder.load_string("""
         BoxLayout:
             size_hint: 1, 0.15
             TextInput:
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "BTC / USD"
             TextInput:
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
         Label:
             size_hint: 1, 0.2
@@ -47,17 +50,27 @@ Builder.load_string("""
             size_hint: 1, 0.15
             TextInput:
                 hint_text: "Enter Address:"
+                hint_text_color: (0.9, 0.9, 0.9, 1)
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Button:
                 size_hint_x: 0.2
-                text: "QR"
+                Image:
+                    source: 'icons/qr.png'
+                    y: self.parent.y + 3
+                    x: self.parent.x + 3
+                    width: self.parent.width - 6
+                    height: self.parent.height - 6
         BoxLayout:
             size_hint: 1, 0.15
             TextInput:
                 hint_text: "Fee: 50 sat/byte"
+                hint_text_color: (0.9, 0.9, 0.9, 1)
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             ToggleButton:
                 text: "Customize Fee"
+#        ZbarQrcodeDetector:
         Label:
             text: ""
         Button:
@@ -74,7 +87,7 @@ Builder.load_string("""
             ActionView:
                 use_separator: True
                 ActionPrevious:
-                    app_icon: "icons/MM_icon.jpg"
+                    app_icon: "icons/brain.png"
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
@@ -88,10 +101,12 @@ Builder.load_string("""
         BoxLayout:
             size_hint: 1, 0.15
             TextInput:
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "BTC / USD"
             TextInput:
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
         AnchorLayout:
             QRCodeWidget:
@@ -106,6 +121,17 @@ Builder.load_string("""
             text: "Back"
             on_press: root.manager.current = "main"
 
+<WaitScreen>:
+    AnchorLayout:
+        Image:
+            source: "icons/throbber.gif"
+            size_hint: 0.2, 0.2
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            text: "Loading..."
+        Label:
+
 <MainScreen>:
     BoxLayout:
         orientation: "vertical"
@@ -114,7 +140,7 @@ Builder.load_string("""
             ActionView:
                 use_separator: True
                 ActionPrevious:
-                    app_icon: "icons/MM_icon.jpg"
+                    app_icon: "icons/brain.png"
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
@@ -164,7 +190,7 @@ Builder.load_string("""
         ActionView:
             use_separator: True
             ActionPrevious:
-                app_icon: "icons/MM_icon.jpg"
+                app_icon: "icons/brain.png"
                 title: "NOWALLET"
                 with_previous: False
             ActionOverflow:
@@ -183,20 +209,24 @@ Builder.load_string("""
             Label:
                 text: "Email/Salt"
             TextInput:
-                hint_text: "email@domain.tld"
                 write_tab: False
+                hint_text: "email@domain.tld"
+                hint_text_color: (0.9, 0.9, 0.9, 1)
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "Passphrase"
             TextInput:
                 password: True
                 write_tab: False
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "Confirm Passphrase"
             TextInput:
                 password: True
                 write_tab: False
+                background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Button:
                 text: "Create Wallet"
@@ -216,6 +246,9 @@ class RecieveScreen(Screen):
 class SendScreen(Screen):
     pass
 
+class WaitScreen(Screen):
+    pass
+
 # Create the screen manager
 transition = SlideTransition(direction="up")
 sm = ScreenManager(transition=transition)
@@ -223,6 +256,7 @@ sm.add_widget(LoginScreen(name="login"))
 sm.add_widget(MainScreen(name="main"))
 sm.add_widget(RecieveScreen(name="recieve"))
 sm.add_widget(SendScreen(name="send"))
+sm.add_widget(WaitScreen(name="wait"))
 
 class NowalletApp(App):
 
