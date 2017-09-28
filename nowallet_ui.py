@@ -129,6 +129,7 @@ Builder.load_string("""
     BoxLayout:
         orientation: "vertical"
         Label:
+            font_size: "23sp"
             text: "Loading..."
         Label:
 
