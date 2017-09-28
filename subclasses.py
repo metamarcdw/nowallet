@@ -67,16 +67,10 @@ class LexSpendable(Spendable):
 
 class SegwitKey(Key):
     def p2sh_p2wpkh_address(self):
-        p2aw_script = self.p2sh_p2wpkh_script()
-        return address_for_pay_to_script(p2aw_script, netcode=self.netcode())
-
-    def p2sh_p2wpkh_script_hash(self):
-        p2aw_script = self.p2sh_p2wpkh_script()
-        return hash160(p2aw_script)
-
-    def p2sh_p2wpkh_script(self):
         hash160_c = self.hash160(use_uncompressed=False)
-        return ScriptPayToAddressWit(b'\0', hash160_c).script()
+        p2aw_script = ScriptPayToAddressWit(b'\0', hash160_c).script()
+        script_hash = hash160(p2aw_script)
+        return address_for_pay_to_script(script_hash, netcode=self.netcode())
 
 class SegwitBIP32Node(BIP32Node):
     def p2sh_p2wpkh_address(self):

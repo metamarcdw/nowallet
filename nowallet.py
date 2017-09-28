@@ -107,7 +107,7 @@ class Wallet:
     """
     COIN = 100000000
     _GAP_LIMIT = 20
-    History = collections.namedtuple("History", ["tx_obj", "is_spend", "value"])
+    _History = collections.namedtuple("_History", ["tx_obj", "is_spend", "value"])
 
     def __init__(self, salt, passphrase, connection, loop, chain, account=0):
         """
@@ -239,8 +239,8 @@ class Wallet:
 
     async def _get_utxos(self, address):
         """
-        Returns a list of pycoin.tx.Spendable objects for all UTXOS associated
-                    with the given address
+        Returns a list of pycoin.tx.Spendable objects for all
+        UTXOS associated with the given address
 
         :param address: an address string to retrieve a balance for
         :returns: Future, a Decimal representing the balance
@@ -257,9 +257,18 @@ class Wallet:
             utxos.append(spendables[vout])
         return utxos
 
-    def _get_spend_value(self, post_tx, address):
+    def _get_spend_value(self, this_tx, address):
+        """
+        Finds the value of the txin/txout in the given Tx object that is
+            associated with our address.
+
+        :param this_tx: A Tx object given from our transaction history
+        :param address: The address of ours that is associated with the
+            given transaction
+        :returns: The coin value associated with our input/output.
+        """
         input_ = None
-        for txin in post_tx.txs_in:
+        for txin in this_tx.txs_in:
             key = SegwitKey.from_sec(
                 txin.witness[1], netcode=self.chain.netcode)
             if key.p2sh_p2wpkh_address() == address:
@@ -271,6 +280,14 @@ class Wallet:
         return prev_txout.coin_value / Wallet.COIN
 
     def _process_history(self, history, address):
+        """
+        Creates a _History namedtuple from a given Tx object.
+
+        :param history: A Tx object given from our transaction history
+        :param address: The address of ours that is associated with the
+            given transaction
+        :returns: A new _History namedtuple for our history
+        """
         value = None
         is_spend = False
         for txout in history.txs_out:
@@ -279,9 +296,9 @@ class Wallet:
         if not value:
             is_spend = True
             value = self._get_spend_value(history, address)
-        history_tuple = self.History(tx_obj=history,
-                                     is_spend=is_spend,
-                                     value=value)
+        history_tuple = self._History(tx_obj=history,
+                                      is_spend=is_spend,
+                                      value=value)
         return history_tuple
 
     def _interpret_history(self, histories, change=False):
@@ -538,7 +555,7 @@ class Wallet:
         new_utxo = tx.tx_outs_as_spendable()[chg_vout]
         change_address = new_utxo.address(netcode=self.chain.netcode)
 
-        history = self.History(tx_obj=tx, is_spend=True, value=amount)
+        history = self._History(tx_obj=tx, is_spend=True, value=amount)
         self.history[change_address] = [history]
         self.balance -= amount
         self.utxos.append(new_utxo)
