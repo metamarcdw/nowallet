@@ -21,7 +21,7 @@ from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
 
-from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
+from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitKey, SegwitBIP32Node
 from keys import derive_key
 from scrape import scrape_onion_servers
 
@@ -107,6 +107,7 @@ class Wallet:
     """
     COIN = 100000000
     _GAP_LIMIT = 20
+    History = collections.namedtuple("History", ["tx_obj", "is_spend", "value"])
 
     def __init__(self, salt, passphrase, connection, loop, chain, account=0):
         """
@@ -227,7 +228,7 @@ class Wallet:
 
     async def _get_balance(self, address):
         """
-        Returns the current balance associated with a given adddress.
+        Returns the current balance associated with a given address.
 
         :param address: an address string to retrieve a balance for
         :returns: Future, a Decimal representing the balance
@@ -256,6 +257,33 @@ class Wallet:
             utxos.append(spendables[vout])
         return utxos
 
+    def _get_spend_value(self, post_tx, address):
+        input_ = None
+        for txin in post_tx.txs_in:
+            key = SegwitKey.from_sec(
+                txin.witness[1], netcode=self.chain.netcode)
+            if key.p2sh_p2wpkh_address() == address:
+                input_ = txin
+
+        prev_tx = self.loop.run_until_complete(
+            self._get_history([str(input_.previous_hash)])).pop()
+        prev_txout = prev_tx.txs_out[input_.previous_index]
+        return prev_txout.coin_value / Wallet.COIN
+
+    def _process_history(self, history, address):
+        value = None
+        is_spend = False
+        for txout in history.txs_out:
+            if txout.address(netcode=self.chain.netcode) == address:
+                value = txout.coin_value / Wallet.COIN
+        if not value:
+            is_spend = True
+            value = self._get_spend_value(history, address)
+        history_tuple = self.History(tx_obj=history,
+                                     is_spend=is_spend,
+                                     value=value)
+        return history_tuple
+
     def _interpret_history(self, histories, change=False):
         """
         Populates the wallet's data structures based on a list of tx histories.
@@ -274,8 +302,11 @@ class Wallet:
                 txids = [tx["tx_hash"] for tx in history]
 
                 if not change:
-                    self.history[address] = self.loop.run_until_complete(
+                    this_history = self.loop.run_until_complete(
                         self._get_history(txids))
+                    this_history = [self._process_history(hist, address)
+                        for hist in this_history]
+                    self.history[address] = this_history
                 self.balance += self.loop.run_until_complete(
                     self._get_balance(address))
                 self.utxos.extend(self.loop.run_until_complete(
@@ -303,9 +334,11 @@ class Wallet:
 
             new_history_list = await self._get_history([txid])
             new_history = new_history_list.pop()
+            new_history = self._process_history(new_history, address)
+
             if address in self.history:
-                if str(new_history) not in \
-                        [str(hist) for hist in self.history[address]]:
+                if str(new_history.tx_obj) not in \
+                        [str(hist.tx_obj) for hist in self.history[address]]:
                     self.history[address].append(new_history)
             else:
                 self.history[address] = [new_history]
@@ -505,7 +538,8 @@ class Wallet:
         new_utxo = tx.tx_outs_as_spendable()[chg_vout]
         change_address = new_utxo.address(netcode=self.chain.netcode)
 
-        self.history[change_address] = [tx]
+        history = self.History(tx_obj=tx, is_spend=True, value=amount)
+        self.history[change_address] = [history]
         self.balance -= amount
         self.utxos.append(new_utxo)
         self.new_history = True

@@ -7,6 +7,7 @@ from pycoin.tx.Tx import Tx
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
+from pycoin.key.Key import Key
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import address_for_pay_to_script
 from pycoin.encoding import hash160
@@ -63,6 +64,19 @@ class LexSpendable(Spendable):
         if self_dict["tx_hash_hex"] == other_dict["tx_hash_hex"]:
             return self_dict["tx_out_index"] < other_dict["tx_out_index"]
         return self_dict["tx_hash_hex"] < other_dict["tx_hash_hex"]
+
+class SegwitKey(Key):
+    def p2sh_p2wpkh_address(self):
+        p2aw_script = self.p2sh_p2wpkh_script()
+        return address_for_pay_to_script(p2aw_script, netcode=self.netcode())
+
+    def p2sh_p2wpkh_script_hash(self):
+        p2aw_script = self.p2sh_p2wpkh_script()
+        return hash160(p2aw_script)
+
+    def p2sh_p2wpkh_script(self):
+        hash160_c = self.hash160(use_uncompressed=False)
+        return ScriptPayToAddressWit(b'\0', hash160_c).script()
 
 class SegwitBIP32Node(BIP32Node):
     def p2sh_p2wpkh_address(self):
