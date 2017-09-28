@@ -65,13 +65,6 @@ class LexSpendable(Spendable):
             return self_dict["tx_out_index"] < other_dict["tx_out_index"]
         return self_dict["tx_hash_hex"] < other_dict["tx_hash_hex"]
 
-class SegwitKey(Key):
-    def p2sh_p2wpkh_address(self):
-        hash160_c = self.hash160(use_uncompressed=False)
-        p2aw_script = ScriptPayToAddressWit(b'\0', hash160_c).script()
-        script_hash = hash160(p2aw_script)
-        return address_for_pay_to_script(script_hash, netcode=self.netcode())
-
 class SegwitBIP32Node(BIP32Node):
     def p2sh_p2wpkh_address(self):
         p2aw_script = self.p2sh_p2wpkh_script()
@@ -84,6 +77,11 @@ class SegwitBIP32Node(BIP32Node):
     def p2sh_p2wpkh_script(self):
         hash160_c = self.hash160(use_uncompressed=False)
         return ScriptPayToAddressWit(b'\0', hash160_c).script()
+
+class SegwitKey(Key):
+    p2sh_p2wpkh_address = SegwitBIP32Node.p2sh_p2wpkh_address
+    p2sh_p2wpkh_script_hash = SegwitBIP32Node.p2sh_p2wpkh_script_hash
+    p2sh_p2wpkh_script = SegwitBIP32Node.p2sh_p2wpkh_script
 
 def main():
     svr = MyServerInfo("onion",
