@@ -114,5 +114,9 @@ def main():
     mpk = SegwitBIP32Node.from_master_secret(secret.encode("utf-8"))
     print(mpk.p2sh_p2wpkh_address())
 
+    segkey = SegwitKey(secret_exponent=mpk.secret_exponent(),
+                       netcode=mpk.netcode())
+    print(segkey.p2sh_p2wpkh_address())
+
 if __name__ == "__main__":
     main()
