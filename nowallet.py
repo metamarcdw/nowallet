@@ -445,7 +445,15 @@ class Wallet:
         weight = 3 * _base_size(tx) + _total_size(tx)
         return weight // 4
 
-    def _get_fee(self, tx):
+    def get_fee_estimation(self):
+        method = "blockchain.estimatefee"
+        coin_per_kb = self.loop.run_until_complete(
+            self.connection.listen_rpc(method, [6]))
+        if coin_per_kb < 0:
+            raise Exception("Cannot get a fee estimate")
+        return coin_per_kb
+
+    def _get_fee(self, tx, coin_per_kb):
         """
         Calculates the size of tx and gets a fee/kb estimate from the server.
 
@@ -453,11 +461,6 @@ class Wallet:
         :returns: An int representing the appropriate fee in satoshis
         """
         tx_kb_count = Wallet._calculate_vsize(tx) / 1024
-        method = "blockchain.estimatefee"
-        coin_per_kb = self.loop.run_until_complete(
-            self.connection.listen_rpc(method, [6]))
-        if coin_per_kb < 0:
-            raise Exception("Cannot get a fee estimate")
         return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
     def _mktx(self, out_addr, amount, version=1):
@@ -496,18 +499,6 @@ class Wallet:
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
 
-        redeem_scripts = dict()
-        wifs = list()
-        for change in (True, False):
-            indicies = self.change_indicies if change else self.spend_indicies
-            for i, used in enumerate(indicies):
-                key = self.get_key(i, change)
-                if used and key.p2sh_p2wpkh_address() in in_addrs:
-                    p2aw_script = key.p2sh_p2wpkh_script()
-                    script_hash = key.p2sh_p2wpkh_script_hash()
-                    redeem_scripts[script_hash] = p2aw_script
-                    wifs.append(key.wif())
-
         txs_in = [spendable.tx_in() for spendable in spendables]
         txs_out = list()
         for payable in payables:
@@ -525,19 +516,27 @@ class Wallet:
 
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
         tx.set_unspents(spendables)
+        return tx, in_addrs, chg_vout
 
-        fee = self._get_fee(tx)
-        decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
-        if not amount / Wallet.COIN + decimal_fee <= self.balance:
-            raise Exception("Insufficient funds to cover fee")
+    def _signtx(self, unsigned_tx, in_addrs, fee):
+        redeem_scripts = dict()
+        wifs = list()
+        for change in (True, False):
+            indicies = self.change_indicies if change else self.spend_indicies
+            for i, used in enumerate(indicies):
+                key = self.get_key(i, change)
+                if used and key.p2sh_p2wpkh_address() in in_addrs:
+                    p2aw_script = key.p2sh_p2wpkh_script()
+                    script_hash = key.p2sh_p2wpkh_script_hash()
+                    redeem_scripts[script_hash] = p2aw_script
+                    wifs.append(key.wif())
 
-        distribute_from_split_pool(tx, fee)
-        sign_tx(tx, wifs=wifs,
+        distribute_from_split_pool(unsigned_tx, fee)
+        sign_tx(unsigned_tx, wifs=wifs,
                 netcode=self.chain.netcode,
                 p2sh_lookup=redeem_scripts)
-        return (tx, chg_vout, fee)
 
-    def spend(self, address, amount):
+    def spend(self, address, amount, coin_per_kb):
         """
         Gets a new tx from _mktx() and sends it to the server to be broadcast,
         then inserts the new tx into our tx history and includes our change
@@ -547,7 +546,14 @@ class Wallet:
         :param amount: a Decimal amount in whole BTC
         :returns: The txid of our new tx, given after a successful broadcast
         """
-        tx, chg_vout, fee = self._mktx(address, amount)
+        tx, in_addrs, chg_vout = self._mktx(address, amount)
+
+        fee = self._get_fee(tx, coin_per_kb)
+        decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
+        if not amount / Wallet.COIN + decimal_fee <= self.balance:
+            raise Exception("Insufficient funds to cover fee")
+
+        self._signtx(tx, in_addrs, fee)
         method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
             self.connection.listen_rpc(method, [tx.as_hex()]))
@@ -563,7 +569,7 @@ class Wallet:
 
         method = "blockchain.address.subscribe"
         self.connection.listen_subscribe(method, [change_address])
-        return (txid, fee)
+        return txid, fee
 
     def __str__(self):
         """
@@ -645,7 +651,8 @@ def main():
                 "Spend address and/or amount were blank"
         assert spend_amount <= wallet.balance, "Insufficient funds"
 
-        txid, fee = wallet.spend(spend_addr, spend_amount)
+        coin_per_kb = wallet.get_fee_estimation()
+        txid, fee = wallet.spend(spend_addr, spend_amount, coin_per_kb)
         decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
         print("Added a miner fee of: {} {}".format(
             decimal_fee, chain.chain_1209k.upper()))
