@@ -446,6 +446,11 @@ class Wallet:
         return weight // 4
 
     def get_fee_estimation(self):
+        """
+        Gets a fee estimate from the server.
+
+        :returns: An int representing the appropriate fee in coins per KB
+        """
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
             self.connection.listen_rpc(method, [6]))
@@ -455,15 +460,16 @@ class Wallet:
 
     def _get_fee(self, tx, coin_per_kb):
         """
-        Calculates the size of tx and gets a fee/kb estimate from the server.
+        Calculates the size of tx based on a given estimate from the server.
 
         :param tx: a Tx object that we need to estimate a fee for
+        :param coin_per_kb: Fee estimation in whole coins per KB
         :returns: An int representing the appropriate fee in satoshis
         """
         tx_kb_count = Wallet._calculate_vsize(tx) / 1024
         return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
-    def _mktx(self, out_addr, amount, version=1):
+    def _mktx(self, out_addr, amount, version=1, rbf=False):
         """
         Builds a standard Bitcoin transaction - in the most naive way.
         Coin selection is basically random. Uses one output and one change
@@ -473,7 +479,8 @@ class Wallet:
         :param out_addr: an address to send to
         :param amount: a Decimal amount in whole BTC
         :param version: an int representing the Tx version
-        :returns: A fully formaed and signed Tx object
+        :param version: A boolean that says whether to mark Tx as replaceable
+        :returns: A not-fully-formed and unsigned Tx object
         """
         amount *= Wallet.COIN
         fee_highball = 100000
@@ -500,6 +507,11 @@ class Wallet:
         payables.append((change_addr, 0))
 
         txs_in = [spendable.tx_in() for spendable in spendables]
+        if rbf:
+            logging.info("Spending with opt-in Replace by Fee! (RBF)")
+            for txin in txs_in:
+                txin.sequence = 0
+
         txs_out = list()
         for payable in payables:
             bitcoin_address, coin_value = payable
@@ -519,6 +531,13 @@ class Wallet:
         return tx, in_addrs, chg_vout
 
     def _signtx(self, unsigned_tx, in_addrs, fee):
+        """
+        Signs Tx and redistributes outputs to include the miner fee.
+
+        :param unsigned_tx: an unsigned Tx to sign and add fee to
+        :param in_addrs: a list of our addresses that have recieved coins
+        :param fee: an int representing the desired Tx fee
+        """
         redeem_scripts = dict()
         wifs = list()
         for change in (True, False):
@@ -536,7 +555,7 @@ class Wallet:
                 netcode=self.chain.netcode,
                 p2sh_lookup=redeem_scripts)
 
-    def spend(self, address, amount, coin_per_kb):
+    def spend(self, address, amount, coin_per_kb, rbf=False):
         """
         Gets a new tx from _mktx() and sends it to the server to be broadcast,
         then inserts the new tx into our tx history and includes our change
@@ -546,7 +565,7 @@ class Wallet:
         :param amount: a Decimal amount in whole BTC
         :returns: The txid of our new tx, given after a successful broadcast
         """
-        tx, in_addrs, chg_vout = self._mktx(address, amount)
+        tx, in_addrs, chg_vout = self._mktx(address, amount, rbf=rbf)
 
         fee = self._get_fee(tx, coin_per_kb)
         decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
@@ -651,8 +670,15 @@ def main():
                 "Spend address and/or amount were blank"
         assert spend_amount <= wallet.balance, "Insufficient funds"
 
+        use_rbf = False
+        if len(sys.argv) > 2 and sys.argv[2] == "rbf":
+            use_rbf = True
         coin_per_kb = wallet.get_fee_estimation()
-        txid, fee = wallet.spend(spend_addr, spend_amount, coin_per_kb)
+        txid, fee = wallet.spend(spend_addr,
+                                 spend_amount,
+                                 coin_per_kb,
+                                 rbf=use_rbf)
+
         decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
         print("Added a miner fee of: {} {}".format(
             decimal_fee, chain.chain_1209k.upper()))
