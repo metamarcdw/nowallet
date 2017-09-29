@@ -445,6 +445,10 @@ class Wallet:
         weight = 3 * _base_size(tx) + _total_size(tx)
         return weight // 4
 
+    @staticmethod
+    def satb_to_coinkb(sat):
+        return (sat * 1024) / Wallet.COIN
+
     def get_fee_estimation(self):
         """
         Gets a fee estimate from the server.
@@ -568,7 +572,7 @@ class Wallet:
 
         fee = self._get_fee(tx, coin_per_kb)
         decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
-        if not amount / Wallet.COIN + decimal_fee <= self.balance:
+        if not amount + decimal_fee <= self.balance:
             raise Exception("Insufficient funds to cover fee")
 
         self._signtx(tx, in_addrs, fee)
