@@ -541,10 +541,9 @@ class Wallet:
         redeem_scripts = dict()
         wifs = list()
         for change in (True, False):
-            indicies = self.change_indicies if change else self.spend_indicies
-            for i, used in enumerate(indicies):
+            for i, addr in enumerate(self.get_all_known_addresses(change)):
                 key = self.get_key(i, change)
-                if used and key.p2sh_p2wpkh_address() in in_addrs:
+                if addr in in_addrs:
                     p2aw_script = key.p2sh_p2wpkh_script()
                     script_hash = key.p2sh_p2wpkh_script_hash()
                     redeem_scripts[script_hash] = p2aw_script
