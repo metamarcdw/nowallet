@@ -452,7 +452,7 @@ class Wallet:
         :param tx: a Tx object that we need to estimate a fee for
         :returns: An int representing the appropriate fee in satoshis
         """
-        tx_kb_count = self._calculate_vsize(tx) / 1024
+        tx_kb_count = Wallet._calculate_vsize(tx) / 1024
         method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
             self.connection.listen_rpc(method, [6]))
