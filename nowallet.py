@@ -109,6 +109,14 @@ class Wallet:
     _GAP_LIMIT = 20
     _History = collections.namedtuple("_History", ["tx_obj", "is_spend", "value"])
 
+    methods = {"get": "blockchain.transaction.get",
+               "get_balance": "blockchain.address.get_balance",
+               "listunspent": "blockchain.address.listunspent",
+               "get_history": "blockchain.address.get_history",
+               "subscribe": "blockchain.address.subscribe",
+               "estimatefee": "blockchain.estimatefee",
+               "broadcast": "blockchain.transaction.broadcast"}
+
     def __init__(self, salt, passphrase, connection, loop, chain, account=0):
         """
         Wallet object constructor. Use discover_keys() and listen_to_addresses()
@@ -219,10 +227,10 @@ class Wallet:
         :param txids: a list of txid strings to retrieve tx histories for
         :returns: Future, a list of Tx objects
         """
-        method = "blockchain.transaction.get"
         results = list()
         for txid in txids:
-            results.append(await self.connection.listen_rpc(method, [txid]))
+            future = self.connection.listen_rpc(self.methods["get"], [txid])
+            results.append(await future)
         txs = [Tx.from_hex(tx_hex) for tx_hex in results]
         return txs
 
@@ -233,8 +241,9 @@ class Wallet:
         :param address: an address string to retrieve a balance for
         :returns: Future, a Decimal representing the balance
         """
-        method = "blockchain.address.get_balance"
-        result = await self.connection.listen_rpc(method, [address])
+        future = self.connection.listen_rpc(
+            self.methods["get_balance"], [address])
+        result = await future
         return decimal.Decimal(str(result["confirmed"])) / Wallet.COIN
 
     async def _get_utxos(self, address):
@@ -245,14 +254,15 @@ class Wallet:
         :param address: an address string to retrieve a balance for
         :returns: Future, a Decimal representing the balance
         """
-        method = "blockchain.address.listunspent"
-        result = await self.connection.listen_rpc(method, [address])
+        future = self.connection.listen_rpc(
+            self.methods["listunspent"], [address])
+        result = await future
         utxos = list()
         for unspent in result:
-            method = "blockchain.transaction.get"
             txid = unspent["tx_hash"]
             vout = unspent["tx_pos"]
-            result = await self.connection.listen_rpc(method, [txid])
+            future = self.connection.listen_rpc(self.methods["get"], [txid])
+            result = await future
             spendables = Tx.from_hex(result).tx_outs_as_spendable()
             utxos.append(spendables[vout])
         return utxos
@@ -383,14 +393,15 @@ class Wallet:
         :param change: a boolean indicating which key index list to use
         """
         logging.info("Discovering transaction history. change=%s", change)
-        method = "blockchain.address.get_history"
         current_index = 0
         quit_flag = False
         while not quit_flag:
             futures = list()
             for i in range(current_index, current_index + Wallet._GAP_LIMIT):
                 addr = self.get_key(i, change).p2sh_p2wpkh_address()
-                futures.append(self.connection.listen_rpc(method, [addr]))
+                future = self.connection.listen_rpc(
+                    self.methods["get_history"], [addr])
+                futures.append(future)
 
             result = self.loop.run_until_complete(asyncio.gather(*futures))
             quit_flag = self._interpret_history(result, change)
@@ -403,10 +414,9 @@ class Wallet:
         begins consuming the queue so we can recieve new tx histories from
         the server asynchronously.
         """
-        method = "blockchain.address.subscribe"
         addrs = self.get_all_known_addresses()
         for addr in addrs:
-            self.connection.listen_subscribe(method, [addr])
+            self.connection.listen_subscribe(self.methods["subscribe"], [addr])
 
         await self.connection.consume_queue(self._dispatch_result)
 
@@ -419,8 +429,8 @@ class Wallet:
         :param result: an address that has some new tx history
         """
         addr = result[0]
-        method = "blockchain.address.get_history"
-        history = await self.connection.listen_rpc(method, [addr])
+        future = self.connection.listen_rpc(self.methods["get_history"], [addr])
+        history = await future
         empty_flag = await self._interpret_new_history(addr, history[0])
         if not empty_flag:
             self.new_history = True
@@ -455,9 +465,8 @@ class Wallet:
 
         :returns: An int representing the appropriate fee in coins per KB
         """
-        method = "blockchain.estimatefee"
         coin_per_kb = self.loop.run_until_complete(
-            self.connection.listen_rpc(method, [6]))
+            self.connection.listen_rpc(self.methods["estimatefee"], [6]))
         if coin_per_kb < 0:
             raise Exception("Cannot get a fee estimate")
         return coin_per_kb
@@ -576,9 +585,9 @@ class Wallet:
             raise Exception("Insufficient funds to cover fee")
 
         self._signtx(tx, in_addrs, fee)
-        method = "blockchain.transaction.broadcast"
         txid = self.loop.run_until_complete(
-            self.connection.listen_rpc(method, [tx.as_hex()]))
+            self.connection.listen_rpc(
+                self.methods["broadcast"], [tx.as_hex()]))
 
         new_utxo = tx.tx_outs_as_spendable()[chg_vout]
         change_address = new_utxo.address(netcode=self.chain.netcode)
@@ -589,8 +598,8 @@ class Wallet:
         self.utxos.append(new_utxo)
         self.new_history = True
 
-        method = "blockchain.address.subscribe"
-        self.connection.listen_subscribe(method, [change_address])
+        self.connection.listen_subscribe(
+            self.methods["subscribe"], [change_address])
         return txid, fee
 
     def __str__(self):
