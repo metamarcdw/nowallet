@@ -457,7 +457,11 @@ class Wallet:
 
     @staticmethod
     def satb_to_coinkb(sat):
-        return (sat * 1024) / Wallet.COIN
+        return (sat * 1000) / Wallet.COIN
+
+    @staticmethod
+    def coinkb_to_satb(coin):
+        return (coin / 1000) * Wallet.COIN
 
     def get_fee_estimation(self):
         """
