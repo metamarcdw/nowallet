@@ -456,12 +456,24 @@ class Wallet:
         return weight // 4
 
     @staticmethod
-    def satb_to_coinkb(sat):
-        return (sat * 1000) / Wallet.COIN
+    def satb_to_coinkb(satb):
+        """
+        Converts a fee rate from satoshis per byte to coins per KB.
+
+        :param satb: An int representing a fee rate in satoshis per byte
+        :returns: An float representing the rate in coins per KB
+        """
+        return (satb * 1000) / Wallet.COIN
 
     @staticmethod
-    def coinkb_to_satb(coin):
-        return (coin / 1000) * Wallet.COIN
+    def coinkb_to_satb(coinkb):
+        """
+        Converts a fee rate from coins per KB to satoshis per byte.
+
+        :param coinkb: A float representing a fee rate in coins per KB
+        :returns: An int representing the rate in satoshis per byte
+        """
+        return int((coinkb / 1000) * Wallet.COIN)
 
     def get_fee_estimation(self):
         """
@@ -496,7 +508,7 @@ class Wallet:
         :param out_addr: an address to send to
         :param amount: a Decimal amount in whole BTC
         :param version: an int representing the Tx version
-        :param version: A boolean that says whether to mark Tx as replaceable
+        :param rbf: A boolean that says whether to mark Tx as replaceable
         :returns: A not-fully-formed and unsigned Tx object
         """
         amount *= Wallet.COIN
@@ -579,6 +591,8 @@ class Wallet:
 
         :param address: an address to send to
         :param amount: a Decimal amount in whole BTC
+        :param coin_per_kb: a fee rate given in whole coins per KB
+        :param rbf: a boolean saying whether to mark the tx as replaceable
         :returns: The txid of our new tx, given after a successful broadcast
         """
         tx, in_addrs, chg_vout = self._mktx(address, amount, rbf=rbf)
@@ -604,7 +618,7 @@ class Wallet:
 
         self.connection.listen_subscribe(
             self.methods["subscribe"], [change_address])
-        return txid, fee
+        return txid, decimal_fee
 
     def __str__(self):
         """
@@ -690,12 +704,11 @@ def main():
         if len(sys.argv) > 2 and sys.argv[2] == "rbf":
             use_rbf = True
         coin_per_kb = wallet.get_fee_estimation()
-        txid, fee = wallet.spend(spend_addr,
-                                 spend_amount,
-                                 coin_per_kb,
-                                 rbf=use_rbf)
+        txid, decimal_fee = wallet.spend(spend_addr,
+                                         spend_amount,
+                                         coin_per_kb,
+                                         rbf=use_rbf)
 
-        decimal_fee = decimal.Decimal(str(fee)) / Wallet.COIN
         print("Added a miner fee of: {} {}".format(
             decimal_fee, chain.chain_1209k.upper()))
         print("Transaction sent!\nID: {}".format(txid))
