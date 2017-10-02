@@ -10,6 +10,7 @@ from kivy.core.window import Window
 Window.size = (350, 600)
 
 Builder.load_string("""
+#:import Factory kivy.factory.Factory
 #:import QRCodeWidget kivy.garden.qrcode
 # import ZbarQrcodeDetector android-zbar-qrcode.main
 
@@ -26,13 +27,6 @@ Builder.load_string("""
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
-                ActionButton:
-                    Image:
-                        source: 'icons/settings.png'
-                        y: self.parent.y + 5
-                        x: self.parent.x + 5
-                        width: self.parent.width - 10
-                        height: self.parent.height - 10
         BoxLayout:
             size_hint: 1, 0.15
             TextInput:
@@ -91,13 +85,6 @@ Builder.load_string("""
                     title: "NOWALLET"
                     with_previous: False
                 ActionOverflow:
-                ActionButton:
-                    Image:
-                        source: 'icons/settings.png'
-                        y: self.parent.y + 5
-                        x: self.parent.x + 5
-                        width: self.parent.width - 10
-                        height: self.parent.height - 10
         BoxLayout:
             size_hint: 1, 0.15
             TextInput:
@@ -133,6 +120,49 @@ Builder.load_string("""
             text: "Loading..."
         Label:
 
+<XPUBScreen>:
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            font_size: "23sp"
+            size_hint: 1, 0.2
+            text: "Your eXtended PUBlic key:"
+        AnchorLayout:
+            QRCodeWidget:
+                size_hint: 0.8, 0.65
+                show_border: False
+                data: "xpub039jf20fj01ijf38fj429hf3i4fb29yehf2748fh4ghg98jfi0j204f"
+        Button:
+            size_hint: 1, 0.15
+            text: "Back"
+            on_press: root.manager.current = "main"
+
+<MyPopup@Popup>:
+    title: "Menu"
+    auto_dismiss: False
+    BoxLayout:
+        orientation: "vertical"
+        Button:
+            text: "View XPUB"
+            size_hint: 1, 0.2
+            on_release: app.sm.current = "xpub"
+            on_release: root.dismiss()
+        Button:
+            text: "Send coins"
+            size_hint: 1, 0.2
+            on_release: app.sm.current = "send"
+            on_release: root.dismiss()
+        Button:
+            text: "Recieve coins"
+            size_hint: 1, 0.2
+            on_release: app.sm.current = "recieve"
+            on_release: root.dismiss()
+        Button:
+            text: "Close"
+            size_hint: 1, 0.2
+            on_release: root.dismiss()
+        Label:
+
 <MainScreen>:
     BoxLayout:
         orientation: "vertical"
@@ -144,14 +174,15 @@ Builder.load_string("""
                     app_icon: "icons/brain.png"
                     title: "NOWALLET"
                     with_previous: False
-                ActionOverflow:
                 ActionButton:
+                    on_release: Factory.MyPopup().open()
                     Image:
                         source: 'icons/settings.png'
                         y: self.parent.y + 5
                         x: self.parent.x + 5
                         width: self.parent.width - 10
                         height: self.parent.height - 10
+                ActionOverflow:
         Label:
             size_hint: 1, 0.3
             font_size: "30sp"
@@ -195,13 +226,6 @@ Builder.load_string("""
                 title: "NOWALLET"
                 with_previous: False
             ActionOverflow:
-            ActionButton:
-                Image:
-                    source: 'icons/settings.png'
-                    y: self.parent.y + 5
-                    x: self.parent.x + 5
-                    width: self.parent.width - 10
-                    height: self.parent.height - 10
     AnchorLayout:
         BoxLayout:
             size_hint: 0.8, 0.5
@@ -250,6 +274,9 @@ class SendScreen(Screen):
 class WaitScreen(Screen):
     pass
 
+class XPUBScreen(Screen):
+    pass
+
 # Create the screen manager
 transition = SlideTransition(direction="up")
 sm = ScreenManager(transition=transition)
@@ -258,11 +285,15 @@ sm.add_widget(MainScreen(name="main"))
 sm.add_widget(RecieveScreen(name="recieve"))
 sm.add_widget(SendScreen(name="send"))
 sm.add_widget(WaitScreen(name="wait"))
+sm.add_widget(XPUBScreen(name="xpub"))
 
 class NowalletApp(App):
+    def __init__(self):
+        self.sm = sm
+        super().__init__()
 
     def build(self):
-        return sm
+        return self.sm
 
 if __name__ == "__main__":
     NowalletApp().run()
