@@ -319,6 +319,18 @@ class Wallet:
                                       height=height)
         return history_tuple
 
+    def _affect_balance(self, hist_tuple):
+        if hist_tuple.is_spend:
+            if hist_tuple.height == 0:
+                self.zeroconf_balance -= hist_tuple.value
+            else:
+                self.balance -= hist_tuple.value
+        else:
+            if hist_tuple.height == 0:
+                self.zeroconf_balance += hist_tuple.value
+            else:
+                self.balance += hist_tuple.value
+
     def _interpret_history(self, histories, change=False):
         """
         Populates the wallet's data structures based on a list of tx histories.
@@ -384,19 +396,10 @@ class Wallet:
                 if str(new_history.tx_obj) not in \
                         [str(hist.tx_obj) for hist in self.history[address]]:
                     self.history[address].append(new_history)
+                    self._affect_balance(new_history)
             else:
                 self.history[address] = [new_history]
-
-            if new_history.is_spend:
-                if new_history.height == 0:
-                    self.zeroconf_balance -= new_history.value
-                else:
-                    self.balance -= new_history.value
-            else:
-                if new_history.height == 0:
-                    self.zeroconf_balance += new_history.value
-                else:
-                    self.balance += new_history.value
+                self._affect_balance(new_history)
 
             new_utxos = await self._get_utxos(address)
             for utxo in new_utxos:
