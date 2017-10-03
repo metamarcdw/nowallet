@@ -107,9 +107,13 @@ class Wallet:
     """
     COIN = 100000000
     _GAP_LIMIT = 20
-    _History = collections.namedtuple("_History", ["tx_obj", "is_spend", "value"])
+    _History = collections.namedtuple("_History", ["tx_obj",
+                                                   "is_spend",
+                                                   "value",
+                                                   "height"])
 
-    methods = {"get": "blockchain.transaction.get",
+    methods = {"numblocks": "blockchain.numblocks.subscribe",
+               "get": "blockchain.transaction.get",
                "get_balance": "blockchain.address.get_balance",
                "listunspent": "blockchain.address.listunspent",
                "get_history": "blockchain.address.get_history",
@@ -161,6 +165,7 @@ class Wallet:
         self.spent_utxos = list()
         self.history = dict()
         self.balance = decimal.Decimal("0")
+        self.zeroconf_balance = decimal.Decimal("0")
         self.new_history = False
 
     def get_xpub(self):
@@ -244,7 +249,9 @@ class Wallet:
         future = self.connection.listen_rpc(
             self.methods["get_balance"], [address])
         result = await future
-        return decimal.Decimal(str(result["confirmed"])) / Wallet.COIN
+        confirmed = decimal.Decimal(str(result["confirmed"])) / Wallet.COIN
+        zeroconf = decimal.Decimal(str(result["unconfirmed"])) / Wallet.COIN
+        return confirmed, zeroconf
 
     async def _get_utxos(self, address):
         """
@@ -289,7 +296,7 @@ class Wallet:
         prev_txout = prev_tx.txs_out[input_.previous_index]
         return prev_txout.coin_value / Wallet.COIN
 
-    def _process_history(self, history, address):
+    def _process_history(self, history, address, height):
         """
         Creates a _History namedtuple from a given Tx object.
 
@@ -308,7 +315,8 @@ class Wallet:
             value = self._get_spend_value(history, address)
         history_tuple = self._History(tx_obj=history,
                                       is_spend=is_spend,
-                                      value=value)
+                                      value=value,
+                                      height=height)
         return history_tuple
 
     def _interpret_history(self, histories, change=False):
@@ -327,15 +335,23 @@ class Wallet:
                 key = self.get_key(len(indicies), change)
                 address = key.p2sh_p2wpkh_address()
                 txids = [tx["tx_hash"] for tx in history]
+                heights = [tx["height"] for tx in history]
 
                 if not change:
                     this_history = self.loop.run_until_complete(
                         self._get_history(txids))
-                    this_history = [self._process_history(hist, address)
-                        for hist in this_history]
-                    self.history[address] = this_history
-                self.balance += self.loop.run_until_complete(
+
+                    processed_history = list()
+                    for i, hist in enumerate(this_history):
+                        tuple = self._process_history(hist, address, heights[i])
+                        processed_history.append(tuple)
+                    self.history[address] = processed_history
+
+                confirmed, zeroconf = self.loop.run_until_complete(
                     self._get_balance(address))
+                self.balance += confirmed
+                self.zeroconf_balance += zeroconf
+
                 self.utxos.extend(self.loop.run_until_complete(
                     self._get_utxos(address)))
 
@@ -358,10 +374,11 @@ class Wallet:
         is_empty = True
         if history:
             txid = history["tx_hash"]
+            height = history["height"]
 
             new_history_list = await self._get_history([txid])
             new_history = new_history_list.pop()
-            new_history = self._process_history(new_history, address)
+            new_history = self._process_history(new_history, address, height)
 
             if address in self.history:
                 if str(new_history.tx_obj) not in \
@@ -370,11 +387,21 @@ class Wallet:
             else:
                 self.history[address] = [new_history]
 
+            if new_history.is_spend:
+                if new_history.height == 0:
+                    self.zeroconf_balance -= new_history.value
+                else:
+                    self.balance -= new_history.value
+            else:
+                if new_history.height == 0:
+                    self.zeroconf_balance += new_history.value
+                else:
+                    self.balance += new_history.value
+
             new_utxos = await self._get_utxos(address)
             for utxo in new_utxos:
                 if str(utxo) not in [str(spent) for spent in self.spent_utxos]:
                     self.utxos.append(utxo)
-                    self.balance += await self._get_balance(address)
 
             for i in range(len(self.spend_indicies)):
                 key = self.get_key(i, change=False)
@@ -612,7 +639,6 @@ class Wallet:
 
         history = self._History(tx_obj=tx, is_spend=True, value=amount)
         self.history[change_address] = [history]
-        self.balance -= amount
         self.utxos.append(new_utxo)
         self.new_history = True
 
@@ -633,8 +659,9 @@ class Wallet:
             pprinter.pformat(self.history)))
         str_.append("\nUTXOS:\n{}".format(
             pprinter.pformat(self.utxos)))
-        str_.append("\nBalance: {} {}".format(
-            self.balance, self.chain.chain_1209k.upper()))
+        str_.append("\nBalance: {} ({} unconfirmed) {}".format(
+            self.balance, self.zeroconf_balance,
+            self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
             self.get_next_unused_key().p2sh_p2wpkh_address()))
         return "".join(str_)
