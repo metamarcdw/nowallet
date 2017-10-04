@@ -274,27 +274,22 @@ class Wallet:
             utxos.append(spendables[vout])
         return utxos
 
-    def _get_spend_value(self, this_tx, address):
+    def _get_spend_value(self, this_tx):
         """
-        Finds the value of the txin/txout in the given Tx object that is
-            associated with our address.
+        Finds the value of the txout in the given Tx object that is
+            associated with our spend.
 
         :param this_tx: A Tx object given from our transaction history
-        :param address: The address of ours that is associated with the
-            given transaction
-        :returns: The coin value associated with our input/output.
+        :returns: The coin value associated with our spend output.
         """
-        input_ = None
-        for txin in this_tx.txs_in:
-            key = SegwitKey.from_sec(
-                txin.witness[1], netcode=self.chain.netcode)
-            if key.p2sh_p2wpkh_address() == address:
-                input_ = txin
-
-        prev_tx = self.loop.run_until_complete(
-            self._get_history([str(input_.previous_hash)])).pop()
-        prev_txout = prev_tx.txs_out[input_.previous_index]
-        return prev_txout.coin_value / Wallet.COIN
+        change_addrs = self.get_all_known_addresses(change=True)
+        chg_vout = None
+        for i, txout in enumerate(this_tx.txs_out):
+            address = txout.address(netcode=self.chain.netcode)
+            if address in change_addrs:
+                chg_vout = i
+        spend_vout = 0 if chg_vout == 1 else 1
+        return this_tx.txs_out[spend_vout].coin_value
 
     def _process_history(self, history, address, height):
         """
@@ -309,17 +304,24 @@ class Wallet:
         is_spend = False
         for txout in history.txs_out:
             if txout.address(netcode=self.chain.netcode) == address:
-                value = txout.coin_value / Wallet.COIN
+                value = txout.coin_value
         if not value:
             is_spend = True
-            value = self._get_spend_value(history, address)
+            value = self._get_spend_value(history)
+
+        decimal_value = decimal.Decimal(str(value)) / Wallet.COIN
         history_tuple = self._History(tx_obj=history,
                                       is_spend=is_spend,
-                                      value=value,
+                                      value=decimal_value,
                                       height=height)
         return history_tuple
 
     def _affect_balance(self, hist_tuple):
+        """
+        Properly affect our balances when new history is recieved.
+
+        :param hist_tuple: A _History tuple given for our new history
+        """
         if hist_tuple.is_spend:
             if hist_tuple.height == 0:
                 self.zeroconf_balance -= hist_tuple.value
@@ -397,6 +399,9 @@ class Wallet:
                         [str(hist.tx_obj) for hist in self.history[address]]:
                     self.history[address].append(new_history)
                     self._affect_balance(new_history)
+                else:
+                    self.balance += new_history.value
+                    self.zeroconf_balance -= new_history.value
             else:
                 self.history[address] = [new_history]
                 self._affect_balance(new_history)
@@ -640,7 +645,11 @@ class Wallet:
         new_utxo = tx.tx_outs_as_spendable()[chg_vout]
         change_address = new_utxo.address(netcode=self.chain.netcode)
 
-        history = self._History(tx_obj=tx, is_spend=True, value=amount)
+        history = self._History(tx_obj=tx,
+                                is_spend=True,
+                                value=amount,
+                                height=0)
+
         self.history[change_address] = [history]
         self.utxos.append(new_utxo)
         self.new_history = True
@@ -719,8 +728,8 @@ def main():
     wallet.discover_keys()
     wallet.discover_keys(change=True)
 
-    if len(sys.argv) > 1 and sys.argv[1] == "spend":
-        print("\nBalance: {} {}".format(
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "spend":
+        print("\nConfirmed balance: {} {}".format(
             wallet.balance, chain.chain_1209k.upper()))
         print("Enter a destination address:")
         spend_addr = input("> ")
@@ -731,9 +740,10 @@ def main():
         assert spend_amount <= wallet.balance, "Insufficient funds"
 
         use_rbf = False
-        if len(sys.argv) > 2 and sys.argv[2] == "rbf":
+        if len(sys.argv) > 2 and sys.argv[2].lower() == "rbf":
             use_rbf = True
         coin_per_kb = wallet.get_fee_estimation()
+
         txid, decimal_fee = wallet.spend(spend_addr,
                                          spend_amount,
                                          coin_per_kb,
