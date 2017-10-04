@@ -78,11 +78,6 @@ class SegwitBIP32Node(BIP32Node):
         hash160_c = self.hash160(use_uncompressed=False)
         return ScriptPayToAddressWit(b'\0', hash160_c).script()
 
-class SegwitKey(Key):
-    p2sh_p2wpkh_address = SegwitBIP32Node.p2sh_p2wpkh_address
-    p2sh_p2wpkh_script_hash = SegwitBIP32Node.p2sh_p2wpkh_script_hash
-    p2sh_p2wpkh_script = SegwitBIP32Node.p2sh_p2wpkh_script
-
 def main():
     svr = MyServerInfo("onion",
                        hostname="fdkhv2bb7hqel2e7.onion",
@@ -111,10 +106,6 @@ def main():
     secret = "CORRECT HORSE BATTERY STAPLE"
     mpk = SegwitBIP32Node.from_master_secret(secret.encode("utf-8"))
     print(mpk.p2sh_p2wpkh_address())
-
-    segkey = SegwitKey(secret_exponent=mpk.secret_exponent(),
-                       netcode=mpk.netcode())
-    print(segkey.p2sh_p2wpkh_address())
 
 if __name__ == "__main__":
     main()
