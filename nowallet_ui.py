@@ -63,7 +63,11 @@ Builder.load_string("""
                 background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             ToggleButton:
-                text: "Customize Fee"
+                size_hint: 0.5, 1
+                text: "Custom Fee"
+            ToggleButton:
+                size_hint: 0.5, 1
+                text: "Use RBF"
 #        ZbarQrcodeDetector:
         Label:
             text: ""
