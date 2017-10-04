@@ -351,14 +351,23 @@ class Wallet:
                 txids = [tx["tx_hash"] for tx in history]
                 heights = [tx["height"] for tx in history]
 
-                if not change:
-                    this_history = self.loop.run_until_complete(
-                        self._get_history(txids))
+                this_history = self.loop.run_until_complete(
+                    self._get_history(txids))
 
-                    processed_history = list()
-                    for i, hist in enumerate(this_history):
-                        tuple = self._process_history(hist, address, heights[i])
-                        processed_history.append(tuple)
+                processed_history = list()
+                for i, hist in enumerate(this_history):
+                    tuple = self._process_history(hist, address, heights[i])
+                    processed_history.append(tuple)
+
+                if change:
+                    del_indexes = list()
+                    for i, hist in enumerate(processed_history):
+                        if not hist.is_spend:
+                            del_indexes.append(i)
+                    processed_history = [hist for i, hist
+                                         in enumerate(processed_history)
+                                         if i not in del_indexes]
+                if processed_history:
                     self.history[address] = processed_history
 
                 confirmed, zeroconf = self.loop.run_until_complete(
