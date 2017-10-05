@@ -21,7 +21,7 @@ from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
 
-from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitKey, SegwitBIP32Node
+from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
 from keys import derive_key
 from scrape import scrape_onion_servers
 
