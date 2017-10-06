@@ -316,23 +316,6 @@ class Wallet:
                                       height=height)
         return history_tuple
 
-    def _affect_balance(self, hist_tuple):
-        """
-        Properly affect our balances when new history is recieved.
-
-        :param hist_tuple: A _History tuple given for our new history
-        """
-        if hist_tuple.is_spend:
-            if hist_tuple.height == 0:
-                self.zeroconf_balance -= hist_tuple.value
-            else:
-                self.balance -= hist_tuple.value
-        else:
-            if hist_tuple.height == 0:
-                self.zeroconf_balance += hist_tuple.value
-            else:
-                self.balance += hist_tuple.value
-
     def _interpret_history(self, histories, change=False):
         """
         Populates the wallet's data structures based on a list of tx histories.
@@ -407,13 +390,16 @@ class Wallet:
                 if str(new_history.tx_obj) not in \
                         [str(hist.tx_obj) for hist in self.history[address]]:
                     self.history[address].append(new_history)
-                    self._affect_balance(new_history)
                 else:
-                    self.balance += new_history.value
-                    self.zeroconf_balance -= new_history.value
+                    # recieved tx confirming
+                    if not new_history.is_spend:
+                        self.balance += new_history.value
+                        self.zeroconf_balance -= new_history.value
             else:
+                # recieving coins
                 self.history[address] = [new_history]
-                self._affect_balance(new_history)
+                if not new_history.is_spend:
+                    self.zeroconf_balance += new_history.value
 
             new_utxos = await self._get_utxos(address)
             for utxo in new_utxos:
@@ -651,18 +637,11 @@ class Wallet:
             self.connection.listen_rpc(
                 self.methods["broadcast"], [tx.as_hex()]))
 
-        new_utxo = tx.tx_outs_as_spendable()[chg_vout]
-        change_address = new_utxo.address(netcode=self.chain.netcode)
-
-        history = self._History(tx_obj=tx,
-                                is_spend=True,
-                                value=amount,
-                                height=0)
-
-        self.history[change_address] = [history]
-        self.utxos.append(new_utxo)
+        self.balance -= (amount + decimal_fee)
         self.new_history = True
 
+        change_out = tx.txs_out[chg_vout]
+        change_address = change_out.address(netcode=self.chain.netcode)
         self.connection.listen_subscribe(
             self.methods["subscribe"], [change_address])
         return txid, decimal_fee
