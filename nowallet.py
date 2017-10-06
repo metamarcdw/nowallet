@@ -539,7 +539,7 @@ class Wallet:
         :param coin_per_kb: Fee estimation in whole coins per KB
         :returns: An int representing the appropriate fee in satoshis
         """
-        tx_kb_count = Wallet._calculate_vsize(tx) / 1024
+        tx_kb_count = Wallet._calculate_vsize(tx) / 1000
         return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
     def _mktx(self, out_addr, amount, version=1, rbf=False):
