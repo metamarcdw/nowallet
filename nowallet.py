@@ -379,6 +379,7 @@ class Wallet:
         """
         is_empty = True
         if history:
+            spend_addrs = self.get_all_known_addresses()
             txid = history["tx_hash"]
             height = history["height"]
 
@@ -391,14 +392,14 @@ class Wallet:
                         [str(hist.tx_obj) for hist in self.history[address]]:
                     self.history[address].append(new_history)
                 else:
-                    # recieved tx confirming
+                    # tx confirming
                     if not new_history.is_spend:
                         self.balance += new_history.value
                         self.zeroconf_balance -= new_history.value
             else:
                 # recieving coins
                 self.history[address] = [new_history]
-                if not new_history.is_spend:
+                if not new_history.is_spend and address in spend_addrs:
                     self.zeroconf_balance += new_history.value
 
             new_utxos = await self._get_utxos(address)
@@ -637,7 +638,12 @@ class Wallet:
             self.connection.listen_rpc(
                 self.methods["broadcast"], [tx.as_hex()]))
 
-        self.balance -= (amount + decimal_fee)
+        coin_in = decimal.Decimal(str(tx.total_in())) / Wallet.COIN
+        change = decimal.Decimal(str(
+            tx.txs_out[chg_vout].coin_value)) / Wallet.COIN
+
+        self.balance -= coin_in
+        self.zeroconf_balance += change
         self.new_history = True
 
         change_out = tx.txs_out[chg_vout]
@@ -660,7 +666,7 @@ class Wallet:
         str_.append("\nUTXOS:\n{}".format(
             pprinter.pformat(self.utxos)))
         str_.append("\nBalance: {} ({} unconfirmed) {}".format(
-            self.balance, self.zeroconf_balance,
+            float(self.balance), float(self.zeroconf_balance),
             self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
             self.get_next_unused_key().p2sh_p2wpkh_address()))
