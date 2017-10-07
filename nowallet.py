@@ -439,6 +439,13 @@ class Wallet:
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
 
+    def discover_all_keys(self):
+        """
+        Calls discover_keys for change and spend keys.
+        """
+        for change in (False, True):
+            self.discover_keys(change=change)
+
     async def listen_to_addresses(self):
         """
         Coroutine, adds all known addresses to the subscription queue, and
@@ -718,9 +725,7 @@ def main():
     assert passphrase == confirm, "Passphrase and confirmation did not match"
     assert email and passphrase, "Email and/or passphrase were blank"
     wallet = Wallet(email, passphrase, connection, loop, chain)
-
-    wallet.discover_keys()
-    wallet.discover_keys(change=True)
+    wallet.discover_all_keys()
 
     if len(sys.argv) > 1 and sys.argv[1].lower() == "spend":
         print("\nConfirmed balance: {} {}".format(
