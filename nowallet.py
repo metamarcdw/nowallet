@@ -99,6 +99,12 @@ BTC = Chain(netcode="BTC",
 TBTC = Chain(netcode="XTN",
              chain_1209k="tbtc",
              bip44=1)
+LTC = Chain(netcode="LTC",
+            chain_1209k="ltc",
+            bip44=2)
+#VTC = Chain(netcode="VTC",
+#            chain_1209k="vtc",
+#            bip44=28)
 
 class Wallet:
     """
@@ -727,6 +733,13 @@ def main():
     Builds a wallet object, discovers keys and listens to addresses.
     Also handles all user IO with help from the print_loop() coroutine function.
     """
+#    from pycoin.networks.network import Network
+#    from pycoin.networks import register_network
+#    vtc_net = Network('VTC', 'Vertcoin', 'mainnet',
+#        wif=b'\x80', address=b'\x47', pay_to_script=b'\x05', 
+#        prv32=b'\x04358394', pub32=b'\x043587cf')
+#    register_network(vtc_net)
+
     chain = TBTC
     loop = asyncio.get_event_loop()
 
