@@ -110,13 +110,14 @@ class Wallet:
     _History = collections.namedtuple("_History", ["tx_obj",
                                                    "is_spend",
                                                    "value",
-                                                   "height"])
+                                                   "height",
+                                                   "timestamp"])
 
-    methods = {"numblocks": "blockchain.numblocks.subscribe",
-               "get": "blockchain.transaction.get",
+    methods = {"get": "blockchain.transaction.get",
                "get_balance": "blockchain.address.get_balance",
                "listunspent": "blockchain.address.listunspent",
                "get_history": "blockchain.address.get_history",
+               "get_header": "blockchain.block.get_header",
                "subscribe": "blockchain.address.subscribe",
                "estimatefee": "blockchain.estimatefee",
                "broadcast": "blockchain.transaction.broadcast"}
@@ -291,7 +292,7 @@ class Wallet:
         spend_vout = 0 if chg_vout == 1 else 1
         return this_tx.txs_out[spend_vout].coin_value
 
-    def _process_history(self, history, address, height):
+    async def _process_history(self, history, address, height):
         """
         Creates a _History namedtuple from a given Tx object.
 
@@ -309,11 +310,19 @@ class Wallet:
             is_spend = True
             value = self._get_spend_value(history)
 
+        if height:
+            block_header = await self.connection.listen_rpc(
+                self.methods["get_header"], [height])
+            timestamp = time.asctime(time.localtime(block_header["timestamp"]))
+        else:
+            timestamp = time.asctime(time.localtime())
+
         decimal_value = decimal.Decimal(str(value)) / Wallet.COIN
         history_tuple = self._History(tx_obj=history,
                                       is_spend=is_spend,
                                       value=decimal_value,
-                                      height=height)
+                                      height=height,
+                                      timestamp=timestamp)
         return history_tuple
 
     def _interpret_history(self, histories, change=False):
@@ -337,10 +346,12 @@ class Wallet:
                 this_history = self.loop.run_until_complete(
                     self._get_history(txids))
 
-                processed_history = list()
+                futures = list()
                 for i, hist in enumerate(this_history):
-                    tuple = self._process_history(hist, address, heights[i])
-                    processed_history.append(tuple)
+                    future = self._process_history(hist, address, heights[i])
+                    futures.append(future)
+                processed_history = self.loop.run_until_complete(
+                    asyncio.gather(*futures))
 
                 if change:
                     del_indexes = list()
@@ -383,9 +394,9 @@ class Wallet:
             txid = history["tx_hash"]
             height = history["height"]
 
-            new_history_list = await self._get_history([txid])
-            new_history = new_history_list.pop()
-            new_history = self._process_history(new_history, address, height)
+            tx_list = await self._get_history([txid])
+            new_history = self.loop._run_until_complete(
+                self._process_history(tx_list.pop(), address, height))
 
             if address in self.history:
                 if str(new_history.tx_obj) not in \
@@ -415,7 +426,7 @@ class Wallet:
             is_empty = False
         return is_empty
 
-    def discover_keys(self, change=False):
+    def _discover_keys(self, change=False):
         """
         Iterates through key indicies (_GAP_LIMIT) at a time and retrieves tx
         histories from the server, then populates our data structures using
@@ -443,8 +454,12 @@ class Wallet:
         """
         Calls discover_keys for change and spend keys.
         """
+        start_discovering = time.time()
         for change in (False, True):
-            self.discover_keys(change=change)
+            self._discover_keys(change=change)
+        end_discovering = time.time()
+        seconds = end_discovering - start_discovering
+        logging.info("Keys derived in {0:.3f} seconds".format(seconds))
 
     async def listen_to_addresses(self):
         """
