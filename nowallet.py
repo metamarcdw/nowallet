@@ -666,15 +666,14 @@ class Wallet:
             self.connection.listen_rpc(
                 self.methods["broadcast"], [tx.as_hex()]))
 
+        change_out = tx.txs_out[chg_vout]
         coin_in = decimal.Decimal(str(tx.total_in())) / Wallet.COIN
-        change = decimal.Decimal(str(
-            tx.txs_out[chg_vout].coin_value)) / Wallet.COIN
+        change = decimal.Decimal(str(change_out.coin_value)) / Wallet.COIN
 
         self.balance -= coin_in
         self.zeroconf_balance += change
         self.new_history = True
 
-        change_out = tx.txs_out[chg_vout]
         change_address = change_out.address(netcode=self.chain.netcode)
         self.connection.listen_subscribe(
             self.methods["subscribe"], [change_address])
