@@ -712,8 +712,7 @@ def get_random_onion(loop, chain):
         scrape_onion_servers(chain_1209k=chain.chain_1209k))
     if not servers:
         raise Exception("No electrum servers found!")
-    random.shuffle(servers)
-    return servers.pop()
+    return random.choice(servers)
 
 async def print_loop(wallet):
     """
