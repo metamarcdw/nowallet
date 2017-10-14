@@ -233,7 +233,7 @@ class Wallet:
 
     async def _get_history(self, txids):
         """
-        Returns a list of pycoin.tx.Tx objects associated
+        Coroutine. Returns a list of pycoin.tx.Tx objects associated
                     with the given txids
 
         :param txids: a list of txid strings to retrieve tx histories for
@@ -248,7 +248,7 @@ class Wallet:
 
     async def _get_balance(self, address):
         """
-        Returns the current balance associated with a given address.
+        Coroutine. Returns the current balance associated with a given address.
 
         :param address: an address string to retrieve a balance for
         :returns: Future, a Decimal representing the balance
@@ -262,11 +262,11 @@ class Wallet:
 
     async def _get_utxos(self, address):
         """
-        Returns a list of pycoin.tx.Spendable objects for all
+        Coroutine. Returns a list of pycoin.tx.Spendable objects for all
         UTXOS associated with the given address
 
         :param address: an address string to retrieve a balance for
-        :returns: Future, a Decimal representing the balance
+        :returns: Future, a list of pycoin Spendable objects.
         """
         future = self.connection.listen_rpc(
             self.methods["listunspent"], [address])
@@ -300,7 +300,7 @@ class Wallet:
 
     async def _process_history(self, history, address, height):
         """
-        Creates a _History namedtuple from a given Tx object.
+        Coroutine. Creates a _History namedtuple from a given Tx object.
 
         :param history: A Tx object given from our transaction history
         :param address: The address of ours that is associated with the
