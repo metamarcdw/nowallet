@@ -1,14 +1,14 @@
 #! /usr/bin/env python3
 
 import logging, sys
-format_ = "%(asctime)s %(levelname)s: %(message)s"
+FORMAT = "%(asctime)s %(levelname)s: %(message)s"
 
 stdout_hdlr = logging.StreamHandler(sys.stdout)
-stdout_hdlr.setFormatter(logging.Formatter(format_))
+stdout_hdlr.setFormatter(logging.Formatter(FORMAT))
 stdout_hdlr.setLevel(logging.INFO)
 
 file_hdlr = logging.FileHandler(filename="nowallet.log", mode="w")
-file_hdlr.setFormatter(logging.Formatter(format_))
+file_hdlr.setFormatter(logging.Formatter(FORMAT))
 file_hdlr.setLevel(logging.DEBUG)
 
 logging.basicConfig(level=logging.DEBUG,
@@ -121,7 +121,7 @@ class History:
 
     async def get_timestamp(self, connection):
         """
-        Gets the timestamp for this Tx based on the given height.
+        Coroutine. Gets the timestamp for this Tx based on the given height.
 
         :param connection: a Connection object for getting a block header
             from the server
@@ -300,6 +300,12 @@ class Wallet:
         return list(self.history.keys())
 
     def get_tx_history(self):
+        """
+        Returns a list of all History objects in our history, ordered
+            by height/timestamp.
+
+        :returns: an ordered list of History objects.
+        """
         history = list()
         for value in self.history.values():
             history.extend(value)
@@ -469,7 +475,7 @@ class Wallet:
             height = history["height"]
 
             tx_list = await self._get_history([txid])
-            new_history = self.loop._run_until_complete(
+            new_history = self.loop.run_until_complete(
                 self._process_history(tx_list.pop(), address, height))
 
             if address in self.history:
@@ -614,7 +620,8 @@ class Wallet:
             raise Exception("Cannot get a fee estimate")
         return coin_per_kb
 
-    def _get_fee(self, tx, coin_per_kb):
+    @staticmethod
+    def _get_fee(tx, coin_per_kb):
         """
         Calculates the size of tx based on a given estimate from the server.
 
@@ -802,7 +809,7 @@ def main():
 #    from pycoin.networks.network import Network
 #    from pycoin.networks import register_network
 #    vtc_net = Network('VTC', 'Vertcoin', 'mainnet',
-#        wif=b'\x80', address=b'\x47', pay_to_script=b'\x05', 
+#        wif=b'\x80', address=b'\x47', pay_to_script=b'\x05',
 #        prv32=b'\x04358394', pub32=b'\x043587cf')
 #    register_network(vtc_net)
 
