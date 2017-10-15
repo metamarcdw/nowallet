@@ -262,6 +262,13 @@ class Wallet:
         """
         return list(self.history.keys())
 
+    def get_tx_history(self):
+        history = list()
+        for value in self.history.values():
+            history.extend(value)
+        history.sort()
+        return history
+
     async def _get_history(self, txids):
         """
         Coroutine. Returns a list of pycoin.tx.Tx objects associated
@@ -713,7 +720,7 @@ class Wallet:
         str_ = list()
         str_.append("\nXPUB: {}".format(self.get_xpub()))
         str_.append("\nHistory:\n{}".format(
-            pprinter.pformat(self.history)))
+            pprinter.pformat(self.get_tx_history())))
         str_.append("\nUTXOS:\n{}".format(
             pprinter.pformat(self.utxos)))
         str_.append("\nBalance: {} ({} unconfirmed) {}".format(
