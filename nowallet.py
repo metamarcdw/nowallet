@@ -27,9 +27,13 @@ from keys import derive_key
 from scrape import scrape_onion_servers
 
 class Connection:
+    """
+    Connection object. Connects to an Electrum server, and handles all
+        Stratum protocol messages.
+    """
     def __init__(self, loop, server, port):
         """
-        Connection object constructor. Connects to an Electrum server.
+        Connection object constructor.
 
         :param loop: an asyncio event loop
         :param server: a string containing a hostname
@@ -93,7 +97,75 @@ class Connection:
             result = await self.queue.get()
             await queue_func(result)
 
-Chain = collections.namedtuple("Chain", ["netcode", "chain_1209k", "bip44"])
+@total_ordering
+class History:
+    """
+    History object. Holds data relevant to a piece of
+        our transaction history.
+    """
+    def __init__(self, tx_obj, is_spend, value, height):
+        """
+        History object constructor.
+
+        :param tx_obj: a pycoin.Tx object representing the tx data
+        :param is_spend: boolean, was this tx a spend from our wallet?
+        :param value: the coin_value of this tx
+        :param height: the height of the block this tx is included in
+        :returns: A new History object
+        """
+        self.tx_obj = tx_obj
+        self.is_spend = is_spend
+        self.value = value
+        self.height = height
+        self.timestamp = None
+
+    async def get_timestamp(self, connection):
+        """
+        Gets the timestamp for this Tx based on the given height.
+
+        :param connection: a Connection object for getting a block header
+            from the server
+        """
+        if self.height:
+            block_header = await connection.listen_rpc(
+                Wallet.methods["get_header"], [self.height])
+            self.timestamp = time.asctime(time.localtime(
+                block_header["timestamp"]))
+        else:
+            self.timestamp = time.asctime(time.localtime())
+
+    def __eq__(self, other):
+        """
+        Special method __eq__()
+        Compares two History objects for equality.
+        """
+        return self.height == other.height and \
+            str(self.tx_obj) == str(self.tx_obj)
+
+    def __lt__(self, other):
+        """
+        Special method __lt__()
+        Compares two History objects by height.
+        """
+        return self.height < other.height
+
+    def __str__(self):
+        """
+        Special method __str__()
+
+        :returns: The string representation of this History object
+        """
+        return ("<History: TXID:{} is_spend:{} " + \
+            "value:{} height:{} timestamp:{}>").format(self.tx_obj.id(),
+                                                       self.is_spend,
+                                                       self.value,
+                                                       self.height,
+                                                       self.timestamp)
+    def __repr__(self):
+        return str(self)
+
+Chain = collections.namedtuple("Chain",
+                               ["netcode", "chain_1209k", "bip44"])
 BTC = Chain(netcode="BTC",
             chain_1209k="btc",
             bip44=0)
@@ -106,41 +178,6 @@ LTC = Chain(netcode="LTC",
 #VTC = Chain(netcode="VTC",
 #            chain_1209k="vtc",
 #            bip44=28)
-
-@total_ordering
-class History:
-    def __init__(self, tx_obj, is_spend, value, height):
-        self.tx_obj = tx_obj
-        self.is_spend = is_spend
-        self.value = value
-        self.height = height
-        self.timestamp = None
-
-    async def get_timestamp(self, connection):
-        if self.height:
-            block_header = await connection.listen_rpc(
-                Wallet.methods["get_header"], [self.height])
-            self.timestamp = time.asctime(time.localtime(
-                block_header["timestamp"]))
-        else:
-            self.timestamp = time.asctime(time.localtime())
-
-    def __eq__(self, other):
-        return self.height == other.height and \
-            str(self.tx_obj) == str(self.tx_obj)
-
-    def __lt__(self, other):
-        return self.height < other.height
-
-    def __str__(self):
-        return ("<History: TXID:{} is_spend:{} " + \
-            "value:{} height:{} timestamp:{}>").format(self.tx_obj.id(),
-                                                       self.is_spend,
-                                                       self.value,
-                                                       self.height,
-                                                       self.timestamp)
-    def __repr__(self):
-        return str(self)
 
 class Wallet:
     """
