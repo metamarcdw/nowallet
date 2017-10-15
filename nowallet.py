@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.DEBUG,
                     handlers=[stdout_hdlr, file_hdlr])
 
 import asyncio, io, random, decimal, collections, getpass, pprint, time
+from functools import total_ordering
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
@@ -106,6 +107,41 @@ LTC = Chain(netcode="LTC",
 #            chain_1209k="vtc",
 #            bip44=28)
 
+@total_ordering
+class History:
+    def __init__(self, tx_obj, is_spend, value, height):
+        self.tx_obj = tx_obj
+        self.is_spend = is_spend
+        self.value = value
+        self.height = height
+        self.timestamp = None
+
+    async def get_timestamp(self, connection):
+        if self.height:
+            block_header = await connection.listen_rpc(
+                Wallet.methods["get_header"], [self.height])
+            self.timestamp = time.asctime(time.localtime(
+                block_header["timestamp"]))
+        else:
+            self.timestamp = time.asctime(time.localtime())
+
+    def __eq__(self, other):
+        return self.height == other.height and \
+            str(self.tx_obj) == str(self.tx_obj)
+
+    def __lt__(self, other):
+        return self.height < other.height
+
+    def __str__(self):
+        return ("<History: TXID:{} is_spend:{} " + \
+            "value:{} height:{} timestamp:{}>").format(self.tx_obj.id(),
+                                                       self.is_spend,
+                                                       self.value,
+                                                       self.height,
+                                                       self.timestamp)
+    def __repr__(self):
+        return str(self)
+
 class Wallet:
     """
     Provides all functionality required for a fully functional and secure
@@ -113,11 +149,6 @@ class Wallet:
     """
     COIN = 100000000
     _GAP_LIMIT = 20
-    _History = collections.namedtuple("_History", ["tx_obj",
-                                                   "is_spend",
-                                                   "value",
-                                                   "height",
-                                                   "timestamp"])
 
     methods = {"get": "blockchain.transaction.get",
                "get_balance": "blockchain.address.get_balance",
@@ -316,20 +347,13 @@ class Wallet:
             is_spend = True
             value = self._get_spend_value(history)
 
-        if height:
-            block_header = await self.connection.listen_rpc(
-                self.methods["get_header"], [height])
-            timestamp = time.asctime(time.localtime(block_header["timestamp"]))
-        else:
-            timestamp = time.asctime(time.localtime())
-
         decimal_value = decimal.Decimal(str(value)) / Wallet.COIN
-        history_tuple = self._History(tx_obj=history,
-                                      is_spend=is_spend,
-                                      value=decimal_value,
-                                      height=height,
-                                      timestamp=timestamp)
-        return history_tuple
+        history_obj = History(tx_obj=history,
+                              is_spend=is_spend,
+                              value=decimal_value,
+                              height=height)
+        await history_obj.get_timestamp(self.connection)
+        return history_obj
 
     def _interpret_history(self, histories, change=False):
         """

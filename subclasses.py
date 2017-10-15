@@ -7,7 +7,6 @@ from pycoin.tx.Tx import Tx
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
-from pycoin.key.Key import Key
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import address_for_pay_to_script
 from pycoin.encoding import hash160
