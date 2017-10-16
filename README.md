@@ -59,14 +59,14 @@ client is running before attempting to use Nowallet.
 (https://www.torproject.org)
 
 ### INSTALLATION:
-Clone the Nowallet Github repository:
-`git clone https://github.com/metamarcdw/nowallet.git`
-
-Install all dependencies:
-`cd nowallet`
-`sudo pip3 install -r requirements.txt`
-
-Run nowallet from the command line:
-`python nowallet.py`
-OR
-`python nowallet.py spend <rbf>`
+Clone the Nowallet Github repository:  
+`git clone https://github.com/metamarcdw/nowallet.git`  
+  
+Install all dependencies:  
+`cd nowallet`  
+`sudo pip3 install -r requirements.txt`  
+  
+Run nowallet from the command line:  
+`python nowallet.py`  
+OR  
+`python nowallet.py spend <rbf>`  
