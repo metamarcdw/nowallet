@@ -31,6 +31,7 @@ of using the WarpWallet technique:
 >recommend it. Any attacker of WarpWallet addresses would have to target 
 >you individually, rather than netting you in a wider, generic sweep. And 
 >your email is trivial to remember, so why not?"
+
 (Note: Salting is not optional in our case.)
 
 ### Details:
