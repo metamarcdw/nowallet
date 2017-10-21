@@ -629,6 +629,8 @@ class Wallet:
         :param coin_per_kb: Fee estimation in whole coins per KB
         :returns: An int representing the appropriate fee in satoshis
         """
+        if coin_per_kb > Wallet.satb_to_coinkb(1000):
+            raise ValueError("Given fee rate is excessively high.")
         tx_kb_count = Wallet._calculate_vsize(tx) / 1000
         return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
