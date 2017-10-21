@@ -4,14 +4,20 @@ import json
 
 from socks_http import urlopen
 
+CURRENCIES = ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "CNY"]
 async def fetch_exchange_rates(chain_1209k="btc"):
     scrape_page = \
         "https://apiv2.bitcoinaverage.com/indices/global/ticker/short?crypto={}"
     url = scrape_page.format(chain_1209k.upper())
-    logging.info("Scraping URL: %s", url)
+    logging.info("Fetching rates from URL: %s", url)
 
     json_ = json.loads(await urlopen(url))
-    return json_
+    rates = dict()
+    for key, value in json_.items():
+        symbol = key.replace(chain_1209k.upper(), "")
+        if symbol in CURRENCIES:
+            rates[symbol] = value["last"]
+    return rates
 
 def main():
     loop = asyncio.get_event_loop()

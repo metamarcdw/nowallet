@@ -25,7 +25,7 @@ from pycoin.tx.Tx import Tx
 from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
 from keys import derive_key
 from scrape import scrape_onion_servers
-#from exchange_rate import fetch_exchange_rates
+#import exchange_rate
 
 class Connection:
     """
