@@ -132,6 +132,8 @@ class History:
                 Wallet.methods["get_header"], [self.height])
             self.timestamp = time.asctime(time.localtime(
                 block_header["timestamp"]))
+            logging.debug("Got timestamp %d from block at height %s",
+                           self.height, self.timestamp)
         else:
             self.timestamp = time.asctime(time.localtime())
 
@@ -324,7 +326,9 @@ class Wallet:
         results = list()
         for txid in txids:
             future = self.connection.listen_rpc(self.methods["get"], [txid])
-            results.append(await future)
+            hex_ = await future
+            results.append(hex_)
+            logging.debug("Retrieved Tx hex: %s", hex_)
         txs = [Tx.from_hex(tx_hex) for tx_hex in results]
         return txs
 
@@ -338,6 +342,7 @@ class Wallet:
         future = self.connection.listen_rpc(
             self.methods["get_balance"], [address])
         result = await future
+        logging.debug("Retrieved a balance for address: %s", address)
         confirmed = decimal.Decimal(str(result["confirmed"])) / Wallet.COIN
         zeroconf = decimal.Decimal(str(result["unconfirmed"])) / Wallet.COIN
         return confirmed, zeroconf
@@ -353,6 +358,7 @@ class Wallet:
         future = self.connection.listen_rpc(
             self.methods["listunspent"], [address])
         result = await future
+        logging.debug("Retrieving utxos for address %s", address)
         utxos = list()
         for unspent in result:
             txid = unspent["tx_hash"]
@@ -361,6 +367,7 @@ class Wallet:
             result = await future
             spendables = Tx.from_hex(result).tx_outs_as_spendable()
             utxos.append(spendables[vout])
+            logging.debug("Retrieved utxo: %s", spendables[vout])
         return utxos
 
     def _get_spend_value(self, this_tx):
@@ -404,6 +411,7 @@ class Wallet:
                               value=decimal_value,
                               height=height)
         await history_obj.get_timestamp(self.connection)
+        logging.debug("Processed history object: %s", history_obj)
         return history_obj
 
     def _interpret_history(self, histories, change=False):
@@ -417,16 +425,22 @@ class Wallet:
         """
         indicies = self.change_indicies if change else self.spend_indicies
         is_empty = True
+        # len(histories) == Wallet._GAP_LIMIT
+        # Each iteration represents one key index
         for history in histories:
             if history:
+                # Get key/address for current index
                 key = self.get_key(len(indicies), change)
                 address = key.p2sh_p2wpkh_address()
+                # Reassign historic info for this index
                 txids = [tx["tx_hash"] for tx in history]
                 heights = [tx["height"] for tx in history]
 
+                # Get Tx objects
                 this_history = self.loop.run_until_complete(
                     self._get_history(txids))
 
+                # Process all Txs into our History objects
                 futures = list()
                 for i, hist in enumerate(this_history):
                     future = self._process_history(hist, address, heights[i])
@@ -434,6 +448,7 @@ class Wallet:
                 processed_history = self.loop.run_until_complete(
                     asyncio.gather(*futures))
 
+                # Delete Txs that are just recieving change
                 if change:
                     del_indexes = list()
                     for i, hist in enumerate(processed_history):
@@ -445,17 +460,21 @@ class Wallet:
                 if processed_history:
                     self.history[address] = processed_history
 
+                # Adjust our balances for this index
                 confirmed, zeroconf = self.loop.run_until_complete(
                     self._get_balance(address))
                 self.balance += confirmed
                 self.zeroconf_balance += zeroconf
 
+                # Add utxos to our list
                 self.utxos.extend(self.loop.run_until_complete(
                     self._get_utxos(address)))
 
+                # Mark this index as used since it has a history
                 indicies.append(True)
                 is_empty = False
             else:
+                # Otherwise mark this index as unused
                 indicies.append(False)
         return is_empty
 
@@ -472,12 +491,14 @@ class Wallet:
         is_empty = True
         if history:
             spend_addrs = self.get_all_known_addresses()
+            # Reassign historic info for new history
             txid = history["tx_hash"]
             height = history["height"]
 
+            # Get Tx object and process into our History object
             tx_list = await self._get_history([txid])
-            new_history = self.loop.run_until_complete(
-                self._process_history(tx_list.pop(), address, height))
+            new_history = await self._process_history(
+                tx_list.pop(), address, height)
 
             if address in self.history:
                 if str(new_history.tx_obj) not in \
@@ -494,11 +515,13 @@ class Wallet:
                 if not new_history.is_spend and address in spend_addrs:
                     self.zeroconf_balance += new_history.value
 
+            # Add new utxo to our list if not already spent
             new_utxos = await self._get_utxos(address)
             for utxo in new_utxos:
                 if str(utxo) not in [str(spent) for spent in self.spent_utxos]:
                     self.utxos.append(utxo)
 
+            # If address is found to belong to a spend index, mark it as used
             for i in range(len(self.spend_indicies)):
                 key = self.get_key(i, change=False)
                 if key.p2sh_p2wpkh_address() == address:
@@ -540,7 +563,7 @@ class Wallet:
             self._discover_keys(change=change)
         end_discovering = time.time()
         seconds = end_discovering - start_discovering
-        logging.info("Keys derived in {0:.3f} seconds".format(seconds))
+        logging.info("Discovered history in {0:.3f} seconds".format(seconds))
 
     async def listen_to_addresses(self):
         """
@@ -551,7 +574,7 @@ class Wallet:
         addrs = self.get_all_known_addresses()
         for addr in addrs:
             self.connection.listen_subscribe(self.methods["subscribe"], [addr])
-
+        logging.debug("Listening for updates involving any known address...")
         await self.connection.consume_queue(self._dispatch_result)
 
     async def _dispatch_result(self, result):
@@ -563,6 +586,7 @@ class Wallet:
         :param result: an address that has some new tx history
         """
         addr = result[0]
+        logging.debug("Dispatched a new history for address %s", addr)
         future = self.connection.listen_rpc(self.methods["get_history"], [addr])
         history = await future
         empty_flag = await self._interpret_new_history(addr, history[0])
@@ -619,6 +643,8 @@ class Wallet:
             self.connection.listen_rpc(self.methods["estimatefee"], [6]))
         if coin_per_kb < 0:
             raise Exception("Cannot get a fee estimate")
+        logging.info("Current fee estimate from server is %f %s/KB",
+            coin_per_kb, self.chain.chain_1209k.upper())
         return coin_per_kb
 
     @staticmethod
@@ -631,7 +657,7 @@ class Wallet:
         :returns: An int representing the appropriate fee in satoshis
         """
         if coin_per_kb > Wallet.satb_to_coinkb(1000):
-            raise ValueError("Given fee rate is excessively high.")
+            raise ValueError("Given fee rate is extraordinarily high.")
         tx_kb_count = Wallet._calculate_vsize(tx) / 1000
         return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
@@ -655,6 +681,8 @@ class Wallet:
         spendables = list()
         in_addrs = set()
         del_indexes = list()
+        # Collect enough utxos for this spend
+        # Add them to spent list and delete them from utxo list
         for i, utxo in enumerate(self.utxos):
             if total_out < amount + fee_highball:
                 self.spent_utxos.append(utxo)
@@ -666,18 +694,22 @@ class Wallet:
         self.utxos = [utxo for i, utxo in enumerate(self.utxos)
                       if i not in del_indexes]
 
+        # Get change address, mark index as used, and create payables list
         change_key = self.get_next_unused_key(change=True, using=True)
         change_addr = change_key.p2sh_p2wpkh_address()
         payables = list()
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
 
+        # Create input list from utxos
+        # Set sequence numbers to zero if using RBF.
         txs_in = [spendable.tx_in() for spendable in spendables]
         if rbf:
             logging.info("Spending with opt-in Replace by Fee! (RBF)")
             for txin in txs_in:
                 txin.sequence = 0
 
+        # Create output list from payables
         txs_out = list()
         for payable in payables:
             bitcoin_address, coin_value = payable
@@ -686,12 +718,14 @@ class Wallet:
         txs_out.sort()
         txs_out = [LexTxOut.demote(txout) for txout in txs_out]
 
+        # Search for change output index after lex sort
         chg_vout = None
         for i, txout in enumerate(txs_out):
             if txout.address(self.chain.netcode) == change_addr:
                 chg_vout = i
                 break
 
+        # Create pycoin Tx object from inputs/outputs
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
         tx.set_unspents(spendables)
         return tx, in_addrs, chg_vout
@@ -706,6 +740,8 @@ class Wallet:
         """
         redeem_scripts = dict()
         wifs = list()
+        # Search our indicies for keys used, given in in_addrs list
+        # Populate lists with our privkeys and redeemscripts
         for change in (True, False):
             for i, addr in enumerate(self.get_all_known_addresses(change)):
                 key = self.get_key(i, change)
@@ -715,6 +751,7 @@ class Wallet:
                     redeem_scripts[script_hash] = p2aw_script
                     wifs.append(key.wif())
 
+        # Include our total fee and sign the Tx
         distribute_from_split_pool(unsigned_tx, fee)
         sign_tx(unsigned_tx, wifs=wifs,
                 netcode=self.chain.netcode,
