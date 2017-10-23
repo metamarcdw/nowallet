@@ -21,6 +21,7 @@ from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
+from pycoin.tx.TxOut import TxOut
 
 from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
 from keys import derive_key
@@ -757,6 +758,31 @@ class Wallet:
                 netcode=self.chain.netcode,
                 p2sh_lookup=redeem_scripts)
 
+    def _create_replacement_tx(self, hist_obj, version=1):
+        if hist_obj.height == 0 and hist_obj.is_spend:
+            old_tx = hist_obj.tx_obj
+            spendables = old_tx.unspents
+            chg_vout = None
+
+            in_addrs = set()
+            for utxo in spendables:
+                in_addrs.add(utxo.address(self.chain.netcode))
+
+            txs_out = list()
+            for i, txout in enumerate(old_tx.txs_out):
+                if txout.coin_value / Wallet.COIN == hist_obj.value:
+                    value = txout.coin_value
+                else:
+                    value = 0
+                    chg_vout = i
+                txs_out.append(TxOut(value, txout.script))
+
+            new_tx = Tx(version=version, txs_in=old_tx.txs_in, txs_out=txs_out)
+            new_tx.set_unspents(spendables)
+            return new_tx, in_addrs, chg_vout
+        else:
+            raise ValueError("This transaction is not replaceable")
+
     def spend(self, address, amount, coin_per_kb, rbf=False):
         """
         Gets a new tx from _mktx() and sends it to the server to be broadcast,
@@ -793,6 +819,20 @@ class Wallet:
         self.connection.listen_subscribe(
             self.methods["subscribe"], [change_address])
         return txid, decimal_fee
+
+    def replace_by_fee(self, hist_obj, coin_per_kb):
+        tx, in_addrs, chg_vout = self._create_replacement_tx(hist_obj)
+        new_fee = self._get_fee(tx, coin_per_kb)
+
+        self._signtx(tx, in_addrs, new_fee)
+        txid = self.loop.run_until_complete(
+            self.connection.listen_rpc(
+                self.methods["broadcast"], [tx.as_hex()]))
+
+        fee_diff = new_fee - hist_obj.tx_obj.fee()
+        self.balance -= fee_diff
+        hist_obj.tx_obj = tx
+        return txid
 
     def __str__(self):
         """
