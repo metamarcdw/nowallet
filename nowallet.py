@@ -666,8 +666,7 @@ class Wallet:
         """
         Builds a standard Bitcoin transaction - in the most naive way.
         Coin selection is basically random. Uses one output and one change
-        address. Takes advantage of our subclasses to implement BIP69. Uses
-        the server's fee estimation through our _get_fee() method.
+        address. Takes advantage of our subclasses to implement BIP69.
 
         :param out_addr: an address to send to
         :param amount: a Decimal amount in whole BTC
@@ -759,6 +758,14 @@ class Wallet:
                 p2sh_lookup=redeem_scripts)
 
     def _create_replacement_tx(self, hist_obj, version=1):
+        """
+        Builds a replacement Bitcoin transaction based on a given History
+        object in order to implement opt in Replace-By-Fee.
+
+        :param hist_obj: a History object from our tx history data
+        :param version: an int representing the Tx version
+        :returns: A not-fully-formed and unsigned replacement Tx object
+        """
         if hist_obj.height == 0 and hist_obj.is_spend:
             old_tx = hist_obj.tx_obj
             spendables = old_tx.unspents
@@ -821,6 +828,15 @@ class Wallet:
         return txid, decimal_fee
 
     def replace_by_fee(self, hist_obj, coin_per_kb):
+        """
+        Gets a replacement tx from _create_replacement_tx() and sends it to 
+        the server to be broadcast, then replaces the tx in our tx history and
+        subtracts the difference in fees from our balance.
+
+        :param hist_obj: a History object from our tx history data
+        :param coin_per_kb: a new fee rate given in whole coins per KB
+        :returns: The txid of our new tx, given after a successful broadcast
+        """
         tx, in_addrs, chg_vout = self._create_replacement_tx(hist_obj)
         new_fee = self._get_fee(tx, coin_per_kb)
 
