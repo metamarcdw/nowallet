@@ -144,7 +144,7 @@ class History:
         Compares two History objects for equality.
         """
         return self.height == other.height and \
-            str(self.tx_obj) == str(self.tx_obj)
+            str(self.tx_obj) == str(other.tx_obj)
 
     def __lt__(self, other):
         """
