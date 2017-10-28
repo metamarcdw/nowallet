@@ -129,7 +129,13 @@
             text: "Back"
             on_press: root.manager.current = "main"
 
-<MyPopup@Popup>:
+<ErrorPopup@Popup>:
+    title: "Error"
+    auto_dismiss: False
+    Label:
+        text: "Sorry, Nowallet has encountered an error."
+
+<MenuPopup@Popup>:
     title: "Menu"
     auto_dismiss: False
     BoxLayout:
@@ -150,6 +156,10 @@
             on_release: app.sm.current = "recieve"
             on_release: root.dismiss()
         Button:
+            text: "Settings"
+            size_hint: 1, 0.2
+            on_release: root.dismiss()
+        Button:
             text: "Close"
             size_hint: 1, 0.2
             on_release: root.dismiss()
@@ -167,7 +177,7 @@
                     title: "NOWALLET"
                     with_previous: False
                 ActionButton:
-                    on_release: Factory.MyPopup().open()
+                    on_release: Factory.ErrorPopup().open()
                     Image:
                         source: 'icons/settings.png'
                         y: self.parent.y + 5
