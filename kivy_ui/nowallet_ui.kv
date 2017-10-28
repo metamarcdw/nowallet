@@ -158,6 +158,7 @@
         Button:
             text: "Settings"
             size_hint: 1, 0.2
+            on_release: app.open_settings()
             on_release: root.dismiss()
         Button:
             text: "Close"
@@ -177,7 +178,7 @@
                     title: "NOWALLET"
                     with_previous: False
                 ActionButton:
-                    on_release: Factory.ErrorPopup().open()
+                    on_release: Factory.MenuPopup().open()
                     Image:
                         source: 'icons/settings.png'
                         y: self.parent.y + 5

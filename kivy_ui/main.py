@@ -9,6 +9,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.core.window import Window
 Window.size = (350, 600)
 
+from settings_json import settings_json
+
 # Declare screens
 class LoginScreen(Screen):
     pass
@@ -46,7 +48,26 @@ class NowalletApp(App):
         super().__init__()
 
     def build(self):
+        self.use_kivy_settings = False
+        self.rbf = self.config.get("nowallet", "rbf")
+        self.currency = self.config.get("nowallet", "currency")
         return self.sm
+
+    def build_config(self, config):
+        config.setdefaults("nowallet", {
+            "rbf": False,
+            "currency": "USD"})
+
+    def build_settings(self, settings):
+        settings.add_json_panel("Nowallet Settings",
+                                self.config,
+                                data=settings_json)
+
+    def on_config_change(self, config, section, key, value):
+        if key == "rbf":
+            self.rbf = value
+        elif key == "currency":
+            self.currency = value
 
 if __name__ == "__main__":
     NowalletApp().run()
