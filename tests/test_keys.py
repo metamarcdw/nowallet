@@ -1,5 +1,5 @@
 import pytest
-from context import keys
+from nowallet import keys
 
 def test_and_split():
     bytes_ = b"\xff\xff\xff\xff"

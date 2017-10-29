@@ -1,5 +1,5 @@
 import pytest
-from context import subclasses
+from nowallet import subclasses
 
 @pytest.fixture
 def server():

@@ -1,5 +1,6 @@
 *.log
 *.ini
+*.egg-info
 .eric6project
 .cache
 __pycache__
