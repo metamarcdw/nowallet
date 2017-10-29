@@ -1,5 +1,6 @@
 *.log
 *.ini
 .eric6project
+.cache
 __pycache__
 nowallet.e4p

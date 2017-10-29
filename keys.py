@@ -12,7 +12,8 @@ def and_split(bytes_):
     return (bytes(ba1), bytes(ba2))
 
 def xor_merge(bytes1, bytes2):
-    assert len(bytes1) == len(bytes2), "Length mismatch"
+    if len(bytes1) != len(bytes2):
+        raise ValueError("Length mismatch")
     byte_array = bytearray()
     for i in range(len(bytes1)):
         byte_array.append(bytes1[i] ^ bytes2[i])
@@ -42,7 +43,7 @@ def derive_key(salt, passphrase, hd=True):
 def main():
     email = input("Enter email: ")
     passphrase = input("Enter passphrase: ")
-    secret_exponent = derive_key(email, passphrase, hd=False)
+    secret_exponent = derive_key(email, passphrase)#, hd=False)
     print(secret_exponent)
 
 if __name__ == "__main__":
