@@ -2,8 +2,8 @@ import json
 import sys
 import os.path
 
-sys.path.append(    # Make sure we can access nowallet in the parent directory
-os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(os.path.abspath( # Make sure we can import nowallet modules
+    os.path.join(os.path.dirname(__file__), os.path.pardir, "nowallet")))
 from exchange_rate import CURRENCIES
 
 settings_json = json.dumps([
