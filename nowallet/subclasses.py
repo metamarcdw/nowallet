@@ -37,12 +37,12 @@ class LexTxOut(TxOut):
         return TxOut(lexout.coin_value, lexout.script)
 
     def __eq__(self, other):
-        return self.coin_value, b2h(self.script) == \
-            other.coin_value, b2h(other.script)
+        return (self.coin_value, b2h(self.script)) == \
+            (other.coin_value, b2h(other.script))
 
     def __lt__(self, other):
-        return self.coin_value, b2h(self.script) < \
-            other.coin_value, b2h(other.script)
+        return (self.coin_value, b2h(self.script)) < \
+            (other.coin_value, b2h(other.script))
 
 @total_ordering
 class LexSpendable(Spendable):
@@ -51,17 +51,14 @@ class LexSpendable(Spendable):
         return cls.from_dict(spendable.as_dict())
 
     def __eq__(self, other):
-        self_dict = self.as_dict()
-        other_dict = other.as_dict()
-        return self_dict["tx_hash_hex"] == other_dict["tx_hash_hex"] and \
-            self_dict["tx_out_index"] == other_dict["tx_out_index"]
+        self_dict, other_dict = self.as_dict(), other.as_dict()
+        return (self_dict["tx_hash_hex"], self_dict["tx_out_index"]) == \
+            (other_dict["tx_hash_hex"], other_dict["tx_out_index"])
 
     def __lt__(self, other):
-        self_dict = self.as_dict()
-        other_dict = other.as_dict()
-        if self_dict["tx_hash_hex"] == other_dict["tx_hash_hex"]:
-            return self_dict["tx_out_index"] < other_dict["tx_out_index"]
-        return self_dict["tx_hash_hex"] < other_dict["tx_hash_hex"]
+        self_dict, other_dict = self.as_dict(), other.as_dict()
+        return (self_dict["tx_hash_hex"], self_dict["tx_out_index"]) < \
+            (other_dict["tx_hash_hex"], other_dict["tx_out_index"])
 
 class SegwitBIP32Node(BIP32Node):
     def p2sh_p2wpkh_address(self):
