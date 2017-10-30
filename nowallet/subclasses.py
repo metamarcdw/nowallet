@@ -37,13 +37,12 @@ class LexTxOut(TxOut):
         return TxOut(lexout.coin_value, lexout.script)
 
     def __eq__(self, other):
-        return self.coin_value == other.coin_value and \
-                self.script == other.script
+        return self.coin_value, b2h(self.script) == \
+            other.coin_value, b2h(other.script)
 
     def __lt__(self, other):
-        if self.coin_value == other.coin_value:
-            return b2h(self.script) < b2h(self.script)
-        return self.coin_value < other.coin_value
+        return self.coin_value, b2h(self.script) < \
+            other.coin_value, b2h(other.script)
 
 @total_ordering
 class LexSpendable(Spendable):
