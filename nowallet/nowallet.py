@@ -209,7 +209,7 @@ class Wallet:
                "estimatefee": "blockchain.estimatefee",
                "broadcast": "blockchain.transaction.broadcast"}
 
-    def __init__(self, salt, passphrase, connection, loop, chain, account=0):
+    def __init__(self, salt, passphrase, connection, loop, chain):
         """
         Wallet object constructor. Use discover_keys() and listen_to_addresses()
         coroutine method to construct wallet data, and listen for new data from
@@ -220,13 +220,12 @@ class Wallet:
         :param connection: a Connection object
         :param loop: an asyncio event loop
         :param chain: a namedtuple containing chain-specific info
-        :param account: account number, defaults to 0
         :returns: A new, empty Wallet object
         """
         self.connection = connection
         self.loop = loop
         self.chain = chain
-        self._create_root_keys(salt, passphrase, account)
+        self._create_root_keys(salt, passphrase)
 
         # Boolean lists, True = used / False = unused
         self.spend_indicies = list()
@@ -241,7 +240,15 @@ class Wallet:
         self.new_history = False
 
     @log_time_elapsed
-    def _create_root_keys(self, salt, passphrase, account):
+    def _create_root_keys(self, salt, passphrase, account=0):
+        """
+        Derives master key from salt/passphrase and initializes all
+        master key attributes.
+
+        :param salt: a string to use as a salt for key derivation
+        :param passphrase: a string containing a secure passphrase
+        :param account: account number, defaults to 0
+        """
         logging.info("Deriving keys...")
         secret_exp, chain_code = derive_key(salt, passphrase)
         self.mpk = SegwitBIP32Node(netcode=self.chain.netcode,
@@ -303,12 +310,12 @@ class Wallet:
 
     def get_all_used_addresses(self):
         """
-        Returns a list of all addresses that have been used previously.
+        Returns all addresses that have been used previously.
 
-        :returns: a list of address strings containing all used addresses
-                    for the given root
+        :returns: address strings containing all used
+            addresses for the given root
         """
-        return list(self.history.keys())
+        return self.history.keys()
 
     def get_tx_history(self):
         """
@@ -667,7 +674,7 @@ class Wallet:
         tx_kb_count = Wallet._calculate_vsize(tx) / 1000
         return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
-    def _mktx(self, out_addr, amount, version=1, rbf=False):
+    def _mktx(self, out_addr, amount, rbf=False):
         """
         Builds a standard Bitcoin transaction - in the most naive way.
         Coin selection is basically random. Uses one output and one change
@@ -695,7 +702,6 @@ class Wallet:
                 in_addrs.add(utxo.address(self.chain.netcode))
                 del_indexes.append(i)
                 total_out += utxo.coin_value
-        spendables.sort()
         self.utxos = [utxo for i, utxo in enumerate(self.utxos)
                       if i not in del_indexes]
 
@@ -706,6 +712,21 @@ class Wallet:
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
 
+        tx = self._create_bip69_tx(spendables, payables, rbf)
+        
+        # Search for change output index after lex sort
+        chg_vout = None
+        for i, txout in enumerate(tx.txs_out):
+            if txout.address(self.chain.netcode) == change_addr:
+                chg_vout = i
+                break
+
+        # Create pycoin Tx object from inputs/outputs
+        return tx, in_addrs, chg_vout
+
+    def _create_bip69_tx(self, spendables, payables, rbf, version=1):
+        spendables.sort()
+        
         # Create input list from utxos
         # Set sequence numbers to zero if using RBF.
         txs_in = [spendable.tx_in() for spendable in spendables]
@@ -723,17 +744,9 @@ class Wallet:
         txs_out.sort()
         txs_out = [LexTxOut.demote(txout) for txout in txs_out]
 
-        # Search for change output index after lex sort
-        chg_vout = None
-        for i, txout in enumerate(txs_out):
-            if txout.address(self.chain.netcode) == change_addr:
-                chg_vout = i
-                break
-
-        # Create pycoin Tx object from inputs/outputs
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
         tx.set_unspents(spendables)
-        return tx, in_addrs, chg_vout
+        return tx
 
     def _signtx(self, unsigned_tx, in_addrs, fee):
         """
@@ -815,9 +828,8 @@ class Wallet:
             raise Exception("Insufficient funds to cover fee")
 
         self._signtx(tx, in_addrs, fee)
-        txid = self.loop.run_until_complete(
-            self.connection.listen_rpc(
-                self.methods["broadcast"], [tx.as_hex()]))
+        txid = self.loop.run_until_complete(self.connection.listen_rpc(
+            self.methods["broadcast"], [tx.as_hex()]))
 
         change_out = tx.txs_out[chg_vout]
         coin_in = decimal.Decimal(str(tx.total_in())) / Wallet.COIN
