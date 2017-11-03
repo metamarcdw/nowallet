@@ -183,6 +183,15 @@ LTC = Chain(netcode="LTC",
 #            chain_1209k="vtc",
 #            bip44=28)
 
+def log_time_elapsed(func):
+    def inner(*args, **kwargs):
+        start_derivation = time.time()
+        func(*args, **kwargs)
+        end_derivation = time.time()
+        seconds = end_derivation - start_derivation
+        logging.info("Operation completed in {0:.3f} seconds".format(seconds))
+    return inner
+
 class Wallet:
     """
     Provides all functionality required for a fully functional and secure
@@ -217,23 +226,7 @@ class Wallet:
         self.connection = connection
         self.loop = loop
         self.chain = chain
-
-        start_derivation = time.time()
-        logging.info("Deriving keys...")
-
-        secret_exp, chain_code = derive_key(salt, passphrase)
-        self.mpk = SegwitBIP32Node(netcode=self.chain.netcode,
-                                   chain_code=chain_code,
-                                   secret_exponent=secret_exp)
-
-        path = "49H/{}H/{}H".format(chain.bip44, account)
-        self.account_master = self.mpk.subkey_for_path(path)
-        self.root_spend_key = self.account_master.subkey(0)
-        self.root_change_key = self.account_master.subkey(1)
-
-        end_derivation = time.time()
-        seconds = end_derivation - start_derivation
-        logging.info("Keys derived in {0:.3f} seconds".format(seconds))
+        self._create_root_keys(salt, passphrase, account)
 
         # Boolean lists, True = used / False = unused
         self.spend_indicies = list()
@@ -246,6 +239,19 @@ class Wallet:
         self.balance = decimal.Decimal("0")
         self.zeroconf_balance = decimal.Decimal("0")
         self.new_history = False
+
+    @log_time_elapsed
+    def _create_root_keys(self, salt, passphrase, account):
+        logging.info("Deriving keys...")
+        secret_exp, chain_code = derive_key(salt, passphrase)
+        self.mpk = SegwitBIP32Node(netcode=self.chain.netcode,
+                                   chain_code=chain_code,
+                                   secret_exponent=secret_exp)
+
+        path = "49H/{}H/{}H".format(self.chain.bip44, account)
+        self.account_master = self.mpk.subkey_for_path(path)
+        self.root_spend_key = self.account_master.subkey(0)
+        self.root_change_key = self.account_master.subkey(1)
 
     @property
     def xpub(self):
@@ -556,16 +562,14 @@ class Wallet:
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
 
+    @log_time_elapsed
     def discover_all_keys(self):
         """
         Calls discover_keys for change and spend keys.
         """
-        start_discovering = time.time()
+        logging.info("Begin discovering tx history...")
         for change in (False, True):
             self._discover_keys(change=change)
-        end_discovering = time.time()
-        seconds = end_discovering - start_discovering
-        logging.info("Discovered history in {0:.3f} seconds".format(seconds))
 
     async def listen_to_addresses(self):
         """
