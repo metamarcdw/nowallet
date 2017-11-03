@@ -143,8 +143,8 @@ class History:
         Special method __eq__()
         Compares two History objects for equality.
         """
-        return self.height == other.height and \
-            str(self.tx_obj) == str(other.tx_obj)
+        return (self.height, str(self.tx_obj)) == \
+            (other.height, str(other.tx_obj))
 
     def __lt__(self, other):
         """
@@ -247,7 +247,8 @@ class Wallet:
         self.zeroconf_balance = decimal.Decimal("0")
         self.new_history = False
 
-    def get_xpub(self):
+    @property
+    def xpub(self):
         """
         Returns this account's extended public key.
 
@@ -858,7 +859,7 @@ class Wallet:
         """
         pprinter = pprint.PrettyPrinter(indent=4)
         str_ = list()
-        str_.append("\nXPUB: {}".format(self.get_xpub()))
+        str_.append("\nXPUB: {}".format(self.xpub))
         str_.append("\nHistory:\n{}".format(
             pprinter.pformat(self.get_tx_history())))
         str_.append("\nUTXOS:\n{}".format(
