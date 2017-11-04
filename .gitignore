@@ -1,7 +1,9 @@
 *.log
+*.txt
 *.ini
 *.egg-info
 .eric6project
 .cache
 __pycache__
+.mypy_cache
 nowallet.e4p
