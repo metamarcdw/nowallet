@@ -6,9 +6,10 @@ from aiosocks.connector import ProxyConnector, ProxyClientRequest
 class SocksHTTPError(Exception):
     pass
 
-async def urlopen(url):
-    auth5 = aiosocks.Socks5Auth('proxyuser1', password='pwd')
-    conn = ProxyConnector(remote_resolve=False)
+async def urlopen(url: str) -> str:
+    auth5: aiosocks.Socks5Auth = aiosocks.Socks5Auth(
+        'proxyuser1', password='pwd')
+    conn: ProxyConnector = ProxyConnector(remote_resolve=False)
 
     try:
         with aiohttp.ClientSession(connector=conn,
@@ -28,8 +29,8 @@ async def urlopen(url):
         pass
 
 def main():
-    loop = asyncio.get_event_loop()
-    html = loop.run_until_complete(urlopen("https://github.com/"))
+    loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+    html: str = loop.run_until_complete(urlopen("https://github.com/"))
     print(html)
     loop.close()
 

@@ -682,7 +682,6 @@ class Wallet:
 
         :param out_addr: an address to send to
         :param amount: a Decimal amount in whole BTC
-        :param version: an int representing the Tx version
         :param rbf: A boolean that says whether to mark Tx as replaceable
         :returns: A not-fully-formed and unsigned Tx object
         """
