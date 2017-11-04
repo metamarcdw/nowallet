@@ -21,7 +21,7 @@ def xor_merge(bytes1: bytes, bytes2: bytes) -> bytes:
     return bytes(byte_array)
 
 def derive_key(salt: str, passphrase: str, hd: bool=True) -> \
-    Union[bytes, Tuple[int, bytes]]:
+    Union[int, Tuple[int, bytes]]:
     key_length: int = 64 if hd else 32
 
     t1: Tuple[bytes, bytes] = and_split(bytes(salt, "utf-8"))

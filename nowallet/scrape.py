@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 from socks_http import urlopen
 from bs4 import BeautifulSoup
@@ -13,7 +13,7 @@ async def scrape_onion_servers(chain_1209k: str="tbtc") -> \
 
     page: str = await urlopen(url)
     soup: BeautifulSoup = BeautifulSoup(page, "html.parser")
-    table_data: List[...] = soup.find_all("td")
+    table_data: List[Any] = soup.find_all("td")
 
     servers: List[Tuple[str, int]] = list()
     for i, data in enumerate(table_data):

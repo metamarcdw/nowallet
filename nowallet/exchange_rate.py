@@ -12,12 +12,12 @@ async def fetch_exchange_rates(chain_1209k: str="btc") -> Dict[str, float]:
     url: str = scrape_page.format(chain_1209k.upper())
     logging.info("Fetching rates from URL: %s", url)
 
-    json_: Dict[...] = json.loads(await urlopen(url))
+    json_: Dict[str, Dict] = json.loads(await urlopen(url))
     rates: Dict[str, float] = dict()
     for key, value in json_.items():
         symbol: str = key.replace(chain_1209k.upper(), "")
         if symbol in CURRENCIES:
-            rates[symbol]: float = value["last"]
+            rates[symbol] = value["last"]
     return rates
 
 def main():

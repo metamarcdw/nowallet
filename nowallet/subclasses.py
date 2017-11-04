@@ -1,5 +1,5 @@
 from functools import total_ordering
-from typing import Type, TypeVar
+from typing import Type, TypeVar, List, Tuple, Dict, Any
 
 from connectrum.svr_info import ServerInfo
 from connectrum.constants import DEFAULT_PORTS
@@ -11,7 +11,6 @@ from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import address_for_pay_to_script
 from pycoin.encoding import hash160
-from typing import Tuple
 
 from pycoin.serialize import b2h
 
@@ -22,15 +21,15 @@ class MyServerInfo(ServerInfo):
             Assuming only one port per host.
         '''
         assert len(for_protocol) == 1, "expect single letter code"
-        rv: List[int] = [i for i in self['ports'] if i[0] == for_protocol]
-        port: int = None
+        rv = [i for i in self['ports'] if i[0] == for_protocol]
+        port = None
         if len(rv) < 2:
             try:
                 port = int(rv[0][1:])
             except Exception:
                 pass
         port = port or DEFAULT_PORTS[for_protocol]
-        use_ssl: bool = for_protocol in ('s', 'g')
+        use_ssl = for_protocol in ('s', 'g')
         return self['hostname'], port, use_ssl
 
 @total_ordering
@@ -40,7 +39,7 @@ class LexTxOut(TxOut):
     def demote(lexout: Type[T]) -> TxOut:
         return TxOut(lexout.coin_value, lexout.script)
 
-    def __eq__(self: T, other: Type[T]) -> bool:
+    def __eq__(self, other) -> bool:
         return (self.coin_value, b2h(self.script)) == \
             (other.coin_value, b2h(other.script))
 
@@ -55,15 +54,15 @@ class LexSpendable(Spendable):
     def promote(cls: Type[T], spendable: Spendable) -> T:
         return cls.from_dict(spendable.as_dict())
 
-    def __eq__(self: T, other: Type[T]) -> bool:
-        self_dict: Dict[...] = self.as_dict()
-        other_dict: Dict[...] = other.as_dict()
+    def __eq__(self, other) -> bool:
+        self_dict: Dict[str, Any] = self.as_dict()
+        other_dict: Dict[str, Any] = other.as_dict()
         return (self_dict["tx_hash_hex"], self_dict["tx_out_index"]) == \
             (other_dict["tx_hash_hex"], other_dict["tx_out_index"])
 
     def __lt__(self: T, other: Type[T]) -> bool:
-        self_dict: Dict[...] = self.as_dict()
-        other_dict: Dict[...] = other.as_dict()
+        self_dict: Dict[str, Any] = self.as_dict()
+        other_dict: Dict[str, Any] = other.as_dict()
         return (self_dict["tx_hash_hex"], self_dict["tx_out_index"]) < \
             (other_dict["tx_hash_hex"], other_dict["tx_out_index"])
 
@@ -86,7 +85,7 @@ def main():
                                      ports=12345)
     print(svr.get_port("t"))
 
-    hex_: Dict[...] = [
+    hex_: List[str] = [
         "01000000014f2eae2eadabe4e807fad4220a931991590ae31f223ba70bf1",
         "8dd16983005441010000006b483045022100ab33f14e1c3387b68942e1ab",
         "bd4ec0e2d94866529409464e262531c165cc75f0022034482cd3031bb779",
