@@ -18,8 +18,8 @@ logging.basicConfig(level=logging.DEBUG,
 import asyncio, io, random, collections, getpass, pprint, time
 from decimal import Decimal
 from functools import total_ordering
-from typing import (Type, TypeVar, ClassVar, Tuple, List, Set, Dict, Any,
-                    Callable, Iterable)
+from typing import (ClassVar, Tuple, List, Set, Dict, Any,
+                    Callable, Iterator, NoReturn)
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
@@ -102,7 +102,8 @@ class Connection:
         self.queue = t[1]
 
     async def consume_queue(self,
-                            queue_func: Callable[[List[str]], None]) -> None:
+                            queue_func: Callable[[List[str]], None]) -> \
+                            NoReturn:
         """
         Coroutine. Infinite loop that consumes the current subscription queue.
 
@@ -118,7 +119,6 @@ class History:
     History object. Holds data relevant to a piece of
         our transaction history.
     """
-    T = TypeVar("T", bound="History")
 
     def __init__(self,
                  tx_obj: Tx,
@@ -165,7 +165,7 @@ class History:
         return (self.height, str(self.tx_obj)) == \
             (other.height, str(other.tx_obj))
 
-    def __lt__(self: T, other: Type[T]) -> bool:
+    def __lt__(self, other) -> bool:
         """
         Special method __lt__()
         Compares two History objects by height.
@@ -202,7 +202,7 @@ LTC = Chain(netcode="LTC",
 #            chain_1209k="vtc",
 #            bip44=28)
 
-def log_time_elapsed(func: Callable[[List[Any], Dict[str, Any]], None]) -> None:
+def log_time_elapsed(func: Callable[[List, Dict[str, Any]], None]) -> None:
     """
     Decorator. Times completion of function and logs at level INFO.
     """
@@ -305,7 +305,7 @@ class Wallet:
         """
         return self.account_master.hwif()
 
-    def get_key(self, index, change=False) -> SegwitBIP32Node:
+    def get_key(self, index: int, change: bool = False) -> SegwitBIP32Node:
         """
         Returns a specified pycoin.key object.
 
@@ -317,7 +317,9 @@ class Wallet:
             self.root_change_key if change else self.root_spend_key
         return root_key.subkey(index)
 
-    def get_next_unused_key(self, change=False, using=False) -> SegwitBIP32Node:
+    def get_next_unused_key(self,
+                            change: bool = False,
+                            using: bool = False) -> SegwitBIP32Node:
         """
         Returns the next unused key object in the sequence.
 
@@ -347,7 +349,7 @@ class Wallet:
                             for i in range(len(indicies))]
         return addrs
 
-    def get_all_used_addresses(self) -> Iterable[str]:
+    def get_all_used_addresses(self) -> Iterator[str]:
         """
         Returns all addresses that have been used previously.
 
@@ -432,7 +434,7 @@ class Wallet:
         :returns: The coin value associated with our spend output.
         """
         change_addrs: List[str] = self.get_all_known_addresses(change=True)
-        chg_vout: int
+        chg_vout: int = None
         for i, txout in enumerate(this_tx.txs_out):
             address: str = txout.address(netcode=self.chain.netcode)
             if address in change_addrs:
@@ -452,7 +454,7 @@ class Wallet:
             given transaction
         :returns: A new _History namedtuple for our history
         """
-        value: int
+        value: int = None
         is_spend: bool = False
         for txout in history.txs_out:
             if txout.address(netcode=self.chain.netcode) == address:
@@ -545,7 +547,7 @@ class Wallet:
         new tx history. Should only be called by _dispatch_result(),
 
         :param address: the address associated with this new tx history
-        :param history: a list of tx histories from the server
+        :param history: a history message from the server
         :param change: a boolean indicating which key index list to use
         :returns: A boolean that is true if all given histories were empty
         """
@@ -595,7 +597,7 @@ class Wallet:
         """
         Iterates through key indicies (_GAP_LIMIT) at a time and retrieves tx
         histories from the server, then populates our data structures using
-        _interpret_history, Should be called manually once for each key root.
+        _interpret_history, Should be called once for each key root.
 
         :param change: a boolean indicating which key index list to use
         """
@@ -734,9 +736,9 @@ class Wallet:
         :param rbf: A boolean that says whether to mark Tx as replaceable
         :returns: A not-fully-formed and unsigned Tx object
         """
-        amount *= Wallet.COIN
+        amount: int = int(amount * Wallet.COIN)
         fee_highball: int = 100000
-        total_out: Decimal = Decimal("0")
+        total_out: int = 0
 
         spendables: List[LexSpendable] = list()
         in_addrs: Set[str] = set()
@@ -963,7 +965,7 @@ def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
         raise Exception("No electrum servers found!")
     return random.choice(servers)
 
-async def print_loop(wallet: Wallet) -> None:
+async def print_loop(wallet: Wallet) -> NoReturn:
     """
     Coroutine. Prints the wallet's string representation to stdout if
     wallet.new_history is True. Checks every second.

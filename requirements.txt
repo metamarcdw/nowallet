@@ -16,6 +16,7 @@ py==1.4.34
 pycoin==0.80
 pylint==1.7.2
 pytest==3.2.3
+pytest-asyncio==0.8.0
 scrypt==0.8.0
 six==1.11.0
 typed-ast==1.1.0

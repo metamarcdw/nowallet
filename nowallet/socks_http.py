@@ -2,12 +2,11 @@ import asyncio
 import aiohttp
 import aiosocks
 from aiosocks.connector import ProxyConnector, ProxyClientRequest
-from typing import Any
 
 class SocksHTTPError(Exception):
     pass
 
-async def urlopen(url: str) -> Any:
+async def urlopen(url: str) -> str:
     auth5: aiosocks.Socks5Auth = aiosocks.Socks5Auth(
         'proxyuser1', password='pwd')
     conn: ProxyConnector = ProxyConnector(remote_resolve=False)
