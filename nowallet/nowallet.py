@@ -699,6 +699,7 @@ class Wallet:
         Gets a fee estimate from the server.
 
         :returns: A float representing the appropriate fee in coins per KB
+        :raise: Raises a base Exception when the server returns -1
         """
         coin_per_kb: float = self.loop.run_until_complete(
             self.connection.listen_rpc(self.methods["estimatefee"], [6]))
@@ -716,6 +717,7 @@ class Wallet:
         :param tx: a Tx object that we need to estimate a fee for
         :param coin_per_kb: Fee estimation in whole coins per KB
         :returns: An int representing the appropriate fee in satoshis
+        :raise: Raises a ValueError if given fee rate is over 1000 satoshi/B
         """
         if coin_per_kb > Wallet.satb_to_coinkb(1000):
             raise ValueError("Given fee rate is extraordinarily high.")
@@ -840,6 +842,7 @@ class Wallet:
         :param hist_obj: a History object from our tx history data
         :param version: an int representing the Tx version
         :returns: A not-fully-formed and unsigned replacement Tx object
+        :raise: Raises a ValueError if tx not a spend or is already confirmed
         """
         if hist_obj.height == 0 and hist_obj.is_spend:
             old_tx: Tx = hist_obj.tx_obj
@@ -883,6 +886,7 @@ class Wallet:
         :param coin_per_kb: a fee rate given in whole coins per KB
         :param rbf: a boolean saying whether to mark the tx as replaceable
         :returns: The txid of our new tx, given after a successful broadcast
+        :raise: Raises a base Exception if we can't afford the fee
         """
         tx, in_addrs, chg_vout = self._mktx(address, amount, rbf=rbf)
 
@@ -958,6 +962,7 @@ def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
 
     :param chain: Our current chain info
     :returns: A server info tuple for a random .onion Electrum server
+    :raise: Raises s base Exception if there are no servers up on 1209k
     """
     servers = loop.run_until_complete(
         scrape_onion_servers(chain_1209k=chain.chain_1209k))
@@ -996,6 +1001,7 @@ def main():
     t: Tuple[str, int] = get_random_onion(loop, chain)
     server, port = t
     connection: Connection = Connection(loop, server, port)
+#    connection: Connection = Connection(loop, "192.168.1.200", 50001)
 
     email: str = input("Enter email: ")
     passphrase: str = getpass.getpass("Enter passphrase: ")
