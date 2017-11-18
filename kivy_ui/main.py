@@ -1,4 +1,6 @@
 #! /usr/bin/env python3
+import sys
+import os
 
 import kivy
 kivy.require('1.10.0')
@@ -9,7 +11,12 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.core.window import Window
 Window.size = (350, 600)
 
+sys.path.append(os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.path.pardir, "nowallet")))
+import nowallet
 from settings_json import settings_json
+
+__version__ = nowallet.__version__
 
 # Declare screens
 class LoginScreen(Screen):

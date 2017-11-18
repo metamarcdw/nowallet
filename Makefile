@@ -11,6 +11,9 @@ test:
 	pytest
 
 go:
-	python nowallet/nowallet.py
+	python3 nowallet/nowallet.py
 
-.PHONY: init install uninstall test go
+go-kivy:
+	python3 kivy_ui/main.py
+
+.PHONY: init install uninstall test go go-kivy
