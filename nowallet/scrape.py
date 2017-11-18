@@ -7,27 +7,28 @@ from bs4 import BeautifulSoup
 
 async def scrape_onion_servers(chain_1209k: str="tbtc") -> \
     List[Tuple[str, int]]:
-    scrape_page: str = "https://1209k.com/bitcoin-eye/ele.php?chain={}"
-    url: str = scrape_page.format(chain_1209k)
+    scrape_page = "https://1209k.com/bitcoin-eye/ele.php?chain={}"  # type: str
+    url = scrape_page.format(chain_1209k)  # type: str
     logging.info("Scraping URL: %s", url)
 
-    page: str = await urlopen(url)
-    soup: BeautifulSoup = BeautifulSoup(page, "html.parser")
-    table_data: List = soup.find_all("td")
+    page = await urlopen(url)  # type: str
+    soup = BeautifulSoup(page, "html.parser")  # type: BeautifulSoup
+    table_data = soup.find_all("td")  # type: List
 
-    servers: List[Tuple[str, int]] = list()
+    servers = list()  # type: List[Tuple[str, int]]
     for i, data in enumerate(table_data):
         if ".onion" in data.text:
-            host: str = data.text
-            port: int = int(table_data[i+1].text)
-            is_running: bool = table_data[i+7].text == "open"
+            host = data.text  # type: str
+            port = int(table_data[i+1].text)  # type: int
+            is_running = table_data[i+7].text == "open"  # type: bool
             if is_running:
                 servers.append((host, port))
     return servers
 
 def main():
-    loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-    result: List[Tuple[str, int]] = loop.run_until_complete(scrape_onion_servers())
+    loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
+    result = loop.run_until_complete(
+        scrape_onion_servers())  # type: List[Tuple[str, int]]
     print(result)
     loop.close()
 

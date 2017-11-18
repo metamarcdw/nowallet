@@ -1,14 +1,14 @@
 #! /usr/bin/env python3
 
 import logging, sys
-FORMAT: str = "%(asctime)s %(levelname)s: %(message)s"
+FORMAT = "%(asctime)s %(levelname)s: %(message)s"  # type: str
 
-stdout_hdlr: logging.StreamHandler = logging.StreamHandler(sys.stdout)
+stdout_hdlr = logging.StreamHandler(sys.stdout)  # type: logging.StreamHandler
 stdout_hdlr.setFormatter(logging.Formatter(FORMAT))
 stdout_hdlr.setLevel(logging.INFO)
 
-file_hdlr: logging.FileHandler = logging.FileHandler(
-    filename="nowallet.log", mode="w")
+file_hdlr = logging.FileHandler(
+    filename="nowallet.log", mode="w")  # type: logging.FileHandler
 file_hdlr.setFormatter(logging.Formatter(FORMAT))
 file_hdlr.setLevel(logging.DEBUG)
 
@@ -19,7 +19,7 @@ import asyncio, io, random, collections, getpass, pprint, time
 from decimal import Decimal
 from functools import total_ordering
 from typing import (ClassVar, Tuple, List, Set, Dict, Any,
-                    Callable, Iterator, NoReturn)
+                    Callable, Awaitable, KeysView, NoReturn)
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
@@ -53,18 +53,18 @@ class Connection:
         """
         logging.info("Connecting...")
 
-        self.server_info: MyServerInfo = MyServerInfo(
-            server, hostname=server, ports=port)
+        self.server_info = MyServerInfo(
+            server, hostname=server, ports=port)  # type: MyServerInfo
         logging.info(self.server_info.get_port("t"))
-        self.client: StratumClient = StratumClient()
-        self.connection: asyncio.Future = self.client.connect(
+        self.client = StratumClient()  # type: StratumClient
+        self.connection = self.client.connect(
             self.server_info,
             proto_code="t",
             use_tor=self.server_info.is_onion,
-            disable_cert_verify=True)
+            disable_cert_verify=True)  # type: asyncio.Future
 
         loop.run_until_complete(self._do_connect())
-        self.queue: asyncio.Queue
+        self.queue = None  # type: asyncio.Queue
 
     async def _do_connect(self) -> None:
         """
@@ -97,20 +97,19 @@ class Connection:
         :param method: The Electrum API method to use
         :param args: Params associated with current method
         """
-        t: Tuple[asyncio.Future, asyncio.Queue] = \
-            self.client.subscribe(method, *args)
+        t = self.client.subscribe(
+            method, *args)  # type: Tuple[asyncio.Future, asyncio.Queue]
         self.queue = t[1]
 
-    async def consume_queue(self,
-                            queue_func: Callable[[List[str]], None]) -> \
-                            NoReturn:
+    async def consume_queue(self, queue_func: \
+        Callable[[List[str]], Awaitable[None]]) -> NoReturn:
         """
         Coroutine. Infinite loop that consumes the current subscription queue.
 
         :param queue_func: A function to call when new responses arrive
         """
         while True:
-            result: List[str] = await self.queue.get()
+            result = await self.queue.get()  # type: List[str]
             await queue_func(result)
 
 @total_ordering
@@ -123,7 +122,7 @@ class History:
     def __init__(self,
                  tx_obj: Tx,
                  is_spend: bool,
-                 value: float,
+                 value: Decimal,
                  height: int) -> None:
         """
         History object constructor.
@@ -134,11 +133,11 @@ class History:
         :param height: the height of the block this tx is included in
         :returns: A new History object
         """
-        self.tx_obj: Tx = tx_obj
-        self.is_spend: bool = is_spend
-        self.value: float = value
-        self.height: int = height
-        self.timestamp: str
+        self.tx_obj = tx_obj  # type: Tx
+        self.is_spend = is_spend  # type: bool
+        self.value = value  # type: Decimal
+        self.height = height  # type: int
+        self.timestamp = None  # type: str
 
     async def get_timestamp(self, connection: Connection) -> None:
         """
@@ -148,8 +147,9 @@ class History:
             from the server
         """
         if self.height:
-            block_header: Dict[str, Any] = await connection.listen_rpc(
-                Wallet.methods["get_header"], [self.height])
+            block_header = await connection.listen_rpc(
+                Wallet.methods["get_header"],
+                [self.height])  # type: Dict[str, Any]
             self.timestamp = time.asctime(time.localtime(
                 block_header["timestamp"]))
             logging.debug("Got timestamp %d from block at height %s",
@@ -202,7 +202,7 @@ LTC = Chain(netcode="LTC",
 #            chain_1209k="vtc",
 #            bip44=28)
 
-def log_time_elapsed(func: Callable[[List, Dict[str, Any]], None]) -> None:
+def log_time_elapsed(func: Callable) -> Callable:
     """
     Decorator. Times completion of function and logs at level INFO.
     """
@@ -210,10 +210,10 @@ def log_time_elapsed(func: Callable[[List, Dict[str, Any]], None]) -> None:
         """
         Decorator inner function.
         """
-        start_derivation: float = time.time()
+        start_derivation = time.time()  # type: float
         func(*args, **kwargs)
-        end_derivation: float = time.time()
-        seconds: float = end_derivation - start_derivation
+        end_derivation = time.time()  # type: float
+        seconds = end_derivation - start_derivation  # type: float
         logging.info("Operation completed in {0:.3f} seconds".format(seconds))
     return inner
 
@@ -222,10 +222,10 @@ class Wallet:
     Provides all functionality required for a fully functional and secure
     HD brainwallet based on the Warpwallet technique.
     """
-    COIN: ClassVar[int] = 100000000
-    _GAP_LIMIT: ClassVar[int] = 20
+    COIN = 100000000  # type: ClassVar[int]
+    _GAP_LIMIT = 20  # type: ClassVar[int]
 
-    methods: ClassVar[Dict[str, str]] = {
+    methods = {
         "get": "blockchain.transaction.get",
         "get_balance": "blockchain.address.get_balance",
         "listunspent": "blockchain.address.listunspent",
@@ -233,7 +233,8 @@ class Wallet:
         "get_header": "blockchain.block.get_header",
         "subscribe": "blockchain.address.subscribe",
         "estimatefee": "blockchain.estimatefee",
-        "broadcast": "blockchain.transaction.broadcast"}
+        "broadcast": "blockchain.transaction.broadcast"
+    }  # type: ClassVar[Dict[str, str]]
 
     def __init__(self,
                  salt: str,
@@ -253,48 +254,50 @@ class Wallet:
         :param chain: a namedtuple containing chain-specific info
         :returns: A new, empty Wallet object
         """
-        self.connection: Connection = connection
-        self.loop: asyncio.AbstractEventLoop = loop
+        @log_time_elapsed
+        def create_root_keys(salt: str,
+                             passphrase: str,
+                             account: int = 0) -> None:
+            """
+            Derives master key from salt/passphrase and initializes all
+            master key attributes.
+
+            :param salt: a string to use as a salt for key derivation
+            :param passphrase: a string containing a secure passphrase
+            :param account: account number, defaults to 0
+            """
+            logging.info("Deriving keys...")
+            t = derive_key(salt, passphrase)  # type: Tuple[int, bytes]
+            secret_exp, chain_code = t
+            self.mpk = SegwitBIP32Node(
+                netcode=self.chain.netcode,
+                chain_code=chain_code,
+                secret_exponent=secret_exp)  # type: SegwitBIP32Node
+
+            path = "49H/{}H/{}H".format(self.chain.bip44, account)  # type: str
+            self.account_master = \
+                self.mpk.subkey_for_path(path)  # type: SegwitBIP32Node
+            self.root_spend_key = \
+                self.account_master.subkey(0)  # type: SegwitBIP32Node
+            self.root_change_key = \
+                self.account_master.subkey(1)  # type: SegwitBIP32Node
+
+        self.connection = connection  # type: Connection
+        self.loop = loop  # type: asyncio.AbstractEventLoop
         self.chain = chain
-        self._create_root_keys(salt, passphrase)
+        create_root_keys(salt, passphrase)
 
         # Boolean lists, True = used / False = unused
-        self.spend_indicies: List[bool] = list()
-        self.change_indicies: List[bool] = list()
+        self.spend_indicies = list()  # type: List[bool]
+        self.change_indicies = list()  # type: List[bool]
 
         # All wallet TX info. (Does not persist!)
-        self.utxos: List[Spendable] = list()
-        self.spent_utxos: List[Spendable] = list()
-        self.history: Dict[str, List[History]] = dict()
-        self.balance: Decimal = Decimal("0")
-        self.zeroconf_balance: Decimal = Decimal("0")
-        self.new_history: bool = False
-
-    @log_time_elapsed
-    def _create_root_keys(self,
-                          salt: str,
-                          passphrase: str,
-                          account: int = 0) -> None:
-        """
-        Derives master key from salt/passphrase and initializes all
-        master key attributes.
-
-        :param salt: a string to use as a salt for key derivation
-        :param passphrase: a string containing a secure passphrase
-        :param account: account number, defaults to 0
-        """
-        logging.info("Deriving keys...")
-        t: Tuple[int, bytes] = derive_key(salt, passphrase)
-        secret_exp, chain_code = t
-        self.mpk: SegwitBIP32Node = SegwitBIP32Node(
-            netcode=self.chain.netcode,
-            chain_code=chain_code,
-            secret_exponent=secret_exp)
-
-        path: str = "49H/{}H/{}H".format(self.chain.bip44, account)
-        self.account_master: SegwitBIP32Node = self.mpk.subkey_for_path(path)
-        self.root_spend_key: SegwitBIP32Node = self.account_master.subkey(0)
-        self.root_change_key: SegwitBIP32Node = self.account_master.subkey(1)
+        self.utxos = list()  # type: List[Spendable]
+        self.spent_utxos = list()  # type: List[Spendable]
+        self.history = dict()  # type: Dict[str, List[History]]
+        self.balance = Decimal("0")  # type: Decimal
+        self.zeroconf_balance = Decimal("0")  # type: Decimal
+        self.new_history = False  # type: bool
 
     @property
     def xpub(self) -> str:
@@ -313,8 +316,8 @@ class Wallet:
         :param change: a boolean indicating which key root to use
         :returns: a key object associated with the given index
         """
-        root_key: SegwitBIP32Node = \
-            self.root_change_key if change else self.root_spend_key
+        root_key = self.root_change_key if change \
+            else self.root_spend_key  # type: SegwitBIP32Node
         return root_key.subkey(index)
 
     def get_next_unused_key(self,
@@ -327,12 +330,12 @@ class Wallet:
         :param using: a boolean indicating whether to mark key as used now
         :returns: a key object associated with the next unused index
         """
-        indicies: List[bool] = \
-            self.change_indicies if change else self.spend_indicies
+        indicies = self.change_indicies if change \
+            else self.spend_indicies  # type: List[bool]
         for i, is_used in enumerate(indicies):
             if not is_used:
                 if using:
-                    indicies[i]: bool = True
+                    indicies[i] = True
                 return self.get_key(i, change)
 
     def get_all_known_addresses(self, change: bool = False) -> List[str]:
@@ -343,13 +346,13 @@ class Wallet:
         :returns: a list of address strings containing all addresses known
                     for the given root
         """
-        indicies: List[bool] = \
-            self.change_indicies if change else self.spend_indicies
-        addrs: List[str] = [self.get_key(i, change).p2sh_p2wpkh_address()
-                            for i in range(len(indicies))]
+        indicies = self.change_indicies if change \
+            else self.spend_indicies  # type: List[bool]
+        addrs = [self.get_key(i, change).p2sh_p2wpkh_address()
+                 for i in range(len(indicies))]  # type: List[str]
         return addrs
 
-    def get_all_used_addresses(self) -> Iterator[str]:
+    def get_all_used_addresses(self) -> KeysView[str]:
         """
         Returns all addresses that have been used previously.
 
@@ -365,7 +368,7 @@ class Wallet:
 
         :returns: an ordered list of History objects.
         """
-        history: List[History] = list()
+        history = list()  # type: List[History]
         for value in self.history.values():
             history.extend(value)
         history.sort()
@@ -379,13 +382,13 @@ class Wallet:
         :param txids: a list of txid strings to retrieve tx histories for
         :returns: Future, a list of Tx objects
         """
-        results: List[str] = list()
+        results = list()  # type: List[str]
         for txid in txids:
-            hex_: str = await self.connection.listen_rpc(
-                self.methods["get"], [txid])
+            hex_ = await self.connection.listen_rpc(
+                self.methods["get"], [txid])  # type: str
             results.append(hex_)
             logging.debug("Retrieved Tx hex: %s", hex_)
-        txs: List[Tx] = [Tx.from_hex(tx_hex) for tx_hex in results]
+        txs = [Tx.from_hex(tx_hex) for tx_hex in results]  # type: List[Tx]
         return txs
 
     async def _get_balance(self, address: str) -> Tuple[Decimal, Decimal]:
@@ -395,11 +398,13 @@ class Wallet:
         :param address: an address string to retrieve a balance for
         :returns: Future, a Decimal representing the balance
         """
-        result: Dict[str, Any] = await self.connection.listen_rpc(
-            self.methods["get_balance"], [address])
+        result = await self.connection.listen_rpc(
+            self.methods["get_balance"], [address])  # type: Dict[str, Any]
         logging.debug("Retrieved a balance for address: %s", address)
-        confirmed: Decimal = Decimal(str(result["confirmed"])) / Wallet.COIN
-        zeroconf: Decimal = Decimal(str(result["unconfirmed"])) / Wallet.COIN
+        confirmed = \
+            Decimal(str(result["confirmed"])) / Wallet.COIN  # type: Decimal
+        zeroconf = \
+            Decimal(str(result["unconfirmed"])) / Wallet.COIN  # type: Decimal
         return confirmed, zeroconf
 
     async def _get_utxos(self, address: str) -> List[Spendable]:
@@ -410,17 +415,17 @@ class Wallet:
         :param address: an address string to retrieve a balance for
         :returns: Future, a list of pycoin Spendable objects.
         """
-        result: Dict[str, Any] = await self.connection.listen_rpc(
-            self.methods["listunspent"], [address])
+        result = await self.connection.listen_rpc(
+            self.methods["listunspent"], [address])  # type: Dict[str, Any]
         logging.debug("Retrieving utxos for address %s", address)
-        utxos: List[Spendable] = list()
+        utxos = list()  # type: List[Spendable]
         for unspent in result:
-            txid: str = unspent["tx_hash"]
-            vout: int = unspent["tx_pos"]
-            result: str = await self.connection.listen_rpc(
-                self.methods["get"], [txid])
-            spendables: List[Spendable] = \
-                Tx.from_hex(result).tx_outs_as_spendable()
+            txid = unspent["tx_hash"]  # type: str
+            vout = unspent["tx_pos"]  # type: int
+            get_result = await self.connection.listen_rpc(
+                self.methods["get"], [txid])  # type: str
+            tx = Tx.from_hex(get_result)  # type: Tx
+            spendables = tx.tx_outs_as_spendable()  # type: List[Spendable]
             utxos.append(spendables[vout])
             logging.debug("Retrieved utxo: %s", spendables[vout])
         return utxos
@@ -433,13 +438,14 @@ class Wallet:
         :param this_tx: A Tx object given from our transaction history
         :returns: The coin value associated with our spend output.
         """
-        change_addrs: List[str] = self.get_all_known_addresses(change=True)
-        chg_vout: int = None
+        change_addrs = \
+            self.get_all_known_addresses(change=True)  # type: List[str]
+        chg_vout = None  # type: int
         for i, txout in enumerate(this_tx.txs_out):
             address: str = txout.address(netcode=self.chain.netcode)
             if address in change_addrs:
                 chg_vout = i
-        spend_vout: int = 0 if chg_vout == 1 else 1
+        spend_vout = 0 if chg_vout == 1 else 1  # type: int
         return this_tx.txs_out[spend_vout].coin_value
 
     async def _process_history(self,
@@ -454,8 +460,8 @@ class Wallet:
             given transaction
         :returns: A new _History namedtuple for our history
         """
-        value: int = None
-        is_spend: bool = False
+        value = None  # type: int
+        is_spend = False  # type: bool
         for txout in history.txs_out:
             if txout.address(netcode=self.chain.netcode) == address:
                 value = txout.coin_value
@@ -464,10 +470,10 @@ class Wallet:
             value = self._get_spend_value(history)
 
         decimal_value: Decimal = Decimal(str(value)) / Wallet.COIN
-        history_obj: History = History(tx_obj=history,
-                                       is_spend=is_spend,
-                                       value=decimal_value,
-                                       height=height)
+        history_obj = History(tx_obj=history,
+                              is_spend=is_spend,
+                              value=decimal_value,
+                              height=height)  # type: History
         await history_obj.get_timestamp(self.connection)
         logging.debug("Processed history object: %s", history_obj)
         return history_obj
@@ -483,34 +489,34 @@ class Wallet:
         :param change: a boolean indicating which key index list to use
         :returns: A boolean that is true if all given histories were empty
         """
-        indicies: List[bool] = \
-            self.change_indicies if change else self.spend_indicies
-        is_empty: bool = True
+        indicies = self.change_indicies if change \
+            else self.spend_indicies  # type: List[bool]
+        is_empty = True  # type: bool
         # Each iteration represents one key index
         for history in histories:
             if history:
                 # Get key/address for current index
-                key: SegwitBIP32Node = self.get_key(len(indicies), change)
-                address: str = key.p2sh_p2wpkh_address()
+                key = self.get_key(len(indicies), change)  # type: SegwitBIP32Node
+                address = key.p2sh_p2wpkh_address()  # type: str
                 # Reassign historic info for this index
-                txids: List[str] = [tx["tx_hash"] for tx in history]
-                heights: List[int] = [tx["height"] for tx in history]
+                txids = [tx["tx_hash"] for tx in history]  # type: List[str]
+                heights = [tx["height"] for tx in history]  # type: List[int]
 
                 # Get Tx objects
-                this_history: List[Tx] = \
-                    self.loop.run_until_complete(self._get_history(txids))
+                this_history = self.loop.run_until_complete(
+                    self._get_history(txids))  # type: List[Tx]
 
                 # Process all Txs into our History objects
-                futures: List[asyncio.Future] = list()
+                futures = list()  # type: List[Awaitable[History]]
                 for i, hist in enumerate(this_history):
                     futures.append(self._process_history(
                         hist, address, heights[i]))
-                processed_history: List[History] = \
-                    self.loop.run_until_complete(asyncio.gather(*futures))
+                processed_history = self.loop.run_until_complete(
+                    asyncio.gather(*futures))  # type: List[History]
 
                 # Delete Txs that are just recieving change
                 if change:
-                    del_indexes: List[int] = list()
+                    del_indexes = list()  # type: List[int]
                     for i, hist in enumerate(processed_history):
                         if not hist.is_spend:
                             del_indexes.append(i)
@@ -521,8 +527,8 @@ class Wallet:
                     self.history[address] = processed_history
 
                 # Adjust our balances for this index
-                t: Tuple[Decimal, Decimal] = \
-                    self.loop.run_until_complete(self._get_balance(address))
+                t = self.loop.run_until_complete(self._get_balance(
+                    address))  # type: Tuple[Decimal, Decimal]
                 confirmed, zeroconf = t
                 self.balance += confirmed
                 self.zeroconf_balance += zeroconf
@@ -551,17 +557,17 @@ class Wallet:
         :param change: a boolean indicating which key index list to use
         :returns: A boolean that is true if all given histories were empty
         """
-        is_empty: bool = True
+        is_empty = True  # type: bool
         if history:
             spend_addrs = self.get_all_known_addresses()
             # Reassign historic info for new history
-            txid: str = history["tx_hash"]
-            height: int = history["height"]
+            txid = history["tx_hash"]  # type: str
+            height = history["height"]  # type: int
 
             # Get Tx object and process into our History object
-            tx_list: List[Tx] = await self._get_history([txid])
-            new_history: History = \
-                await self._process_history(tx_list.pop(), address, height)
+            tx_list = await self._get_history([txid])  # type: List[Tx]
+            new_history = await self._process_history(
+                tx_list.pop(), address, height)  # type: History
 
             if address in self.history:
                 if str(new_history.tx_obj) not in \
@@ -579,14 +585,14 @@ class Wallet:
                     self.zeroconf_balance += new_history.value
 
             # Add new utxo to our list if not already spent
-            new_utxos: List[Spendable] = await self._get_utxos(address)
+            new_utxos = await self._get_utxos(address)  # type: List[Spendable]
             for utxo in new_utxos:
                 if str(utxo) not in [str(spent) for spent in self.spent_utxos]:
                     self.utxos.append(utxo)
 
             # If address is found to belong to a spend index, mark it as used
             for i in range(len(self.spend_indicies)):
-                key: SegwitBIP32Node = self.get_key(i, change=False)
+                key = self.get_key(i, change=False)  # type: SegwitBIP32Node
                 if key.p2sh_p2wpkh_address() == address:
                     self.spend_indicies[i] = True
                     break
@@ -602,18 +608,18 @@ class Wallet:
         :param change: a boolean indicating which key index list to use
         """
         logging.info("Discovering transaction history. change=%s", change)
-        current_index: int = 0
-        quit_flag: bool = False
+        current_index = 0  # type: int
+        quit_flag = False  # type: bool
         while not quit_flag:
-            futures: List[asyncio.Future] = list()
+            futures = list()  # type: List[Awaitable]
             for i in range(current_index, current_index + Wallet._GAP_LIMIT):
-                addr: str = self.get_key(i, change).p2sh_p2wpkh_address()
+                addr = self.get_key(i, change).p2sh_p2wpkh_address() # type: str
                 futures.append(self.connection.listen_rpc(
                     self.methods["get_history"], [addr]))
 
-            result: List[Dict[str, Any]] = \
-                self.loop.run_until_complete(asyncio.gather(*futures))
-            quit_flag: bool = self._interpret_history(result, change)
+            result = self.loop.run_until_complete(
+                asyncio.gather(*futures))  # type: List[Dict[str, Any]]
+            quit_flag = self._interpret_history(result, change)
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
 
@@ -632,7 +638,7 @@ class Wallet:
         begins consuming the queue so we can recieve new tx histories from
         the server asynchronously.
         """
-        addrs: List[str] = self.get_all_known_addresses()
+        addrs = self.get_all_known_addresses()  # type: List[str]
         for addr in addrs:
             self.connection.listen_subscribe(self.methods["subscribe"], [addr])
         logging.debug("Listening for updates involving any known address...")
@@ -646,11 +652,12 @@ class Wallet:
 
         :param result: an address that has some new tx history
         """
-        addr: str = result[0]
+        addr = result[0]  # type: str
         logging.debug("Dispatched a new history for address %s", addr)
-        history: List[Dict[str, Any]] = await self.connection.listen_rpc(
-            self.methods["get_history"], [addr])
-        empty_flag: bool = await self._interpret_new_history(addr, history[0])
+        history = await self.connection.listen_rpc(
+            self.methods["get_history"], [addr])  # type: List[Dict[str, Any]]
+        empty_flag = await self._interpret_new_history(
+            addr, history[0])  # type: bool
         if not empty_flag:
             self.new_history = True
 
@@ -663,15 +670,15 @@ class Wallet:
         :returns: An int representing the vsize of the given Tx
         """
         def _total_size(tx: Tx) -> int:
-            ins: int = len(tx.txs_in)
-            outs: int = len(tx.txs_out)
+            ins = len(tx.txs_in)  # type: int
+            outs = len(tx.txs_out)  # type: int
             return (ins * 180 + outs * 34) + (10 + ins)
         def _base_size(tx: Tx) -> int:
-            buffer: io.BytesIO = io.BytesIO()
+            buffer = io.BytesIO()  # type: io.BytesIO
             tx.stream(buffer)
             return len(buffer.getvalue())
 
-        weight: int = 3 * _base_size(tx) + _total_size(tx)
+        weight = 3 * _base_size(tx) + _total_size(tx)  # type: int
         return weight // 4
 
     @staticmethod
@@ -701,8 +708,8 @@ class Wallet:
         :returns: A float representing the appropriate fee in coins per KB
         :raise: Raises a base Exception when the server returns -1
         """
-        coin_per_kb: float = self.loop.run_until_complete(
-            self.connection.listen_rpc(self.methods["estimatefee"], [6]))
+        coin_per_kb = self.loop.run_until_complete(self.connection.listen_rpc(
+            self.methods["estimatefee"], [6]))  # type: float
         if coin_per_kb < 0:
             raise Exception("Cannot get a fee estimate")
         logging.info("Current fee estimate from server is %f %s/KB",
@@ -721,12 +728,12 @@ class Wallet:
         """
         if coin_per_kb > Wallet.satb_to_coinkb(1000):
             raise ValueError("Given fee rate is extraordinarily high.")
-        tx_kb_count: float = Wallet._calculate_vsize(tx) / 1000
+        tx_kb_count = Wallet._calculate_vsize(tx) / 1000  # type: float
         return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
 
     def _mktx(self,
               out_addr: str,
-              amount: Decimal,
+              dec_amount: Decimal,
               rbf: bool = False) -> Tuple[Tx, Set[str], int]:
         """
         Builds a standard Bitcoin transaction - in the most naive way.
@@ -738,13 +745,14 @@ class Wallet:
         :param rbf: A boolean that says whether to mark Tx as replaceable
         :returns: A not-fully-formed and unsigned Tx object
         """
-        amount: int = int(amount * Wallet.COIN)
-        fee_highball: int = 100000
-        total_out: int = 0
+        amount = int(dec_amount * Wallet.COIN)  # type: int
+        fee_highball = 100000  # type: int
+        total_out = 0  # type: int
 
-        spendables: List[LexSpendable] = list()
-        in_addrs: Set[str] = set()
-        del_indexes: List[int] = list()
+        spendables = list()  # type: List[LexSpendable]
+        in_addrs = set()  # type: Set[str]
+        del_indexes = list()  # type: List[int]
+
         # Collect enough utxos for this spend
         # Add them to spent list and delete them from utxo list
         for i, utxo in enumerate(self.utxos):
@@ -758,17 +766,17 @@ class Wallet:
                       if i not in del_indexes]
 
         # Get change address, mark index as used, and create payables list
-        change_key: SegwitBIP32Node = \
-            self.get_next_unused_key(change=True, using=True)
-        change_addr: str = change_key.p2sh_p2wpkh_address()
-        payables: List[Tuple[str, int]] = list()
+        change_key = self.get_next_unused_key(
+            change=True, using=True)  # type: SegwitBIP32Node
+        change_addr = change_key.p2sh_p2wpkh_address()  # type: str
+        payables = list()  # type: List[Tuple[str, int]]
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
 
-        tx: Tx = Wallet._create_bip69_tx(spendables, payables, rbf)
+        tx = Wallet._create_bip69_tx(spendables, payables, rbf)  # type: Tx
 
         # Search for change output index after lex sort
-        chg_vout: int
+        chg_vout = None  # type: int
         for i, txout in enumerate(tx.txs_out):
             if txout.address(self.chain.netcode) == change_addr:
                 chg_vout = i
@@ -786,22 +794,24 @@ class Wallet:
 
         # Create input list from utxos
         # Set sequence numbers to zero if using RBF.
-        txs_in: List[TxIn] = [spendable.tx_in() for spendable in spendables]
+        txs_in = [spendable.tx_in()
+                  for spendable in spendables]  # type: List[TxIn]
         if rbf:
             logging.info("Spending with opt-in Replace by Fee! (RBF)")
             for txin in txs_in:
                 txin.sequence = 0
 
         # Create output list from payables
-        txs_out: List[LexTxOut] = list()
+        txs_out = list()  # type: List[TxOut]
         for payable in payables:
             bitcoin_address, coin_value = payable
-            script: bytes = standard_tx_out_script(bitcoin_address)
+            script = standard_tx_out_script(bitcoin_address)  # type: bytes
             txs_out.append(LexTxOut(coin_value, script))
         txs_out.sort()
-        txs_out: List[TxOut] = [LexTxOut.demote(txout) for txout in txs_out]
+        txs_out = [LexTxOut.demote(txout)
+                   for txout in txs_out]
 
-        tx: Tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)
+        tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)  # type: Tx
         tx.set_unspents(spendables)
         return tx
 
@@ -813,16 +823,17 @@ class Wallet:
         :param in_addrs: a list of our addresses that have recieved coins
         :param fee: an int representing the desired Tx fee
         """
-        redeem_scripts: Dict[bytes, bytes] = dict()
-        wifs: List[str] = list()
+        redeem_scripts = dict()  # type: Dict[bytes, bytes]
+        wifs = list()  # type: List[str]
+
         # Search our indicies for keys used, given in in_addrs list
         # Populate lists with our privkeys and redeemscripts
         for change in (True, False):
             for i, addr in enumerate(self.get_all_known_addresses(change)):
-                key: SegwitBIP32Node = self.get_key(i, change)
+                key = self.get_key(i, change)  # type: SegwitBIP32Node
                 if addr in in_addrs:
-                    p2aw_script: bytes = key.p2sh_p2wpkh_script()
-                    script_hash: bytes = key.p2sh_p2wpkh_script_hash()
+                    p2aw_script = key.p2sh_p2wpkh_script()  # type: bytes
+                    script_hash = key.p2sh_p2wpkh_script_hash()  # type: bytes
                     redeem_scripts[script_hash] = p2aw_script
                     wifs.append(key.wif())
 
@@ -845,17 +856,17 @@ class Wallet:
         :raise: Raises a ValueError if tx not a spend or is already confirmed
         """
         if hist_obj.height == 0 and hist_obj.is_spend:
-            old_tx: Tx = hist_obj.tx_obj
-            spendables: List[Spendable] = old_tx.unspents
-            chg_vout: int
+            old_tx = hist_obj.tx_obj  # type: Tx
+            spendables = old_tx.unspents  # type: List[Spendable]
+            chg_vout = None  # type: int
 
-            in_addrs: Set[str] = set()
+            in_addrs = set()  # type: Set[str]
             for utxo in spendables:
                 in_addrs.add(utxo.address(self.chain.netcode))
 
-            txs_out: List[TxOut] = list()
+            txs_out = list()  # type: List[TxOut]
             for i, txout in enumerate(old_tx.txs_out):
-                value: int
+                value = None  # type: int
                 if txout.coin_value / Wallet.COIN == hist_obj.value:
                     value = txout.coin_value
                 else:
@@ -863,9 +874,9 @@ class Wallet:
                     chg_vout = i
                 txs_out.append(TxOut(value, txout.script))
 
-            new_tx: Tx = Tx(version=version,
-                            txs_in=old_tx.txs_in,
-                            txs_out=txs_out)
+            new_tx = Tx(version=version,
+                        txs_in=old_tx.txs_in,
+                        txs_out=txs_out)  # type: Tx
             new_tx.set_unspents(spendables)
             return new_tx, in_addrs, chg_vout
         else:
@@ -888,26 +899,28 @@ class Wallet:
         :returns: The txid of our new tx, given after a successful broadcast
         :raise: Raises a base Exception if we can't afford the fee
         """
-        tx, in_addrs, chg_vout = self._mktx(address, amount, rbf=rbf)
+        t = self._mktx(address, amount, rbf=rbf)  # type: Tuple[Tx, Set[str], int]
+        tx, in_addrs, chg_vout = t
 
-        fee = self._get_fee(tx, coin_per_kb)
-        decimal_fee = Decimal(str(fee)) / Wallet.COIN
+        fee = self._get_fee(tx, coin_per_kb)  # type: int
+        decimal_fee = Decimal(str(fee)) / Wallet.COIN  # type: Decimal
         if not amount + decimal_fee <= self.balance:
             raise Exception("Insufficient funds to cover fee")
 
         self._signtx(tx, in_addrs, fee)
         txid = self.loop.run_until_complete(self.connection.listen_rpc(
-            self.methods["broadcast"], [tx.as_hex()]))
+            self.methods["broadcast"], [tx.as_hex()]))  # type: str
 
-        change_out = tx.txs_out[chg_vout]
-        coin_in = Decimal(str(tx.total_in())) / Wallet.COIN
-        change = Decimal(str(change_out.coin_value)) / Wallet.COIN
+        change_out = tx.txs_out[chg_vout]  # type: TxOut
+        coin_in = Decimal(str(tx.total_in())) / Wallet.COIN  # type: Decimal
+        change = Decimal(str(change_out.coin_value)) / Wallet.COIN  # type: Decimal
 
         self.balance -= coin_in
         self.zeroconf_balance += change
         self.new_history = True
 
-        change_address = change_out.address(netcode=self.chain.netcode)
+        change_address = change_out.address(
+            netcode=self.chain.netcode)  # type:str
         self.connection.listen_subscribe(
             self.methods["subscribe"], [change_address])
         return txid, decimal_fee
@@ -922,15 +935,15 @@ class Wallet:
         :param coin_per_kb: a new fee rate given in whole coins per KB
         :returns: The txid of our new tx, given after a successful broadcast
         """
-        t: Tuple[Tx, Set[str], int] = self._create_replacement_tx(hist_obj)
+        t = self._create_replacement_tx(hist_obj)  # type: Tuple[Tx, Set[str], int]
         tx, in_addrs = t[:2]
-        new_fee: int = self._get_fee(tx, coin_per_kb)
+        new_fee = self._get_fee(tx, coin_per_kb)  # type: int
 
         self._signtx(tx, in_addrs, new_fee)
-        txid: str = self.loop.run_until_complete(self.connection.listen_rpc(
-            self.methods["broadcast"], [tx.as_hex()]))
+        txid = self.loop.run_until_complete(self.connection.listen_rpc(
+            self.methods["broadcast"], [tx.as_hex()]))  # type: str
 
-        fee_diff: int = new_fee - hist_obj.tx_obj.fee()
+        fee_diff = new_fee - hist_obj.tx_obj.fee()  # type: int
         self.balance -= fee_diff
         hist_obj.tx_obj = tx
         return txid
@@ -941,8 +954,8 @@ class Wallet:
 
         :returns: The string representation of this wallet object
         """
-        pprinter: pprint.PrettyPrinter = pprint.PrettyPrinter(indent=4)
-        str_: List[str] = list()
+        pprinter = pprint.PrettyPrinter(indent=4)  # type: pprint.PrettyPrinter
+        str_ = list()  # type: List[str]
         str_.append("\nXPUB: {}".format(self.xpub))
         str_.append("\nHistory:\n{}".format(
             pprinter.pformat(self.get_tx_history())))
@@ -964,8 +977,8 @@ def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
     :returns: A server info tuple for a random .onion Electrum server
     :raise: Raises s base Exception if there are no servers up on 1209k
     """
-    servers = loop.run_until_complete(
-        scrape_onion_servers(chain_1209k=chain.chain_1209k))
+    servers = loop.run_until_complete(scrape_onion_servers(
+        chain_1209k=chain.chain_1209k))  # type: List[Tuple[str, int]]
     if not servers:
         raise Exception("No electrum servers found!")
     return random.choice(servers)
@@ -996,19 +1009,19 @@ def main():
 #    register_network(vtc_net)
 
     chain = TBTC
-    loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
 
-    t: Tuple[str, int] = get_random_onion(loop, chain)
+    t = get_random_onion(loop, chain)  # type: Tuple[str, int]
     server, port = t
-    connection: Connection = Connection(loop, server, port)
-#    connection: Connection = Connection(loop, "192.168.1.200", 50001)
+    connection = Connection(loop, server, port)  # type: Connection
+#    connection = Connection(loop, "192.168.1.200", 50001)  # type: Connection
 
-    email: str = input("Enter email: ")
-    passphrase: str = getpass.getpass("Enter passphrase: ")
-    confirm: str = getpass.getpass("Confirm your passphrase: ")
+    email = input("Enter email: ")  # type: str
+    passphrase = getpass.getpass("Enter passphrase: ")  # type: str
+    confirm = getpass.getpass("Confirm your passphrase: ")  # type: str
     assert passphrase == confirm, "Passphrase and confirmation did not match"
     assert email and passphrase, "Email and/or passphrase were blank"
-    wallet: Wallet = Wallet(email, passphrase, connection, loop, chain)
+    wallet = Wallet(email, passphrase, connection, loop, chain)  # type: Wallet
     wallet.discover_all_keys()
 
     if len(sys.argv) > 1 and sys.argv[1].lower() == "spend":
@@ -1022,15 +1035,15 @@ def main():
                 "Spend address and/or amount were blank"
         assert spend_amount <= wallet.balance, "Insufficient funds"
 
-        use_rbf: bool = False
+        use_rbf = False  # type: bool
         if len(sys.argv) > 2 and sys.argv[2].lower() == "rbf":
             use_rbf = True
-        coin_per_kb: float = wallet.get_fee_estimation()
+        coin_per_kb = wallet.get_fee_estimation()  # type: float
 
-        t: Tuple[str, Decimal] = wallet.spend(spend_addr,
-                                              spend_amount,
-                                              coin_per_kb,
-                                              rbf=use_rbf)
+        t = wallet.spend(spend_addr,
+                         spend_amount,
+                         coin_per_kb,
+                         rbf=use_rbf)  # type: Tuple[str, Decimal]
         txid, decimal_fee = t
 
         print("Added a miner fee of: {} {}".format(
