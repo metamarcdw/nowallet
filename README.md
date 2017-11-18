@@ -65,7 +65,7 @@ Clone the Nowallet Github repository:
   
 Install all dependencies:  
 `cd nowallet`  
-`sudo pip3 install -r requirements.txt`  
+`make init`  
   
 Run nowallet from the command line:  
 `python nowallet.py`  
@@ -74,4 +74,6 @@ OR
 
 #### UNIT TESTING:
 Install the nowallet package before attempting to run the test suite:  
-`sudo pip3 install -e .`
+`make install`  
+Run unit tests:
+`make test`
