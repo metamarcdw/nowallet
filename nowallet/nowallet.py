@@ -19,7 +19,7 @@ import asyncio, io, random, collections, getpass, pprint, time
 from decimal import Decimal
 from functools import total_ordering
 from typing import (ClassVar, Tuple, List, Set, Dict, Any,
-                    Callable, Awaitable, KeysView, NoReturn)
+                    Callable, Awaitable, KeysView)
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
@@ -102,7 +102,7 @@ class Connection:
         self.queue = t[1]
 
     async def consume_queue(self, queue_func: \
-        Callable[[List[str]], Awaitable[None]]) -> NoReturn:
+        Callable[[List[str]], Awaitable[None]]) -> None:
         """
         Coroutine. Infinite loop that consumes the current subscription queue.
 
@@ -442,7 +442,7 @@ class Wallet:
             self.get_all_known_addresses(change=True)  # type: List[str]
         chg_vout = None  # type: int
         for i, txout in enumerate(this_tx.txs_out):
-            address: str = txout.address(netcode=self.chain.netcode)
+            address = txout.address(netcode=self.chain.netcode)  # type: str
             if address in change_addrs:
                 chg_vout = i
         spend_vout = 0 if chg_vout == 1 else 1  # type: int
@@ -469,7 +469,7 @@ class Wallet:
             is_spend = True
             value = self._get_spend_value(history)
 
-        decimal_value: Decimal = Decimal(str(value)) / Wallet.COIN
+        decimal_value = Decimal(str(value)) / Wallet.COIN  # type: Decimal
         history_obj = History(tx_obj=history,
                               is_spend=is_spend,
                               value=decimal_value,
@@ -983,7 +983,7 @@ def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
         raise Exception("No electrum servers found!")
     return random.choice(servers)
 
-async def print_loop(wallet: Wallet) -> NoReturn:
+async def print_loop(wallet: Wallet) -> None:
     """
     Coroutine. Prints the wallet's string representation to stdout if
     wallet.new_history is True. Checks every second.
@@ -1028,9 +1028,9 @@ def main():
         print("\nConfirmed balance: {} {}".format(
             wallet.balance, chain.chain_1209k.upper()))
         print("Enter a destination address:")
-        spend_addr: str = input("> ")
+        spend_addr = input("> ")  # type: str
         print("Enter an amount to spend:")
-        spend_amount: Decimal = Decimal(input("> "))
+        spend_amount = Decimal(input("> "))  # type: Decimal
         assert spend_addr and spend_amount, \
                 "Spend address and/or amount were blank"
         assert spend_amount <= wallet.balance, "Insufficient funds"

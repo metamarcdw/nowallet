@@ -1,10 +1,12 @@
 *.log
 *.ini
 *.egg-info
+.buildozer
 .eric6project
 .cache
 __pycache__
 .mypy_cache
+bin
 nowallet.e4p
 lint.txt
 type.txt

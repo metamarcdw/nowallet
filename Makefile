@@ -16,10 +16,10 @@ test:
 	pytest
 
 go:
-	python nowallet/nowallet.py
+	python3 nowallet/nowallet.py
 
 go-kivy:
-	python kivy_ui/main.py
+	python3 kivy_ui/main.py
 
 lint:
 	pylint nowallet/*.py > lint.txt
