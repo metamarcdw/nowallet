@@ -1,3 +1,8 @@
+clean:
+	rm -rf __pycache__/ .cache/ .mypy_cache/
+	rm -f lint.txt type.txt nowallet.log
+	rm -rf nowallet/__pycache__/ nowallet/.mypy_cache/
+
 init:
 	pip install -r requirements.txt
 
@@ -22,4 +27,4 @@ lint:
 type:
 	mypy --ignore-missing-imports nowallet/*.py > type.txt
 
-.PHONY: init install uninstall test go go-kivy lint type
+.PHONY: clean init install uninstall test go go-kivy lint type

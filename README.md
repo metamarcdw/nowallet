@@ -75,5 +75,5 @@ OR
 #### UNIT TESTING:
 Install the nowallet package before attempting to run the test suite:  
 `make install`  
-Run unit tests:
+Run unit tests:  
 `make test`
