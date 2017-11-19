@@ -1,5 +1,5 @@
 from functools import total_ordering
-from typing import Type, TypeVar, List, Tuple, Dict, Any
+from typing import Type, TypeVar, Tuple, List, Dict, Any
 
 from connectrum.svr_info import ServerInfo
 from connectrum.constants import DEFAULT_PORTS

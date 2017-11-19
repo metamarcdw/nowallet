@@ -20,7 +20,7 @@ def xor_merge(bytes1: bytes, bytes2: bytes) -> bytes:
         byte_array.append(bytes1[i] ^ bytes2[i])
     return bytes(byte_array)
 
-def derive_key(salt: str, passphrase: str, hd: bool=True) -> \
+def derive_key(salt: str, passphrase: str, hd: bool = True) -> \
     Union[int, Tuple[int, bytes]]:
     key_length = 64 if hd else 32  # type: int
 

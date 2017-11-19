@@ -18,14 +18,14 @@ logging.basicConfig(level=logging.DEBUG,
 import asyncio, io, random, collections, getpass, pprint, time
 from decimal import Decimal
 from functools import total_ordering
-from typing import (ClassVar, Tuple, List, Set, Dict, Any,
+from typing import (Tuple, List, Set, Dict, Any, ClassVar,
                     Callable, Awaitable, KeysView)
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
-from pycoin.tx.TxIn import TxIn
+# from pycoin.tx.TxIn import TxIn
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 
@@ -272,19 +272,24 @@ class Wallet:
             self.mpk = SegwitBIP32Node(
                 netcode=self.chain.netcode,
                 chain_code=chain_code,
-                secret_exponent=secret_exp)  # type: SegwitBIP32Node
+                secret_exponent=secret_exp)
 
             path = "49H/{}H/{}H".format(self.chain.bip44, account)  # type: str
             self.account_master = \
-                self.mpk.subkey_for_path(path)  # type: SegwitBIP32Node
+                self.mpk.subkey_for_path(path)
             self.root_spend_key = \
-                self.account_master.subkey(0)  # type: SegwitBIP32Node
+                self.account_master.subkey(0)
             self.root_change_key = \
-                self.account_master.subkey(1)  # type: SegwitBIP32Node
+                self.account_master.subkey(1)
 
         self.connection = connection  # type: Connection
         self.loop = loop  # type: asyncio.AbstractEventLoop
         self.chain = chain
+
+        self.mpk = None  # type: SegwitBIP32Node
+        self.account_master = None  # type: SegwitBIP32Node
+        self.root_spend_key = None  # type: SegwitBIP32Node
+        self.root_change_key = None  # type: SegwitBIP32Node
         create_root_keys(salt, passphrase)
 
         # Boolean lists, True = used / False = unused

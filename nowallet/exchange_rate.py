@@ -6,7 +6,7 @@ from typing import Dict, List
 from socks_http import urlopen
 
 CURRENCIES = ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "CNY"]  # type: List[str]
-async def fetch_exchange_rates(chain_1209k: str="btc") -> Dict[str, float]:
+async def fetch_exchange_rates(chain_1209k: str = "btc") -> Dict[str, float]:
     scrape_page = ("https://apiv2.bitcoinaverage.com/indices/" +
                    "global/ticker/short?crypto={}")  # type: str
     url = scrape_page.format(chain_1209k.upper())  # type: str
