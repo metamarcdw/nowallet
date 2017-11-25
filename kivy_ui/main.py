@@ -13,7 +13,7 @@ Window.size = (350, 600)
 
 #sys.path.append(os.path.abspath(
 #    os.path.join(os.path.dirname(__file__), os.path.pardir)))
-import nowallet
+#import nowallet
 from settings_json import settings_json
 
 __version__ = "0.1.0"
