@@ -10,3 +10,4 @@ bin
 nowallet.e4p
 lint.txt
 type.txt
+.tox
