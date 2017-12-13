@@ -27,6 +27,7 @@ async def urlopen(url: str) -> str:
     except aiosocks.SocksError:
         # communication problem
         pass
+    return ""  # Should never happen
 
 def main():
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop

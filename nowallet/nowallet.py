@@ -18,14 +18,13 @@ logging.basicConfig(level=logging.DEBUG,
 import asyncio, io, random, collections, getpass, pprint, time
 from decimal import Decimal
 from functools import total_ordering
-from typing import (Tuple, List, Set, Dict, Any, ClassVar,
-                    Callable, Awaitable, KeysView)
+from typing import (Tuple, List, Set, Dict, Any, Callable, Awaitable, KeysView)
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
-# from pycoin.tx.TxIn import TxIn
+from pycoin.tx.TxIn import TxIn
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 
@@ -222,8 +221,8 @@ class Wallet:
     Provides all functionality required for a fully functional and secure
     HD brainwallet based on the Warpwallet technique.
     """
-    COIN = 100000000  # type: ClassVar[int]
-    _GAP_LIMIT = 20  # type: ClassVar[int]
+    COIN = 100000000  # type: int
+    _GAP_LIMIT = 20  # type: int
 
     methods = {
         "get": "blockchain.transaction.get",
@@ -234,7 +233,7 @@ class Wallet:
         "subscribe": "blockchain.address.subscribe",
         "estimatefee": "blockchain.estimatefee",
         "broadcast": "blockchain.transaction.broadcast"
-    }  # type: ClassVar[Dict[str, str]]
+    }  # type: Dict[str, str]
 
     def __init__(self,
                  salt: str,
@@ -421,7 +420,7 @@ class Wallet:
         :returns: Future, a list of pycoin Spendable objects.
         """
         result = await self.connection.listen_rpc(
-            self.methods["listunspent"], [address])  # type: Dict[str, Any]
+            self.methods["listunspent"], [address])  # type: Dict
         logging.debug("Retrieving utxos for address %s", address)
         utxos = list()  # type: List[Spendable]
         for unspent in result:
@@ -484,7 +483,7 @@ class Wallet:
         return history_obj
 
     def _interpret_history(self,
-                           histories: List[Dict[str, Any]],
+                           histories: List[Dict],
                            change: bool = False) -> bool:
         """
         Populates the wallet's data structures based on a list of tx histories.
