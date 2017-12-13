@@ -1,6 +1,6 @@
 from typing import Union, Tuple
 
-import Crypto
+from Crypto.Hash import SHA256
 import scrypt
 import pbkdf2
 
@@ -35,7 +35,7 @@ def derive_key(salt: str, passphrase: str, hd: bool = True) -> \
     pbkdf2_key = pbkdf2.PBKDF2(
         pass2, salt2,
         iterations=1 << 16,
-        digestmodule=Crypto.hash.SHA256).read(key_length)  # type: bytes
+        digestmodule=SHA256).read(key_length)  # type: bytes
     merged = xor_merge(scrypt_key, pbkdf2_key)  # type: bytes
 
     if hd:
