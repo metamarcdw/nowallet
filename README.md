@@ -68,9 +68,9 @@ Install all dependencies:
 `make init`  
   
 Run nowallet from the command line:  
-`python nowallet.py`  
+`python3 nowallet.py`  
 OR  
-`python nowallet.py spend <rbf>`  
+`python3 nowallet.py spend <rbf>`  
 
 #### UNIT TESTING:
 Install the nowallet package before attempting to run the test suite:  
