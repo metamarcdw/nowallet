@@ -4,13 +4,13 @@ clean:
 	rm -rf nowallet/__pycache__/ nowallet/.mypy_cache/
 
 init:
-	pip install -r requirements.txt
+	pip3 install -r requirements.txt
 
 install:
-	pip install -e .
+	pip3 install -e .
 
 uninstall:
-	pip uninstall nowallet
+	pip3 uninstall nowallet
 
 test:
 	pytest
