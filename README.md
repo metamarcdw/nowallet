@@ -53,24 +53,25 @@ https://testnet.manu.backend.hamburg/faucet
 
 ### REQUIREMENTS:
 1. Building is currently supported on Linux based systems only.
-2. Make sure you have Git, Python3.5 (or higher), and pip installed
-3. Install Tor for your specific operating system
-(Not Tor browser, just Tor's standalone client). Make sure your Tor
-client is running before attempting to use Nowallet.
-(https://www.torproject.org)
+2. Install Tor for Linux using the instructions linked below:  
+https://www.torproject.org/docs/debian.html.en  
+(Do not use the packages in Ubuntu's universe.)
 
 ### INSTALLATION:
+Install all dependencies:  
+`sudo apt-get install git python3-dev python3-pip libssl-dev`
+  
 Clone the Nowallet Github repository:  
 `git clone https://github.com/metamarcdw/nowallet.git`  
   
-Install all dependencies:  
+Install required Python liraries:  
 `cd nowallet`  
 `make init`  
   
 Run nowallet from the command line:  
-`python nowallet.py`  
+`python3 nowallet.py`  
 OR  
-`python nowallet.py spend <rbf>`  
+`python3 nowallet.py spend <rbf>`  
 
 #### UNIT TESTING:
 Install the nowallet package before attempting to run the test suite:  
