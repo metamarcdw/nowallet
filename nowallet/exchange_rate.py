@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import json
-from typing import Dict, List
+from typing import Dict
 
 from socks_http import urlopen
 
