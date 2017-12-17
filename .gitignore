@@ -1,5 +1,5 @@
 *.log
-*.ini
+nowallet.ini
 *.egg-info
 .buildozer
 .eric6project

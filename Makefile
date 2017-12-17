@@ -13,7 +13,7 @@ uninstall:
 	pip3 uninstall nowallet
 
 test:
-	pytest
+	tox
 
 go:
 	python3 nowallet/nowallet.py
