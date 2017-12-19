@@ -67,6 +67,7 @@ Clone the Nowallet Github repository:
 Install required Python liraries:  
 `cd nowallet`  
 `make init`  
+`make install`  
   
 Run nowallet from the command line:  
 `make go`  
