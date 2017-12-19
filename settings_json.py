@@ -1,11 +1,5 @@
 import json
-#import sys
-#import os.path
-
-#sys.path.append(os.path.abspath( # Make sure we can import nowallet modules
-#    os.path.join(os.path.dirname(__file__), os.path.pardir, "nowallet")))
-#from exchange_rate import CURRENCIES
-CURRENCIES = ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "CNY"]
+from nowallet.exchange_rate import CURRENCIES
 
 settings_json = json.dumps([
     {"type": "bool",

@@ -28,9 +28,9 @@ from pycoin.tx.TxIn import TxIn
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 
-from subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
-from keys import derive_key
-from scrape import scrape_onion_servers
+from .subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
+from .keys import derive_key
+from .scrape import scrape_onion_servers
 #import exchange_rate
 
 class Connection:

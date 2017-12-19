@@ -3,7 +3,7 @@ import asyncio
 import json
 from typing import Dict
 
-from socks_http import urlopen
+from .socks_http import urlopen
 
 CURRENCIES = ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "CNY"]  # type: List[str]
 async def fetch_exchange_rates(chain_1209k: str = "btc") -> Dict[str, float]:

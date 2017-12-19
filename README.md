@@ -69,12 +69,12 @@ Install required Python liraries:
 `make init`  
   
 Run nowallet from the command line:  
-`python3 nowallet.py`  
+`make go`  
 OR  
-`python3 nowallet.py spend <rbf>`  
+`make go-spend`  
 
 #### UNIT TESTING:
-Install the nowallet package before attempting to run the test suite:  
-`make install`  
+Install the tox package before attempting to run the test suite:  
+`sudo pip3 install tox`  
 Run unit tests:  
 `make test`

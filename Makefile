@@ -16,10 +16,13 @@ test:
 	tox
 
 go:
-	python3 nowallet/nowallet.py
+	python3 -m nowallet.nowallet
+
+go-spend:
+	python3 -m nowallet.nowallet spend rbf
 
 go-kivy:
-	python3 kivy_ui/main.py
+	python3 main.py
 
 lint:
 	pylint nowallet/*.py > lint.txt
@@ -27,4 +30,4 @@ lint:
 type:
 	mypy --ignore-missing-imports nowallet/*.py > type.txt
 
-.PHONY: clean init install uninstall test go go-kivy lint type
+.PHONY: clean init install uninstall test go go-spend go-kivy lint type
