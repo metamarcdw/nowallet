@@ -7,3 +7,4 @@ from . import socks_http
 from . import scrape
 from . import exchange_rate
 from . import subclasses
+from .nowallet import *

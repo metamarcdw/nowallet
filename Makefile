@@ -16,10 +16,10 @@ test:
 	tox
 
 go:
-	python3 -m nowallet.nowallet
+	python3 -m nowallet
 
 go-spend:
-	python3 -m nowallet.nowallet spend rbf
+	python3 -m nowallet spend rbf
 
 go-kivy:
 	python3 main.py

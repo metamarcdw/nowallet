@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
-#import sys
-#import os
+#import asyncio
 
 import kivy
 kivy.require('1.10.0')
@@ -8,11 +7,7 @@ kivy.require('1.10.0')
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
-#from kivy.core.window import Window
-#Window.size = (350, 600)
 
-#sys.path.append(os.path.abspath(
-#    os.path.join(os.path.dirname(__file__), os.path.pardir)))
 #import nowallet
 from settings_json import settings_json
 
@@ -51,6 +46,14 @@ sm.add_widget(XPUBScreen(name="xpub"))
 
 class NowalletApp(App):
     def __init__(self):
+#        chain = nowallet.TBTC
+#        loop = asyncio.get_event_loop()
+#        server, port = nowallet.get_random_onion(loop, chain)
+#        connection = nowallet.Connection(loop, server, port)
+#        wallet = nowallet.Wallet(
+#            "email", "passphrase", connection, loop, chain)
+#        print(wallet.xpub)
+
         self.sm = sm
         super().__init__()
 
