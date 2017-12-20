@@ -64,7 +64,7 @@ Install all dependencies:
 Clone the Nowallet Github repository:  
 `git clone https://github.com/metamarcdw/nowallet.git`  
   
-Install required Python liraries:  
+Install required Python libraries:  
 `cd nowallet`  
 `make init`  
 `make install`  
