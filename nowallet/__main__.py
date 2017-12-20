@@ -1,5 +1,20 @@
-import getpass
-from .nowallet import *
+import sys, asyncio, getpass
+from decimal import Decimal
+
+from . import nowallet
+
+async def print_loop(wallet: nowallet.Wallet) -> None:
+    """
+    Coroutine. Prints the wallet's string representation to stdout if
+    wallet.new_history is True. Checks every second.
+
+    :param wallet: a wallet object
+    """
+    while True:
+        await asyncio.sleep(1)
+        if wallet.new_history:
+            print(wallet)
+            wallet.new_history = False
 
 def main():
     """
@@ -11,23 +26,26 @@ def main():
     from pycoin.networks import register_network
     vtc_net = Network('VTC', 'Vertcoin', 'mainnet',
         wif=b'\x80', address=b'\x47', pay_to_script=b'\x05',
-        prv32=b'\x04358394', pub32=b'\x043587cf')
+        prv32=b'\x04358394', pub32=b'\x043587cf') # type: Network
     register_network(vtc_net)
 
-    chain = TBTC
+    chain = nowallet.TBTC
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
 
-    t = get_random_onion(loop, chain)  # type: Tuple[str, int]
+    t = nowallet.get_random_onion(loop, chain)  # type: Tuple[str, int]
     server, port = t
-    connection = Connection(loop, server, port)  # type: Connection
-#    connection = Connection(loop, "mdw.ddns.net", 50002)  # type: Connection
+    connection = nowallet.Connection(
+        loop, server, port)  # type: nowallet.Connection
+#    connection = nowallet.Connection(
+#        loop, "mdw.ddns.net", 50002)  # type: nowallet.Connection
 
     email = input("Enter email: ")  # type: str
     passphrase = getpass.getpass("Enter passphrase: ")  # type: str
     confirm = getpass.getpass("Confirm your passphrase: ")  # type: str
     assert passphrase == confirm, "Passphrase and confirmation did not match"
     assert email and passphrase, "Email and/or passphrase were blank"
-    wallet = Wallet(email, passphrase, connection, loop, chain)  # type: Wallet
+    wallet = nowallet.Wallet(
+        email, passphrase, connection, loop, chain)  # type: nowallet.Wallet
     wallet.discover_all_keys()
 
     if len(sys.argv) > 1 and sys.argv[1].lower() == "spend":

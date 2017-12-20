@@ -1,5 +1,3 @@
-#! /usr/bin/env python3
-
 import logging, sys
 FORMAT = "%(asctime)s %(levelname)s: %(message)s"  # type: str
 
@@ -987,15 +985,3 @@ def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
         raise Exception("No electrum servers found!")
     return random.choice(servers)
 
-async def print_loop(wallet: Wallet) -> None:
-    """
-    Coroutine. Prints the wallet's string representation to stdout if
-    wallet.new_history is True. Checks every second.
-
-    :param wallet: a wallet object
-    """
-    while True:
-        await asyncio.sleep(1)
-        if wallet.new_history:
-            print(wallet)
-            wallet.new_history = False
