@@ -11,6 +11,7 @@ from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import address_for_pay_to_script
 from pycoin.encoding import hash160
+from pycoin.contrib import segwit_addr
 
 from pycoin.serialize import b2h
 
@@ -67,15 +68,20 @@ class LexSpendable(Spendable):
             (other_dict["tx_hash_hex"], other_dict["tx_out_index"])
 
 class SegwitBIP32Node(BIP32Node):
+    def bech32_p2wpkh_address(self, hrp) -> str:
+        witprog_version = 1
+        p2aw_script = self.p2wpkh_script()
+        return segwit_addr.encode(hrp, witprog_version, p2aw_script)
+
     def p2sh_p2wpkh_address(self) -> str:
-        p2aw_script = self.p2sh_p2wpkh_script()  # type: bytes
+        p2aw_script = self.p2wpkh_script()  # type: bytes
         return address_for_pay_to_script(p2aw_script, netcode=self.netcode())
 
-    def p2sh_p2wpkh_script_hash(self) -> bytes:
-        p2aw_script = self.p2sh_p2wpkh_script()  # type: bytes
+    def p2wpkh_script_hash(self) -> bytes:
+        p2aw_script = self.p2wpkh_script()  # type: bytes
         return hash160(p2aw_script)
 
-    def p2sh_p2wpkh_script(self) -> bytes:
+    def p2wpkh_script(self) -> bytes:
         hash160_c = self.hash160(use_uncompressed=False)  # type: bytes
         return ScriptPayToAddressWit(b'\0', hash160_c).script()
 

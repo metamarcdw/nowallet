@@ -185,18 +185,22 @@ class History:
         return str(self)
 
 Chain = collections.namedtuple("Chain",
-                               ["netcode", "chain_1209k", "bip44"])
+                               ["netcode", "chain_1209k", "hrp", "bip44"])
 BTC = Chain(netcode="BTC",
             chain_1209k="btc",
+            hrp="bc",
             bip44=0)
 TBTC = Chain(netcode="XTN",
              chain_1209k="tbtc",
+             hrp="tb",
              bip44=1)
 LTC = Chain(netcode="LTC",
             chain_1209k="ltc",
+            hrp="ltc",
             bip44=2)
 VTC = Chain(netcode="VTC",
             chain_1209k="vtc",
+            hrp="vtc",
             bip44=28)
 
 def log_time_elapsed(func: Callable) -> Callable:
@@ -282,6 +286,7 @@ class Wallet:
         self.connection = connection  # type: Connection
         self.loop = loop  # type: asyncio.AbstractEventLoop
         self.chain = chain
+        self.bech32 = False
 
         self.mpk = None  # type: SegwitBIP32Node
         self.account_master = None  # type: SegwitBIP32Node
@@ -340,6 +345,16 @@ class Wallet:
                     indicies[i] = True
                 return self.get_key(i, change)
 
+    def get_address(self, key: SegwitBIP32Node) -> str:
+        """
+        Returns the segwit address for a given key.
+
+        :param key: any given SegwitBIP32Node key
+        :returns: A segwit (P2WPKH) address, either P2SH or bech32.
+        """
+        return key.p2sh_p2wpkh_address() if not self.bech32 \
+            else key.bech32_p2wpkh_address(self.chain.hrp)
+
     def get_all_known_addresses(self, change: bool = False) -> List[str]:
         """
         Returns a list of all addresses currently known to us.
@@ -350,7 +365,7 @@ class Wallet:
         """
         indicies = self.change_indicies if change \
             else self.spend_indicies  # type: List[bool]
-        addrs = [self.get_key(i, change).p2sh_p2wpkh_address()
+        addrs = [self.get_address(self.get_key(i, change))
                  for i in range(len(indicies))]  # type: List[str]
         return addrs
 
@@ -499,7 +514,7 @@ class Wallet:
             if history:
                 # Get key/address for current index
                 key = self.get_key(len(indicies), change)  # type: SegwitBIP32Node
-                address = key.p2sh_p2wpkh_address()  # type: str
+                address = self.get_address(key)  # type: str
                 # Reassign historic info for this index
                 txids = [tx["tx_hash"] for tx in history]  # type: List[str]
                 heights = [tx["height"] for tx in history]  # type: List[int]
@@ -595,7 +610,7 @@ class Wallet:
             # If address is found to belong to a spend index, mark it as used
             for i in range(len(self.spend_indicies)):
                 key = self.get_key(i, change=False)  # type: SegwitBIP32Node
-                if key.p2sh_p2wpkh_address() == address:
+                if self.get_address(key) == address:
                     self.spend_indicies[i] = True
                     break
             is_empty = False
@@ -615,7 +630,7 @@ class Wallet:
         while not quit_flag:
             futures = list()  # type: List[Awaitable]
             for i in range(current_index, current_index + Wallet._GAP_LIMIT):
-                addr = self.get_key(i, change).p2sh_p2wpkh_address() # type: str
+                addr = self.get_address(self.get_key(i, change)) # type: str
                 futures.append(self.connection.listen_rpc(
                     self.methods["get_history"], [addr]))
 
@@ -770,7 +785,7 @@ class Wallet:
         # Get change address, mark index as used, and create payables list
         change_key = self.get_next_unused_key(
             change=True, using=True)  # type: SegwitBIP32Node
-        change_addr = change_key.p2sh_p2wpkh_address()  # type: str
+        change_addr = self.get_address(change_key)  # type: str
         payables = list()  # type: List[Tuple[str, int]]
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
@@ -967,7 +982,7 @@ class Wallet:
             float(self.balance), float(self.zeroconf_balance),
             self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
-            self.get_next_unused_key().p2sh_p2wpkh_address()))
+            self.get_address(self.get_next_unused_key())))
         return "".join(str_)
 
 def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
