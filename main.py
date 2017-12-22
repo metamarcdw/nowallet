@@ -60,11 +60,13 @@ class NowalletApp(App):
     def build(self):
         self.use_kivy_settings = False
         self.rbf = self.config.get("nowallet", "rbf")
+        self.bech32 = self.config.get("nowallet", "bech32")
         self.currency = self.config.get("nowallet", "currency")
         return self.sm
 
     def build_config(self, config):
         config.setdefaults("nowallet", {
+            "bech32": False,
             "rbf": False,
             "currency": "USD"})
 
@@ -76,6 +78,8 @@ class NowalletApp(App):
     def on_config_change(self, config, section, key, value):
         if key == "rbf":
             self.rbf = value
+        if key == "bech32":
+            self.bech32 = value
         elif key == "currency":
             self.currency = value
 
