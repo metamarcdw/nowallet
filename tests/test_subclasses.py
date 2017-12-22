@@ -100,13 +100,13 @@ def segwitbip32node_from_chbs():
     return subclasses.SegwitBIP32Node.from_master_secret(secret)
 
 def test_segwitkey_script(segwitbip32node_from_chbs):
-    script = segwitbip32node_from_chbs.p2sh_p2wpkh_script()
+    script = segwitbip32node_from_chbs.p2wpkh_script()
     assert isinstance(script, bytes)
     assert script == (b"\x00\x14\xe5\xba\xc1f\xbd[\x9fb\x04" + \
                       b"\xb1\xb4?\xb3\xc6!\x99qd\xc7\xfe")
 
 def test_segwitkey_script_hash(segwitbip32node_from_chbs):
-    script_hash = segwitbip32node_from_chbs.p2sh_p2wpkh_script_hash()
+    script_hash = segwitbip32node_from_chbs.p2wpkh_script_hash()
     assert isinstance(script_hash, bytes)
     assert script_hash == (b"H\x12\xe21\x90\x00:\xc2\xd2\xd7" + \
                            b"\xe3\x15\x99<\x96\x08\xaea\xac%")
@@ -115,4 +115,9 @@ def test_segwitkey_address(segwitbip32node_from_chbs):
     address = segwitbip32node_from_chbs.p2sh_p2wpkh_address()
     assert isinstance(address, str)
     assert address == "38G7CQfoej3fZQbHHey7Z1XPUGpVpJv4em"
+
+#def test_bech32_segwitkey_address(segwitbip32node_from_chbs):
+#    address = segwitbip32node_from_chbs.p2sh_p2wpkh_address()
+#    assert isinstance(address, str)
+#    assert address == "38G7CQfoej3fZQbHHey7Z1XPUGpVpJv4em"
 
