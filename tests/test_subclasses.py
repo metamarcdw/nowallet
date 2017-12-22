@@ -4,7 +4,7 @@ import random
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 
-from nowallet import subclasses
+from nowallet import subclasses, TBTC
 
 @pytest.fixture
 def server():
@@ -116,8 +116,7 @@ def test_segwitkey_address(segwitbip32node_from_chbs):
     assert isinstance(address, str)
     assert address == "38G7CQfoej3fZQbHHey7Z1XPUGpVpJv4em"
 
-#def test_bech32_segwitkey_address(segwitbip32node_from_chbs):
-#    address = segwitbip32node_from_chbs.p2sh_p2wpkh_address()
-#    assert isinstance(address, str)
-#    assert address == "38G7CQfoej3fZQbHHey7Z1XPUGpVpJv4em"
-
+def test_bech32_segwitkey_address(segwitbip32node_from_chbs):
+    address = segwitbip32node_from_chbs.bech32_p2wpkh_address(TBTC.hrp)
+    assert isinstance(address, str)
+    assert address == "tb1pqq2wtwkpv674h8mzqjcmg0anccsejutycllqdnahql"
