@@ -8,10 +8,10 @@ from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
-#import nowallet
+import nowallet
 from settings_json import settings_json
 
-__version__ = "0.1.0"
+__version__ = nowallet.__version__
 
 # Declare screens
 class LoginScreen(Screen):
