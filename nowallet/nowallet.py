@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.DEBUG,
 import asyncio, io, random, collections, pprint, time
 from decimal import Decimal
 from functools import total_ordering
-from typing import (Tuple, List, Set, Dict, Any, Callable, Awaitable, KeysView)
+from typing import (Tuple, List, Set, Dict, KeysView, Any,
+                    Union, Callable, Awaitable)
 
 from connectrum.client import StratumClient
 from pycoin.ui import standard_tx_out_script
@@ -52,7 +53,7 @@ class Connection:
 
         self.server_info = MyServerInfo(
             server, hostname=server, ports=port)  # type: MyServerInfo
-        logging.info(self.server_info.get_port("t"))
+        logging.info(str(self.server_info.get_port("t")))
         self.client = StratumClient()  # type: StratumClient
         self.connection = self.client.connect(
             self.server_info,
@@ -268,20 +269,22 @@ class Wallet:
             :param account: account number, defaults to 0
             """
             logging.info("Deriving keys...")
-            t = derive_key(salt, passphrase)  # type: Tuple[int, bytes]
+            t = derive_key(
+                salt, passphrase)  # type: Union[int, Tuple[int, bytes]]
+            assert isinstance(t, tuple), "Should never fail"
             secret_exp, chain_code = t
             self.mpk = SegwitBIP32Node(
                 netcode=self.chain.netcode,
                 chain_code=chain_code,
-                secret_exponent=secret_exp)
+                secret_exponent=secret_exp)  # type: SegwitBIP32Node
 
             path = "49H/{}H/{}H".format(self.chain.bip44, account)  # type: str
             self.account_master = \
-                self.mpk.subkey_for_path(path)
+                self.mpk.subkey_for_path(path)  # type: SegwitBIP32Node
             self.root_spend_key = \
-                self.account_master.subkey(0)
+                self.account_master.subkey(0)  # type: SegwitBIP32Node
             self.root_change_key = \
-                self.account_master.subkey(1)
+                self.account_master.subkey(1)  # type: SegwitBIP32Node
 
         self.connection = connection  # type: Connection
         self.loop = loop  # type: asyncio.AbstractEventLoop
@@ -344,6 +347,7 @@ class Wallet:
                 if using:
                     indicies[i] = True
                 return self.get_key(i, change)
+        return None
 
     def get_address(self, key: SegwitBIP32Node) -> str:
         """
@@ -999,4 +1003,3 @@ def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
     if not servers:
         raise Exception("No electrum servers found!")
     return random.choice(servers)
-

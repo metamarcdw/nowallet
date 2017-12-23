@@ -25,8 +25,8 @@ def main():
     from pycoin.networks.network import Network
     from pycoin.networks import register_network
     vtc_net = Network('VTC', 'Vertcoin', 'mainnet',
-        wif=b'\x80', address=b'\x47', pay_to_script=b'\x05',
-        prv32=b'\x04358394', pub32=b'\x043587cf') # type: Network
+                      wif=b'\x80', address=b'\x47', pay_to_script=b'\x05',
+                      prv32=b'\x04358394', pub32=b'\x043587cf') # type: Network
     register_network(vtc_net)
 
     chain = nowallet.TBTC

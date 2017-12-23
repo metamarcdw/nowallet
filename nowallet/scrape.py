@@ -2,8 +2,8 @@ import logging
 import asyncio
 from typing import List, Tuple
 
-from .socks_http import urlopen
 from bs4 import BeautifulSoup
+from .socks_http import urlopen
 
 async def scrape_onion_servers(chain_1209k: str = "tbtc") -> \
     List[Tuple[str, int]]:
