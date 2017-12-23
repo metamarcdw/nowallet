@@ -1,4 +1,4 @@
-from context import scrape
+from nowallet import scrape
 
 def test_scrape_onion_servers(event_loop):
     servers = event_loop.run_until_complete(

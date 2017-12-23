@@ -1,4 +1,4 @@
-from context import exchange_rate
+from nowallet import exchange_rate
 
 def test_fetch_exchange_rates(event_loop):
     rates = event_loop.run_until_complete(exchange_rate.fetch_exchange_rates())

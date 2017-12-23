@@ -1,5 +1,5 @@
 import pytest
-import nowallet.nowallet as nowallet
+import nowallet
 
 @pytest.fixture
 def dummy_connection(event_loop):

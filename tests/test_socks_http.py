@@ -1,5 +1,5 @@
 import pytest
-from context import socks_http
+from nowallet import socks_http
 
 @pytest.mark.asyncio
 async def test_socks_http_urlopen():
