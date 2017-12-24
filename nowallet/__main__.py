@@ -67,11 +67,14 @@ def main():
         t = wallet.spend(spend_addr,
                          spend_amount,
                          coin_per_kb,
-                         rbf=use_rbf)  # type: Tuple[str, Decimal]
-        txid, decimal_fee = t
+                         rbf=use_rbf)  # type: Tuple[str, Decimal, int]
+        txid, decimal_fee, tx_vsize = t
+        sat_fee = int(decimal_fee * nowallet.Wallet.COIN)  # type: int
+        satb_rate = sat_fee // tx_vsize  # type: int
 
-        print("Added a miner fee of: {} {}".format(
-            decimal_fee, chain.chain_1209k.upper()))
+        print("vsize: {}".format(tx_vsize))
+        print("Added a miner fee of: {} {} ({} sat/B)".format(
+            decimal_fee, chain.chain_1209k.upper(), satb_rate))
         print("Transaction sent!\nID: {}".format(txid))
 
     tasks = asyncio.gather(

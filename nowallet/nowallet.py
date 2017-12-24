@@ -733,12 +733,12 @@ class Wallet:
             self.methods["estimatefee"], [6]))  # type: float
         if coin_per_kb < 0:
             raise Exception("Cannot get a fee estimate")
-        logging.info("Current fee estimate from server is %f %s/KB",
+        logging.info("Fee estimate from server is %f %s/KB",
                      coin_per_kb, self.chain.chain_1209k.upper())
         return coin_per_kb
 
     @staticmethod
-    def _get_fee(tx, coin_per_kb: float) -> int:
+    def _get_fee(tx, coin_per_kb: float) -> Tuple[int, int]:
         """
         Calculates the size of tx based on a given estimate from the server.
 
@@ -747,10 +747,19 @@ class Wallet:
         :returns: An int representing the appropriate fee in satoshis
         :raise: Raises a ValueError if given fee rate is over 1000 satoshi/B
         """
-        if coin_per_kb > Wallet.satb_to_coinkb(1000):
+        if coin_per_kb > Wallet.satb_to_coinkb(2000):
             raise ValueError("Given fee rate is extraordinarily high.")
-        tx_kb_count = Wallet._calculate_vsize(tx) / 1000  # type: float
-        return int((tx_kb_count * coin_per_kb) * Wallet.COIN)
+        tx_vsize = Wallet._calculate_vsize(tx)  # type: int
+        tx_kb_count = tx_vsize / 1000  # type: float
+        fee = int((tx_kb_count * coin_per_kb) * Wallet.COIN)  # type: int
+
+        # Make sure our fee is at least the default minrelayfee
+        # https://bitcoin.org/en/developer-guide#transaction-fees-and-change
+        MINRELAYFEE = 1000  # type: int
+        if fee < MINRELAYFEE:
+            fee = MINRELAYFEE
+        return fee, tx_vsize
+
 
     def _mktx(self,
               out_addr: str,
@@ -823,14 +832,14 @@ class Wallet:
                 txin.sequence = 0
 
         # Create output list from payables
-        txs_out = list()  # type: List[TxOut]
+        txs_out = list()  # type: List[LexTxOut]
         for payable in payables:
             bitcoin_address, coin_value = payable
             script = standard_tx_out_script(bitcoin_address)  # type: bytes
             txs_out.append(LexTxOut(coin_value, script))
         txs_out.sort()
         txs_out = [LexTxOut.demote(txout)
-                   for txout in txs_out]
+                   for txout in txs_out]  # type List[TxOut]
 
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)  # type: Tx
         tx.set_unspents(spendables)
@@ -853,8 +862,8 @@ class Wallet:
             for i, addr in enumerate(self.get_all_known_addresses(change)):
                 key = self.get_key(i, change)  # type: SegwitBIP32Node
                 if addr in in_addrs:
-                    p2aw_script = key.p2sh_p2wpkh_script()  # type: bytes
-                    script_hash = key.p2sh_p2wpkh_script_hash()  # type: bytes
+                    p2aw_script = key.p2wpkh_script()  # type: bytes
+                    script_hash = key.p2wpkh_script_hash()  # type: bytes
                     redeem_scripts[script_hash] = p2aw_script
                     wifs.append(key.wif())
 
@@ -907,7 +916,7 @@ class Wallet:
               address: str,
               amount: Decimal,
               coin_per_kb: float,
-              rbf: bool = False) -> Tuple[str, Decimal]:
+              rbf: bool = False) -> Tuple[str, Decimal, int]:
         """
         Gets a new tx from _mktx() and sends it to the server to be broadcast,
         then inserts the new tx into our tx history and includes our change
@@ -922,8 +931,9 @@ class Wallet:
         """
         t = self._mktx(address, amount, rbf=rbf)  # type: Tuple[Tx, Set[str], int]
         tx, in_addrs, chg_vout = t
+        t = self._get_fee(tx, coin_per_kb)  # type: Tuple[int, int]
+        fee, tx_vsize = t
 
-        fee = self._get_fee(tx, coin_per_kb)  # type: int
         decimal_fee = Decimal(str(fee)) / Wallet.COIN  # type: Decimal
         if not amount + decimal_fee <= self.balance:
             raise Exception("Insufficient funds to cover fee")
@@ -944,7 +954,7 @@ class Wallet:
             netcode=self.chain.netcode)  # type:str
         self.connection.listen_subscribe(
             self.methods["subscribe"], [change_address])
-        return txid, decimal_fee
+        return txid, decimal_fee, tx_vsize
 
     def replace_by_fee(self, hist_obj: History, coin_per_kb: float) -> str:
         """
