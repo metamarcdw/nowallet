@@ -40,7 +40,8 @@ class Connection:
     def __init__(self,
                  loop: asyncio.AbstractEventLoop,
                  server: str,
-                 port: int) -> None:
+                 port: int,
+                 proto: str) -> None:
         """
         Connection object constructor.
 
@@ -53,12 +54,12 @@ class Connection:
 
         self.server_info = MyServerInfo(
             server, hostname=server, ports=port)  # type: MyServerInfo
-        logging.info(str(self.server_info.get_port("t")))
+        logging.info(str(self.server_info.get_port(proto)))
         self.client = StratumClient()  # type: StratumClient
         self.connection = self.client.connect(
             self.server_info,
-            proto_code="t",
-            use_tor=self.server_info.is_onion,
+            proto_code=proto,
+            use_tor=True,
             disable_cert_verify=True)  # type: asyncio.Future
 
         loop.run_until_complete(self._do_connect())

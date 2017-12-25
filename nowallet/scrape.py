@@ -17,18 +17,23 @@ async def scrape_onion_servers(chain_1209k: str = "tbtc") -> \
 
     servers = list()  # type: List[Tuple[str, int]]
     for i, data in enumerate(table_data):
-        if ".onion" in data.text:
+        if i % 11 == 0 and "." in data.text:  # Every new URL
             host = data.text  # type: str
             port = int(table_data[i+1].text)  # type: int
+            proto = None  # type: str
+            if table_data[i+2].text == "ssl":
+                proto = "s"
+            elif table_data[i+2].text == "tcp":
+                proto = "t"
             is_running = table_data[i+7].text == "open"  # type: bool
             if is_running:
-                servers.append((host, port))
+                servers.append((host, port, proto))
     return servers
 
 def main():
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
     result = loop.run_until_complete(
-        scrape_onion_servers())  # type: List[Tuple[str, int]]
+        scrape_onion_servers())  # type: List[Tuple[str, int, str]]
     print(result)
     loop.close()
 

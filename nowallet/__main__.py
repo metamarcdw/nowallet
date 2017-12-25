@@ -32,12 +32,12 @@ def main():
     chain = nowallet.TBTC
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
 
-    t = nowallet.get_random_onion(loop, chain)  # type: Tuple[str, int]
-    server, port = t
+    t = nowallet.get_random_onion(loop, chain)  # type: Tuple[str, int, str]
+    server, port, proto = t
     connection = nowallet.Connection(
-        loop, server, port)  # type: nowallet.Connection
+        loop, server, port, proto)  # type: nowallet.Connection
 #    connection = nowallet.Connection(
-#        loop, "mdw.ddns.net", 50002)  # type: nowallet.Connection
+#        loop, "mdw.ddns.net", 50002, "s")  # type: nowallet.Connection
 
     email = input("Enter email: ")  # type: str
     passphrase = getpass.getpass("Enter passphrase: ")  # type: str
