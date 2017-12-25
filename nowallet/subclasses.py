@@ -11,6 +11,7 @@ from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import address_for_pay_to_script
 from pycoin.encoding import hash160
+from pycoin.networks import bech32_hrp_for_netcode
 from pycoin.contrib import segwit_addr
 
 from pycoin.serialize import b2h
@@ -68,7 +69,8 @@ class LexSpendable(Spendable):
             (other_dict["tx_hash_hex"], other_dict["tx_out_index"])
 
 class SegwitBIP32Node(BIP32Node):
-    def bech32_p2wpkh_address(self, hrp) -> str:
+    def bech32_p2wpkh_address(self) -> str:
+        hrp = bech32_hrp_for_netcode(self.netcode())
         witprog_version = 1
         p2aw_script = self.p2wpkh_script()
         return segwit_addr.encode(hrp, witprog_version, p2aw_script)
@@ -117,6 +119,7 @@ def main():
     mpk = SegwitBIP32Node.from_master_secret(
         secret.encode("utf-8"))  # type: SegwitBIP32Node
     print(mpk.p2sh_p2wpkh_address())
+    print(mpk.bech32_p2wpkh_address())
 
 if __name__ == "__main__":
     main()

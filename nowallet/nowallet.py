@@ -187,22 +187,18 @@ class History:
         return str(self)
 
 Chain = collections.namedtuple("Chain",
-                               ["netcode", "chain_1209k", "hrp", "bip44"])
+                               ["netcode", "chain_1209k", "bip44"])
 BTC = Chain(netcode="BTC",
             chain_1209k="btc",
-            hrp="bc",
             bip44=0)
 TBTC = Chain(netcode="XTN",
              chain_1209k="tbtc",
-             hrp="tb",
              bip44=1)
 LTC = Chain(netcode="LTC",
             chain_1209k="ltc",
-            hrp="ltc",
             bip44=2)
 VTC = Chain(netcode="VTC",
             chain_1209k="vtc",
-            hrp="vtc",
             bip44=28)
 
 def log_time_elapsed(func: Callable) -> Callable:
@@ -358,7 +354,7 @@ class Wallet:
         :returns: A segwit (P2WPKH) address, either P2SH or bech32.
         """
         return key.p2sh_p2wpkh_address() if not self.bech32 \
-            else key.bech32_p2wpkh_address(self.chain.hrp)
+            else key.bech32_p2wpkh_address()
 
     def get_all_known_addresses(self, change: bool = False) -> List[str]:
         """
