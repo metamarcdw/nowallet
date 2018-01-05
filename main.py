@@ -61,6 +61,7 @@ class NowalletApp(App):
         self.use_kivy_settings = False
         self.rbf = self.config.get("nowallet", "rbf")
         self.bech32 = self.config.get("nowallet", "bech32")
+        self.units = self.config.get("nowallet", "units")
         self.currency = self.config.get("nowallet", "currency")
         return self.sm
 
@@ -68,6 +69,7 @@ class NowalletApp(App):
         config.setdefaults("nowallet", {
             "bech32": False,
             "rbf": False,
+            "units": "BTC",
             "currency": "USD"})
 
     def build_settings(self, settings):
@@ -78,8 +80,10 @@ class NowalletApp(App):
     def on_config_change(self, config, section, key, value):
         if key == "rbf":
             self.rbf = value
-        if key == "bech32":
+        elif key == "bech32":
             self.bech32 = value
+        elif key == "units":
+            self.units = value
         elif key == "currency":
             self.currency = value
 
