@@ -4,9 +4,11 @@
 import kivy
 kivy.require('1.10.0')
 
+from kivy.core.window import Window
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.recycleview import RecycleView
 
 import nowallet
 from settings_json import settings_json
@@ -31,6 +33,13 @@ class WaitScreen(Screen):
 
 class XPUBScreen(Screen):
     pass
+
+class RV(RecycleView):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.data = [{"text": "Recieved 0.5 BTC"},
+                     {"text": "Recieved 1 BTC"},
+                     {"text": "Sent 0.299 BTC"}]
 
 buildKV = Builder.load_file("nowallet_ui.kv")
 
@@ -71,6 +80,7 @@ class NowalletApp(App):
             "rbf": False,
             "units": "BTC",
             "currency": "USD"})
+        Window.bind(on_keyboard=self.key_input)
 
     def build_settings(self, settings):
         settings.add_json_panel("Nowallet Settings",
@@ -86,6 +96,12 @@ class NowalletApp(App):
             self.units = value
         elif key == "currency":
             self.currency = value
+
+    def key_input(self, window, key, scancode, codepoint, modifier):
+        if key == 27:   # the back button / ESC
+            return True  # override the default behaviour
+        else:           # the key now does nothing
+            return False
 
 if __name__ == "__main__":
     NowalletApp().run()

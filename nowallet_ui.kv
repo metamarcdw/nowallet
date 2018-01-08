@@ -187,24 +187,14 @@
             size_hint: 1, 0.3
             font_size: "30sp"
             text: "1.20049387 BTC"
-        ScrollView:
-            do_scroll_x: False
-            GridLayout:
-                cols: 1
+        RV:
+            viewclass: 'Button'
+            RecycleBoxLayout:
+                default_size: None, dp(56)
+                default_size_hint: 1, None
                 size_hint_y: None
                 height: self.minimum_height
-                Button:
-                    size_hint_y: None
-                    height: 50
-                    text: "Recieved 0.5 BTC"
-                Button:
-                    size_hint_y: None
-                    height: 50
-                    text: "Recieved 1 BTC"
-                Button:
-                    size_hint_y: None
-                    height: 50
-                    text: "Sent 0.299 BTC"
+                orientation: 'vertical'
         BoxLayout:
             size_hint: 1, 0.18
             Button:
