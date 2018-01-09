@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from .socks_http import urlopen
 
 async def scrape_onion_servers(chain_1209k: str = "tbtc") -> \
-    List[Tuple[str, int]]:
+    List[Tuple[str, int, str]]:
     scrape_page = "https://1209k.com/bitcoin-eye/ele.php?chain={}"  # type: str
     url = scrape_page.format(chain_1209k)  # type: str
     logging.info("Scraping URL: %s", url)

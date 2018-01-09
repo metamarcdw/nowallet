@@ -5,8 +5,8 @@ def test_scrape_onion_servers(event_loop):
         scrape.scrape_onion_servers(chain_1209k="btc"))
     for server in servers:
         assert isinstance(server, tuple)
-        assert len(server) == 2
-        host, port = server
+        assert len(server) == 3
+        host, port, proto = server
         assert isinstance(host, str)
         assert isinstance(port, int)
-        assert "onion" in host
+        assert isinstance(proto, str)

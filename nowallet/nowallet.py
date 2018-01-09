@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.DEBUG,
 import asyncio, io, random, collections, pprint, time
 from decimal import Decimal
 from functools import total_ordering
+from urllib import parse
 from typing import (Tuple, List, Set, Dict, KeysView, Any,
                     Union, Callable, Awaitable)
 
@@ -996,7 +997,8 @@ class Wallet:
             self.get_address(self.get_next_unused_key())))
         return "".join(str_)
 
-def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
+def get_random_onion(loop: asyncio.AbstractEventLoop,
+                     chain) -> Tuple[str, int, str]:
     """
     Grabs a random onion server from a list that it gets from our
     scrape_onion_servers function.
@@ -1010,3 +1012,22 @@ def get_random_onion(loop: asyncio.AbstractEventLoop, chain) -> Tuple[str, int]:
     if not servers:
         raise Exception("No electrum servers found!")
     return random.choice(servers)
+
+def get_payable_from_BIP21URI(uri: str,
+                              proto: str="bitcoin") -> Tuple[str, Decimal]:
+    """
+    Computes a 'payable' tuple from a given BIP21 encoded URI.
+
+    :param uri: The BIP21 URI to decode
+    :param proto: The expected protocol/scheme (case insensitive)
+    :returns: A payable (address, amount) corresponding to the given URI
+    :raise: Raises s ValueError if there is no address given or if the
+        protocol/scheme doesn't match what is expected
+    """
+    obj = parse.urlparse(uri)  # type: parse.ParseResult
+    if not obj.path or obj.scheme.upper() != proto.upper():
+        raise ValueError("Malformed URI")
+    if not obj.query:
+        return obj.path, None
+    query = parse.parse_qs(obj.query)  # type: Dict
+    return obj.path, Decimal(query["amount"][0])

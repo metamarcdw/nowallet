@@ -117,6 +117,6 @@ def test_segwitkey_address(segwitbip32node_from_chbs):
     assert address == "38G7CQfoej3fZQbHHey7Z1XPUGpVpJv4em"
 
 def test_bech32_segwitkey_address(segwitbip32node_from_chbs):
-    address = segwitbip32node_from_chbs.bech32_p2wpkh_address(TBTC.hrp)
+    address = segwitbip32node_from_chbs.bech32_p2wpkh_address()
     assert isinstance(address, str)
-    assert address == "tb1pqq2wtwkpv674h8mzqjcmg0anccsejutycllqdnahql"
+    assert address == "bc1pqq2wtwkpv674h8mzqjcmg0anccsejutycllqmc65qs"
