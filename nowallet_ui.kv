@@ -56,10 +56,17 @@
 #        ZbarQrcodeDetector:
         Label:
             text: ""
-        Button:
-            text: "Back"
-            size_hint: 1, 0.23
-            on_press: root.manager.current = "main"
+        BoxLayout:
+            size_hint: 1, 0.24
+            Button:
+                font_size: "30sp"
+                text: "Back"
+                on_release: root.manager.current = "main"
+            Button:
+                font_size: "30sp"
+                text: "Send"
+                on_release: root.add_new_data("NEW DATA")
+                on_release: root.manager.current = "main"
 
 <RecieveScreen>:
     BoxLayout:
@@ -95,7 +102,7 @@
         Button:
             size_hint: 1, 0.2
             text: "Back"
-            on_press: root.manager.current = "main"
+            on_release: root.manager.current = "main"
 
 <WaitScreen>:
     AnchorLayout:
@@ -124,7 +131,7 @@
         Button:
             size_hint: 1, 0.15
             text: "Back"
-            on_press: root.manager.current = "main"
+            on_release: root.manager.current = "main"
 
 <ErrorPopup@Popup>:
     title: "Error"
@@ -188,6 +195,7 @@
             font_size: "30sp"
             text: "1.20049387 BTC"
         RV:
+            id: recycleView
             viewclass: 'Button'
             RecycleBoxLayout:
                 default_size: None, dp(56)
@@ -200,11 +208,11 @@
             Button:
                 font_size: "30sp"
                 text: "Recieve"
-                on_press: root.manager.current = "recieve"
+                on_release: root.manager.current = "recieve"
             Button:
                 font_size: "30sp"
                 text: "Send"
-                on_press: root.manager.current = "send"
+                on_release: root.manager.current = "send"
 
 <LoginScreen>:
     ActionBar:
@@ -218,31 +226,38 @@
             ActionOverflow:
     AnchorLayout:
         BoxLayout:
-            size_hint: 0.8, 0.5
+            size_hint: 0.8, 0.7
             spacing: 3
             orientation: "vertical"
             Label:
                 text: "Email/Salt"
+                font_size: "17sp"
             TextInput:
                 write_tab: False
                 hint_text: "email@domain.tld"
+                font_size: "17sp"
                 hint_text_color: (0.9, 0.9, 0.9, 1)
                 background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "Passphrase"
+                font_size: "17sp"
             TextInput:
                 password: True
                 write_tab: False
+                font_size: "17sp"
                 background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Label:
                 text: "Confirm Passphrase"
+                font_size: "17sp"
             TextInput:
                 password: True
                 write_tab: False
+                font_size: "17sp"
                 background_color: (0.7, 0.7, 0.7, 1)
                 padding_y: ( self.height - self.line_height ) / 2
             Button:
                 text: "Create Wallet"
-                on_press: root.manager.current = "main"
+                font_size: "17sp"
+                on_release: root.manager.current = "main"

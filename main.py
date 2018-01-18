@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-#import asyncio
+import asyncio
 
 import kivy
 kivy.require('1.10.0')
@@ -26,7 +26,9 @@ class RecieveScreen(Screen):
     pass
 
 class SendScreen(Screen):
-    pass
+    def add_new_data(self, text):
+        data = sm.get_screen("main").ids.recycleView.data_model.data
+        data.insert(0, {"text": text})
 
 class WaitScreen(Screen):
     pass
@@ -55,13 +57,13 @@ sm.add_widget(XPUBScreen(name="xpub"))
 
 class NowalletApp(App):
     def __init__(self):
-#        chain = nowallet.TBTC
-#        loop = asyncio.get_event_loop()
-#        server, port = nowallet.get_random_onion(loop, chain)
-#        connection = nowallet.Connection(loop, server, port)
-#        wallet = nowallet.Wallet(
-#            "email", "passphrase", connection, loop, chain)
-#        print(wallet.xpub)
+        chain = nowallet.TBTC
+        loop = asyncio.get_event_loop()
+        server, port, proto = nowallet.get_random_onion(loop, chain)
+        connection = nowallet.Connection(loop, server, port, proto)
+        wallet = nowallet.Wallet(
+            "email", "passphrase", connection, loop, chain)
+        print(wallet.xpub)
 
         self.sm = sm
         super().__init__()
