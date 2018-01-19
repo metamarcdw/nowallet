@@ -56,7 +56,7 @@ class Connection:
         self.server_info = MyServerInfo(
             server, hostname=server, ports=port)  # type: MyServerInfo
         logging.info(str(self.server_info.get_port(proto)))
-        self.client = StratumClient()  # type: StratumClient
+        self.client = StratumClient(loop)  # type: StratumClient
         self.connection = self.client.connect(
             self.server_info,
             proto_code=proto,

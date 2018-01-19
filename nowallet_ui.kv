@@ -98,9 +98,10 @@
                 data: "bitcoin://129834hg2uin20eifvnjf0eifcmvdkv2d"
         Label:
             size_hint: 1, 0.3
-            text: "Address: 3s9834hg2uin20eifvnjf0eifcmvdkv2d"
+            text: "Address:\n3s9834hg2uin20eifvnjf0eifcmvdkv2d"
         Button:
             size_hint: 1, 0.2
+            font_size: "30sp"
             text: "Back"
             on_release: root.manager.current = "main"
 
@@ -112,6 +113,7 @@
     BoxLayout:
         orientation: "vertical"
         Label:
+            id: wait_text
             font_size: "23sp"
             text: "Loading..."
         Label:
