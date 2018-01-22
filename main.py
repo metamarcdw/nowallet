@@ -29,14 +29,6 @@ class LoginScreen(Screen):
 class MainScreen(Screen):
     pass
 
-class RecieveScreen(Screen):
-    pass
-
-class SendScreen(Screen):
-    def add_new_data(self, text):
-        data = self.manager.get_screen("main").ids.recycleView.data_model.data
-        data.insert(0, {"text": text})
-
 class WaitScreen(Screen):
     pass
 
@@ -125,6 +117,10 @@ class NowalletApp(App):
             return True  # override the default behaviour
         else:           # the key now does nothing
             return False
+
+    def add_list_item(self, text):
+        data = App.get_running_app().root.ids.recycleView.data_model.data
+        data.insert(0, {"text": text})
 
 if __name__ == "__main__":
     NowalletApp().run()
