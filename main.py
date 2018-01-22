@@ -2,7 +2,7 @@
 import asyncio
 
 import kivy
-kivy.require('1.10.0')
+kivy.require("1.10.0")
 
 from kivy.utils import platform
 from kivy.core.window import Window
@@ -20,7 +20,7 @@ import nowallet
 from settings_json import settings_json
 
 __version__ = nowallet.__version__
-if platform != 'android':
+if platform != "android":
     Window.size = (350, 550)
 
 # Declare screens
@@ -59,7 +59,7 @@ class MenuItem(MDMenuItem):
 
 class NowalletApp(App):
     theme_cls = ThemeManager()
-    theme_cls.theme_style = 'Dark'
+    theme_cls.theme_style = "Dark"
     theme_cls.primary_palette = "Grey"
     theme_cls.accent_palette = "LightGreen"
 
@@ -67,10 +67,10 @@ class NowalletApp(App):
         self.chain = nowallet.TBTC
         self.loop = asyncio.get_event_loop()
         self.menu_items = [
-            {'viewclass': 'MenuItem',
-             'text': 'View YPUB'},
-            {'viewclass': 'MenuItem',
-             'text': 'Settings'}
+            {"viewclass": "MenuItem",
+             "text": "View YPUB"},
+            {"viewclass": "MenuItem",
+             "text": "Settings"}
         ]
         super().__init__()
 

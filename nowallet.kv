@@ -15,12 +15,12 @@ BoxLayout:
     orientation: "vertical"
     Toolbar:
         id: toolbar
-        title: 'NOWALLET'
+        title: "NOWALLET"
         md_bg_color: app.theme_cls.primary_color
-        background_palette: 'Primary'
-        background_hue: '500'
-        left_action_items: [['currency-btc', lambda x: None]]
-        right_action_items: [['menu', lambda x: MDDropdownMenu(items=app.menu_items, width_mult=4).open(self)]]
+        background_palette: "Primary"
+        background_hue: "500"
+        left_action_items: [["currency-btc", lambda x: None]]
+        right_action_items: [["menu", lambda x: MDDropdownMenu(items=app.menu_items, width_mult=4).open(self)]]
     ScreenManager:
         id: sm
         transition: SlideTransition(direction="up")
@@ -61,10 +61,10 @@ BoxLayout:
                     BoxLayout:
                         orientation: "vertical"
                         MDLabel:
-                            font_style: 'Display1'
-                            theme_text_color: 'Primary'
+                            font_style: "Display1"
+                            theme_text_color: "Primary"
                             text: "1.20049387 BTC"
-                            halign: 'center'
+                            halign: "center"
                             size_hint_y: None
                             height: self.texture_size[1] + dp(45)
                         RV:
@@ -75,7 +75,7 @@ BoxLayout:
                                 default_size_hint: 1, None
                                 size_hint_y: None
                                 height: self.minimum_height
-                                orientation: 'vertical'
+                                orientation: "vertical"
 
                 MDBottomNavigationItem:
                     name: "send"
@@ -88,6 +88,7 @@ BoxLayout:
                             spacing: 9
                             BoxLayout:
                                 size_hint: 1, 0.2
+                                spacing: 5
                                 MDTextField:
                                     hint_text: "BTC"
                                     color_mode: "accent"
@@ -99,7 +100,7 @@ BoxLayout:
                             MDLabel:
                                 size_hint: 1, 0.2
                                 text: "Available balance:\n1.20049387 BTC"
-                                theme_text_color: 'Primary'
+                                theme_text_color: "Primary"
                                 font_style:"Title"
                             BoxLayout:
                                 size_hint: 1, 0.4
@@ -112,6 +113,7 @@ BoxLayout:
                                 MDRaisedButton:
                                     size_hint: 0.5, 1
                                     text: "Custom Fee"
+                                    on_release: root.ids.sm.current = "wait"
                             BoxLayout:
                                 size_hint: 1, 0.4
                                 spacing: 5
@@ -138,6 +140,7 @@ BoxLayout:
                             orientation: "vertical"
                             BoxLayout:
                                 size_hint: 1, 0.2
+                                spacing: 5
                                 MDTextField:
                                     hint_text: "BTC"
                                     color_mode: "accent"
@@ -149,14 +152,14 @@ BoxLayout:
                             MDCard:
                                 size_hint: None, None
                                 size: dp(300), dp(320)
-                                pos_hint: {'center_x': 0.5}
+                                pos_hint: {"center_x": 0.5}
                                 BoxLayout:
-                                    orientation:'vertical'
+                                    orientation:"vertical"
                                     padding: dp(10)
                                     spacing: 5
                                     MDLabel:
-                                        text: 'Current Address (P2SH):\n3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF'
-                                        theme_text_color: 'Primary'
+                                        text: "Current Address (P2SH):\n3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF"
+                                        theme_text_color: "Primary"
                                         font_style:"Body2"
                                         size_hint_y: None
                                         height: dp(40)
@@ -170,28 +173,28 @@ BoxLayout:
                 MDSpinner:
                     size_hint: None, None
                     size: dp(46), dp(46)
-                    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
             MDLabel:
                 id: wait_text
                 text: "Loading.."
-                theme_text_color: 'Primary'
+                theme_text_color: "Primary"
                 font_style:"Title"
                 size_hint: None, None
-                pos_hint: {'center_x': 0.53, 'center_y': 0.66}
+                pos_hint: {"center_x": 0.53, "center_y": 0.66}
 
         YPUBScreen:
             name: "ypub"
             MDCard:
                 size_hint: None, None
                 size: dp(320), dp(360)
-                pos_hint: {'center_x': 0.5, 'center_y': 0.55}
+                pos_hint: {"center_x": 0.5, "center_y": 0.55}
                 BoxLayout:
-                    orientation:'vertical'
-                    padding: dp(15)
+                    orientation:"vertical"
+                    padding: dp(10)
                     spacing: 5
                     MDLabel:
-                        text: 'Extended Public Key (SegWit):\nypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68'
-                        theme_text_color: 'Primary'
+                        text: "Extended Public Key (SegWit):\nypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68"
+                        theme_text_color: "Primary"
                         font_style:"Body2"
                         size_hint_y: None
                         height: dp(70)
@@ -201,10 +204,10 @@ BoxLayout:
                         data: "ypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68"
             MDRaisedButton:
                 size_hint: 0.5, 0.07
-                pos_hint: {'center_x': 0.5, 'center_y': 0.13}
+                pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
                 on_release: root.ids.sm.current = "main"
 
 <ListItem>:
     IconLeftSampleWidget:
-        icon: 'check-circle'
+        icon: "check-circle"
