@@ -159,7 +159,7 @@ BoxLayout:
                                         theme_text_color: 'Primary'
                                         font_style:"Body2"
                                         size_hint_y: None
-                                        height: dp(36)
+                                        height: dp(40)
                                     QRCodeWidget:
                                         show_border: False
                                         data: "bitcoin:3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF"
@@ -199,10 +199,11 @@ BoxLayout:
                         id: ypub_qrcode
                         show_border: False
                         data: "ypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68"
-                    MDRaisedButton:
-                        size_hint: 1, 0.25
-                        text: "Go Back"
-                        on_release: root.ids.sm.current = "main"
+            MDRaisedButton:
+                size_hint: 0.5, 0.07
+                pos_hint: {'center_x': 0.5, 'center_y': 0.13}
+                text: "Go Back"
+                on_release: root.ids.sm.current = "main"
 
 <ListItem>:
     IconLeftSampleWidget:

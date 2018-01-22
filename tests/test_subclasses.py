@@ -4,7 +4,7 @@ import random
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 
-from nowallet import subclasses, TBTC
+from nowallet import subclasses
 
 @pytest.fixture
 def server():
