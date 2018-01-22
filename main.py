@@ -9,6 +9,7 @@ from kivy.core.window import Window
 from kivy.app import App
 from kivy.uix.screenmanager import Screen
 from kivy.uix.recycleview import RecycleView
+
 from kivymd.theming import ThemeManager
 from kivymd.list import OneLineIconListItem
 from kivymd.list import ILeftBodyTouch
@@ -74,11 +75,11 @@ class NowalletApp(App):
         super().__init__()
 
 #    def on_start(self):
-#        App.get_running_app().root.ids.sm.current = "wait"
+#        self.root.ids.sm.current = "wait"
 #        server, port, proto = nowallet.get_random_onion(self.loop, self.chain)
 #        connection = nowallet.Connection(self.loop, server, port, proto)
 #        self.wallet = nowallet.Wallet("email", "passphrase", connection, self.loop, self.chain)
-#        App.get_running_app().root.ids.sm.current = "login"
+#        self.root.ids.sm.current = "login"
 #        print(self.wallet.xpub)
 
     def build(self):
@@ -119,7 +120,7 @@ class NowalletApp(App):
             return False
 
     def add_list_item(self, text):
-        data = App.get_running_app().root.ids.recycleView.data_model.data
+        data = self.root.ids.recycleView.data_model.data
         data.insert(0, {"text": text})
 
 if __name__ == "__main__":
