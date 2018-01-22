@@ -1,0 +1,211 @@
+#:import Factory kivy.factory.Factory
+#:import SlideTransition kivy.uix.screenmanager.SlideTransition
+#:import QRCodeWidget kivy.garden.qrcode
+# import ZbarQrcodeDetector android-zbar-qrcode.main
+#:import MDLabel kivymd.label.MDLabel
+#:import Toolbar kivymd.toolbar.Toolbar
+#:import MDBottomNavigation kivymd.tabs.MDBottomNavigation
+#:import MDBottomNavigationItem kivymd.tabs.MDBottomNavigationItem
+#:import MDDropdownMenu kivymd.menu.MDDropdownMenu
+#:import MDCard kivymd.card.MDCard
+#:import MDSeparator kivymd.card.MDSeparator
+#:import MDSpinner kivymd.spinner.MDSpinner
+#:import MDTextField kivymd.textfields.MDTextField
+
+BoxLayout:
+    orientation: "vertical"
+    Toolbar:
+        id: toolbar
+        title: 'NOWALLET'
+        md_bg_color: app.theme_cls.primary_color
+        background_palette: 'Primary'
+        background_hue: '500'
+        left_action_items: [['currency-btc', lambda x: print("BALLS")]]
+        right_action_items: [['menu', lambda x: MDDropdownMenu(items=app.menu_items, width_mult=4).open(self)]]
+    ScreenManager:
+        id: sm
+        transition: SlideTransition(direction="up")
+
+        LoginScreen:
+            name: "login"
+            AnchorLayout:
+                BoxLayout:
+                    size_hint: 0.8, 0.3
+                    spacing: 3
+                    orientation: "vertical"
+                    MDTextField:
+                        hint_text: "Email/Salt"
+                        color_mode: "accent"
+                        write_tab: False
+                    MDTextField:
+                        hint_text: "Passphrase"
+                        color_mode: "accent"
+                        write_tab: False
+                        password: True
+                    MDTextField:
+                        hint_text: "Confirm Passphrase"
+                        color_mode: "accent"
+                        write_tab: False
+                        password: True
+                    MDRaisedButton:
+                        size_hint_x: 1
+                        text: "Create Wallet"
+                        on_release: root.ids.sm.current = "main"
+
+        MainScreen:
+            name: "main"
+            MDBottomNavigation:
+                MDBottomNavigationItem:
+                    name: "balance"
+                    text: "Balance"
+                    icon: "bank"
+                    BoxLayout:
+                        orientation: "vertical"
+                        MDLabel:
+                            font_style: 'Display1'
+                            theme_text_color: 'Primary'
+                            text: "1.20049387 BTC"
+                            halign: 'center'
+                            size_hint_y: None
+                            height: self.texture_size[1] + dp(45)
+                        RV:
+                            id: recycleView
+                            viewclass: "ListItem"
+                            RecycleBoxLayout:
+                                default_size: None, dp(56)
+                                default_size_hint: 1, None
+                                size_hint_y: None
+                                height: self.minimum_height
+                                orientation: 'vertical'
+
+                MDBottomNavigationItem:
+                    name: "send"
+                    text: "Sending"
+                    icon: "debug-step-out"
+                    AnchorLayout:
+                        BoxLayout:
+                            size_hint: 0.9, 0.84
+                            orientation: "vertical"
+                            spacing: 9
+                            BoxLayout:
+                                size_hint: 1, 0.2
+                                MDTextField:
+                                    hint_text: "BTC"
+                                    color_mode: "accent"
+                                    write_tab: False
+                                MDTextField:
+                                    hint_text: "USD"
+                                    color_mode: "accent"
+                                    write_tab: False
+                            MDLabel:
+                                size_hint: 1, 0.2
+                                text: "Available balance:\n1.20049387 BTC"
+                                theme_text_color: 'Primary'
+                                font_style:"Title"
+                            BoxLayout:
+                                size_hint: 1, 0.4
+                                MDTextField:
+                                    helper_text: "Miner Fee: sat/byte"
+                                    helper_text_mode: "persistent"
+                                    color_mode: "accent"
+                                    write_tab: False
+                                MDRaisedButton:
+                                    size_hint: 0.5, 1
+                                    text: "Custom Fee"
+                            BoxLayout:
+                                size_hint: 1, 0.4
+                                MDTextField:
+                                    helper_text: "Enter Address"
+                                    helper_text_mode: "persistent"
+                                    color_mode: "accent"
+                                    write_tab: False
+                                MDRaisedButton:
+                                    size_hint: 0.5, 1
+                                    text: "Send TX"
+                    #        ZbarQrcodeDetector:
+                            Label:
+
+                MDBottomNavigationItem:
+                    name: "recieve"
+                    text: "Recieving"
+                    icon: "debug-step-into"
+                    AnchorLayout:
+                        BoxLayout:
+                            size_hint: 0.9, 0.8
+                            spacing: 3
+                            orientation: "vertical"
+                            BoxLayout:
+                                size_hint: 1, 0.2
+                                MDTextField:
+                                    hint_text: "BTC"
+                                    color_mode: "accent"
+                                    write_tab: False
+                                MDTextField:
+                                    hint_text: "USD"
+                                    color_mode: "accent"
+                                    write_tab: False
+                            MDCard:
+                                size_hint: None, None
+                                size: dp(300), dp(320)
+                                pos_hint: {'center_x': 0.5}
+                                BoxLayout:
+                                    orientation:'vertical'
+                                    padding: dp(10)
+                                    MDLabel:
+                                        text: 'Current Address (P2SH):\n3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF'
+                                        theme_text_color: 'Primary'
+                                        font_style:"Body2"
+                                        size_hint_y: None
+                                        height: dp(36)
+                                    MDSeparator:
+                                        height: dp(3)
+                                    QRCodeWidget:
+                                        show_border: False
+                                        data: "bitcoin:3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF"
+
+        WaitScreen:
+            name: "wait"
+            AnchorLayout:
+                MDSpinner:
+                    size_hint: None, None
+                    size: dp(46), dp(46)
+                    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            MDLabel:
+                id: wait_text
+                text: "Loading.."
+                theme_text_color: 'Primary'
+                font_style:"Title"
+                size_hint: None, None
+                pos_hint: {'center_x': 0.53, 'center_y': 0.66}
+
+        YPUBScreen:
+            name: "ypub"
+            MDCard:
+                size_hint: None, None
+                size: dp(320), dp(360)
+                pos_hint: {'center_x': 0.5, 'center_y': 0.55}
+                BoxLayout:
+                    orientation:'vertical'
+                    padding: dp(15)
+                    MDLabel:
+                        text: 'Extended Public Key (SegWit):\nypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68'
+                        theme_text_color: 'Primary'
+                        font_style:"Body2"
+                        size_hint_y: None
+                        height: dp(70)
+                    MDSeparator:
+                        height: dp(3)
+                    QRCodeWidget:
+                        id: ypub_qrcode
+                        show_border: False
+                        data: "ypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68"
+                    MDSeparator:
+                        height: dp(3)
+                    MDRaisedButton:
+                        size_hint: 1, 0.15
+                        text: "Go Back"
+                        on_release: root.ids.sm.current = "main"
+
+<ListItem>:
+    IconLeftSampleWidget:
+        icon: 'check-circle'

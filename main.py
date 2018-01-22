@@ -7,11 +7,13 @@ kivy.require('1.10.0')
 from kivy.utils import platform
 from kivy.core.window import Window
 from kivy.app import App
-from kivy.lang import Builder
-from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.screenmanager import Screen
 from kivy.uix.recycleview import RecycleView
-from async_gui.tasks import Task, ProcessTask
-from async_gui.toolkits.kivy import KivyEngine
+from kivymd.theming import ThemeManager
+from kivymd.list import OneLineIconListItem
+from kivymd.list import ILeftBodyTouch
+from kivymd.button import MDIconButton
+from kivymd.menu import MDMenuItem
 
 import nowallet
 from settings_json import settings_json
@@ -32,13 +34,13 @@ class RecieveScreen(Screen):
 
 class SendScreen(Screen):
     def add_new_data(self, text):
-        data = sm.get_screen("main").ids.recycleView.data_model.data
+        data = self.manager.get_screen("main").ids.recycleView.data_model.data
         data.insert(0, {"text": text})
 
 class WaitScreen(Screen):
     pass
 
-class XPUBScreen(Screen):
+class YPUBScreen(Screen):
     pass
 
 class RV(RecycleView):
@@ -48,73 +50,51 @@ class RV(RecycleView):
                      {"text": "Recieved 1 BTC"},
                      {"text": "Sent 0.299 BTC"}]
 
-engine = KivyEngine()
-buildKV = Builder.load_file("nowallet_ui.kv")
+class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
+    pass
 
-# Create the screen manager
-transition = SlideTransition(direction="up")
-sm = ScreenManager(transition=transition)
-sm.add_widget(LoginScreen(name="login"))
-sm.add_widget(MainScreen(name="main"))
-sm.add_widget(RecieveScreen(name="recieve"))
-sm.add_widget(SendScreen(name="send"))
-sm.add_widget(WaitScreen(name="wait"))
-sm.add_widget(XPUBScreen(name="xpub"))
+class ListItem(OneLineIconListItem):
+    pass
+
+class MenuItem(MDMenuItem):
+    def on_release(self):
+        if "YPUB" in self.text:
+            App.get_running_app().root.ids.sm.current = "ypub"
+        elif "Settings" in self.text:
+            App.get_running_app().open_settings()
 
 class NowalletApp(App):
+    theme_cls = ThemeManager()
+    theme_cls.theme_style = 'Dark'
+    theme_cls.primary_palette = "Grey"
+    theme_cls.accent_palette = "LightGreen"
+
     def __init__(self):
         self.chain = nowallet.TBTC
         self.loop = asyncio.get_event_loop()
-        self.sm = sm
+        self.menu_items = [
+            {'viewclass': 'MenuItem',
+             'text': 'View YPUB'},
+            {'viewclass': 'MenuItem',
+             'text': 'Settings'}
+        ]
         super().__init__()
 
 #    def on_start(self):
-#        sm.current = "wait"
-#        self.scrape_1209k()
-#        self.initialize_connection()
-#        self.initialize_wallet()
-#        sm.current = "main"
+#        App.get_running_app().root.ids.sm.current = "wait"
+#        server, port, proto = nowallet.get_random_onion(self.loop, self.chain)
+#        connection = nowallet.Connection(self.loop, server, port, proto)
+#        self.wallet = nowallet.Wallet("email", "passphrase", connection, self.loop, self.chain)
+#        App.get_running_app().root.ids.sm.current = "login"
 #        print(self.wallet.xpub)
 
-    def on_start(self):
-        sm.get_screen("wait").ids.wait_text.text = "Waiting 3sec"
-        sm.current = "wait"
-        self.wait_three()
-        sm.current = "main"
-
-    @engine.async
-    def wait_three(self):
-        import time
-        yield Task(time.sleep, 3)
-
-    @engine.async
-    def scrape_1209k(self):
-        self.server = yield Task(
-            nowallet.get_random_onion, self.loop, self.chain)
-    @engine.async
-    def initialize_connection(self):
-        server, port, proto = self.server
-        self.connection = yield Task(
-            nowallet.Connection, self.loop, server, port, proto)
-    @engine.async
-    def initialize_wallet(self):
-        self.wallet = yield ProcessTask(self.new_wallet)
-
-    def new_wallet(self, email="email", passphrase="passphrase"):
-        return nowallet.Wallet(email,
-                               passphrase,
-                               self.connection,
-                               self.loop,
-                               self.chain)
-
     def build(self):
-            self.icon = "icons/brain.png"
-            self.use_kivy_settings = False
-            self.rbf = self.config.get("nowallet", "rbf")
-            self.bech32 = self.config.get("nowallet", "bech32")
-            self.units = self.config.get("nowallet", "units")
-            self.currency = self.config.get("nowallet", "currency")
-            return self.sm
+        self.icon = "icons/brain.png"
+        self.use_kivy_settings = False
+        self.rbf = self.config.get("nowallet", "rbf")
+        self.bech32 = self.config.get("nowallet", "bech32")
+        self.units = self.config.get("nowallet", "units")
+        self.currency = self.config.get("nowallet", "currency")
 
     def build_config(self, config):
         config.setdefaults("nowallet", {
