@@ -8,7 +8,6 @@
 #:import MDBottomNavigationItem kivymd.tabs.MDBottomNavigationItem
 #:import MDDropdownMenu kivymd.menu.MDDropdownMenu
 #:import MDCard kivymd.card.MDCard
-#:import MDSeparator kivymd.card.MDSeparator
 #:import MDSpinner kivymd.spinner.MDSpinner
 #:import MDTextField kivymd.textfields.MDTextField
 
@@ -153,14 +152,13 @@ BoxLayout:
                                 BoxLayout:
                                     orientation:'vertical'
                                     padding: dp(10)
+                                    spacing: 5
                                     MDLabel:
                                         text: 'Current Address (P2SH):\n3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF'
                                         theme_text_color: 'Primary'
                                         font_style:"Body2"
                                         size_hint_y: None
                                         height: dp(36)
-                                    MDSeparator:
-                                        height: dp(3)
                                     QRCodeWidget:
                                         show_border: False
                                         data: "bitcoin:3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF"
@@ -189,22 +187,19 @@ BoxLayout:
                 BoxLayout:
                     orientation:'vertical'
                     padding: dp(15)
+                    spacing: 5
                     MDLabel:
                         text: 'Extended Public Key (SegWit):\nypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68'
                         theme_text_color: 'Primary'
                         font_style:"Body2"
                         size_hint_y: None
                         height: dp(70)
-                    MDSeparator:
-                        height: dp(3)
                     QRCodeWidget:
                         id: ypub_qrcode
                         show_border: False
                         data: "ypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68"
-                    MDSeparator:
-                        height: dp(3)
                     MDRaisedButton:
-                        size_hint: 1, 0.15
+                        size_hint: 1, 0.25
                         text: "Go Back"
                         on_release: root.ids.sm.current = "main"
 

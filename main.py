@@ -58,7 +58,8 @@ class ListItem(OneLineIconListItem):
 
 class MenuItem(MDMenuItem):
     def on_release(self):
-        if "YPUB" in self.text:
+        if "YPUB" in self.text \
+        and App.get_running_app().root.ids.sm.current == "main":
             App.get_running_app().root.ids.sm.current = "ypub"
         elif "Settings" in self.text:
             App.get_running_app().open_settings()
