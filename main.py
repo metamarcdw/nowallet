@@ -1,5 +1,8 @@
 #! /usr/bin/env python3
 import asyncio
+from async_gui.engine import Task
+from async_gui.toolkits.kivy import KivyEngine
+engine = KivyEngine()
 
 import kivy
 kivy.require("1.10.0")
@@ -7,6 +10,7 @@ kivy.require("1.10.0")
 from kivy.utils import platform
 from kivy.core.window import Window
 from kivy.app import App
+from kivy.metrics import dp
 from kivy.uix.screenmanager import Screen
 from kivy.uix.recycleview import RecycleView
 
@@ -15,6 +19,8 @@ from kivymd.list import OneLineIconListItem
 from kivymd.list import ILeftBodyTouch
 from kivymd.button import MDIconButton
 from kivymd.menu import MDMenuItem
+from kivymd.dialog import MDDialog
+from kivymd.label import MDLabel
 
 import nowallet
 from settings_json import settings_json
@@ -66,21 +72,57 @@ class NowalletApp(App):
     def __init__(self):
         self.chain = nowallet.TBTC
         self.loop = asyncio.get_event_loop()
-        self.menu_items = [
-            {"viewclass": "MenuItem",
-             "text": "View YPUB"},
-            {"viewclass": "MenuItem",
-             "text": "Settings"}
-        ]
+
+        self.menu_items = [{"viewclass": "MenuItem",
+                            "text": "View YPUB"},
+                           {"viewclass": "MenuItem",
+                            "text": "Settings"}]
         super().__init__()
 
-#    def on_start(self):
-#        self.root.ids.sm.current = "wait"
-#        server, port, proto = nowallet.get_random_onion(self.loop, self.chain)
-#        connection = nowallet.Connection(self.loop, server, port, proto)
-#        self.wallet = nowallet.Wallet("email", "passphrase", connection, self.loop, self.chain)
-#        self.root.ids.sm.current = "login"
-#        print(self.wallet.xpub)
+    def show_dialog(self, title, message):
+        content = MDLabel(font_style='Body1',
+                          theme_text_color='Secondary',
+                          text=message,
+                          size_hint_y=None,
+                          valign='top')
+        content.bind(texture_size=content.setter('size'))
+        self.dialog = MDDialog(title=title,
+                               content=content,
+                               size_hint=(.8, None),
+                               height=dp(200),
+                               auto_dismiss=False)
+
+        self.dialog.add_action_button("Dismiss",
+                                      action=lambda *x: self.dialog.dismiss())
+        self.dialog.open()
+
+    def do_login(self):
+        email = self.root.ids.email_field.text
+        passphrase = self.root.ids.pass_field.text
+        confirm = self.root.ids.confirm_field.text
+        if not email or not passphrase or not confirm:
+            self.show_dialog("Error", "All fields are required.")
+            return
+        if passphrase != confirm:
+            self.show_dialog("Error", "Passwords did not match.")
+            return
+
+        self.root.ids.sm.current = "wait"
+        self.do_login_tasks(email, passphrase)
+        self.root.ids.sm.current = "main"
+
+    @engine.async
+    def do_login_tasks(self, email, passphrase):
+        self.root.ids.wait_text.text = "Connecting.."
+        server, port, proto = yield Task(
+            nowallet.get_random_onion, self.loop, self.chain)
+        connection = yield Task(
+            nowallet.Connection, self.loop, server, port, proto)
+        self.root.ids.wait_text.text = "Deriving Keys.."
+        self.wallet = yield Task(
+            nowallet.Wallet, email, passphrase,
+            connection, self.loop, self.chain)
+        print(self.wallet.ypub)
 
     def build(self):
         self.icon = "icons/brain.png"
@@ -119,9 +161,14 @@ class NowalletApp(App):
         else:           # the key now does nothing
             return False
 
+    def on_pause(self):
+        return True
+
     def add_list_item(self, text):
         data = self.root.ids.recycleView.data_model.data
         data.insert(0, {"text": text})
 
 if __name__ == "__main__":
-    NowalletApp().run()
+    app = NowalletApp()
+    engine.main_app = app
+    app.run()

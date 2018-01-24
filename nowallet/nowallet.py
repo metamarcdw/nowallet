@@ -308,7 +308,7 @@ class Wallet:
         self.new_history = False  # type: bool
 
     @property
-    def xpub(self) -> str:
+    def ypub(self) -> str:
         """
         Returns this account's extended public key.
 
@@ -985,7 +985,7 @@ class Wallet:
         """
         pprinter = pprint.PrettyPrinter(indent=4)  # type: pprint.PrettyPrinter
         str_ = list()  # type: List[str]
-        str_.append("\nXPUB: {}".format(self.xpub))
+        str_.append("\nYPUB: {}".format(self.ypub))
         str_.append("\nHistory:\n{}".format(
             pprinter.pformat(self.get_tx_history())))
         str_.append("\nUTXOS:\n{}".format(

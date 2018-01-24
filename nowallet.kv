@@ -33,15 +33,18 @@ BoxLayout:
                     spacing: 3
                     orientation: "vertical"
                     MDTextField:
+                        id: email_field
                         hint_text: "Email/Salt"
                         color_mode: "accent"
                         write_tab: False
                     MDTextField:
+                        id: pass_field
                         hint_text: "Passphrase"
                         color_mode: "accent"
                         write_tab: False
                         password: True
                     MDTextField:
+                        id: confirm_field
                         hint_text: "Confirm Passphrase"
                         color_mode: "accent"
                         write_tab: False
@@ -49,7 +52,7 @@ BoxLayout:
                     MDRaisedButton:
                         size_hint_x: 1
                         text: "Create Wallet"
-                        on_release: root.ids.sm.current = "main"
+                        on_release: app.do_login()
 
         MainScreen:
             name: "main"
@@ -179,8 +182,9 @@ BoxLayout:
                 text: "Loading.."
                 theme_text_color: "Primary"
                 font_style:"Title"
-                size_hint: None, None
-                pos_hint: {"center_x": 0.53, "center_y": 0.66}
+                size_hint: 0.5, None
+                halign: "center"
+                pos_hint: {"center_x": 0.5, "center_y": 0.66}
 
         YPUBScreen:
             name: "ypub"
