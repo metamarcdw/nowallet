@@ -12,7 +12,6 @@ from kivy.core.window import Window
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.uix.screenmanager import Screen
-from kivy.uix.recycleview import RecycleView
 
 from kivymd.theming import ThemeManager
 from kivymd.list import OneLineIconListItem
@@ -41,13 +40,6 @@ class WaitScreen(Screen):
 
 class YPUBScreen(Screen):
     pass
-
-class RV(RecycleView):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.data = [{"text": "Recieved 0.5 BTC"},
-                     {"text": "Recieved 1 BTC"},
-                     {"text": "Sent 0.299 BTC"}]
 
 class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
     pass
@@ -109,6 +101,7 @@ class NowalletApp(App):
 
         self.root.ids.sm.current = "wait"
         self.do_login_tasks(email, passphrase)
+        self.update_balance_screen()
         self.root.ids.sm.current = "main"
 
     @engine.async
@@ -124,7 +117,16 @@ class NowalletApp(App):
             connection, self.loop, self.chain)
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
-        print(self.wallet)
+
+    def update_balance_screen(self):
+        balance_str = "{} {}".format(
+            self.wallet.balance, self.wallet.chain.chain_1209k.upper())
+        self.root.ids.balance_label.text = balance_str
+        for hist in self.wallet.get_tx_history():
+            verb = "Sent" if hist.is_spend else "Recieved"
+            hist_str = "{} {} {}".format(
+                verb, hist.value, self.wallet.chain.chain_1209k.upper())
+            self.add_list_item(hist_str)
 
     def build(self):
         self.icon = "icons/brain.png"

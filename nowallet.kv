@@ -1,4 +1,5 @@
 #:import SlideTransition kivy.uix.screenmanager.SlideTransition
+#:import RecycleView kivy.uix.recycleview
 #:import QRCodeWidget kivy.garden.qrcode
 # import ZbarQrcodeDetector android-zbar-qrcode.main
 
@@ -64,13 +65,13 @@ BoxLayout:
                     BoxLayout:
                         orientation: "vertical"
                         MDLabel:
+                            id: balance_label
                             font_style: "Display1"
                             theme_text_color: "Primary"
-                            text: "1.20049387 BTC"
                             halign: "center"
                             size_hint_y: None
                             height: self.texture_size[1] + dp(45)
-                        RV:
+                        RecycleView:
                             id: recycleView
                             viewclass: "ListItem"
                             RecycleBoxLayout:
