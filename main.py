@@ -122,7 +122,9 @@ class NowalletApp(App):
         self.wallet = yield Task(
             nowallet.Wallet, email, passphrase,
             connection, self.loop, self.chain)
-        print(self.wallet.ypub)
+        self.root.ids.wait_text.text = "Fetching history.."
+        yield Task(self.wallet.discover_all_keys)
+        print(self.wallet)
 
     def build(self):
         self.icon = "icons/brain.png"

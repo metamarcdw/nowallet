@@ -531,7 +531,7 @@ class Wallet:
                     futures.append(self._process_history(
                         hist, address, heights[i]))
                 processed_history = self.loop.run_until_complete(
-                    asyncio.gather(*futures))  # type: List[History]
+                    asyncio.gather(*futures, loop=self.loop))  # type: List[History]
 
                 # Delete Txs that are just recieving change
                 if change:
@@ -637,7 +637,7 @@ class Wallet:
                     self.methods["get_history"], [addr]))
 
             result = self.loop.run_until_complete(
-                asyncio.gather(*futures))  # type: List[Dict[str, Any]]
+                asyncio.gather(*futures, loop=self.loop))  # type: List[Dict[str, Any]]
             quit_flag = self._interpret_history(result, change)
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
