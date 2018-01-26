@@ -8,6 +8,7 @@
 #:import MDBottomNavigation kivymd.tabs.MDBottomNavigation
 #:import MDBottomNavigationItem kivymd.tabs.MDBottomNavigationItem
 #:import MDDropdownMenu kivymd.menu.MDDropdownMenu
+#:import MDMenuItem kivymd.menu.MDMenuItem
 #:import MDCard kivymd.card.MDCard
 #:import MDSpinner kivymd.spinner.MDSpinner
 #:import MDTextField kivymd.textfields.MDTextField
@@ -212,6 +213,9 @@ BoxLayout:
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
                 on_release: root.ids.sm.current = "main"
+
+<MDMenuItem>:
+    on_release: app.menu_item_handler(self.text)
 
 <ListItem>:
     IconLeftSampleWidget:

@@ -17,7 +17,6 @@ from kivymd.theming import ThemeManager
 from kivymd.list import OneLineIconListItem
 from kivymd.list import ILeftBodyTouch
 from kivymd.button import MDIconButton
-from kivymd.menu import MDMenuItem
 from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
 
@@ -47,14 +46,6 @@ class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
 class ListItem(OneLineIconListItem):
     pass
 
-class MenuItem(MDMenuItem):
-    def on_release(self):
-        if "YPUB" in self.text \
-        and App.get_running_app().root.ids.sm.current == "main":
-            App.get_running_app().root.ids.sm.current = "ypub"
-        elif "Settings" in self.text:
-            App.get_running_app().open_settings()
-
 class NowalletApp(App):
     theme_cls = ThemeManager()
     theme_cls.theme_style = "Dark"
@@ -65,9 +56,9 @@ class NowalletApp(App):
         self.chain = nowallet.TBTC
         self.loop = asyncio.get_event_loop()
 
-        self.menu_items = [{"viewclass": "MenuItem",
+        self.menu_items = [{"viewclass": "MDMenuItem",
                             "text": "View YPUB"},
-                           {"viewclass": "MenuItem",
+                           {"viewclass": "MDMenuItem",
                             "text": "Settings"}]
         super().__init__()
 
@@ -87,6 +78,13 @@ class NowalletApp(App):
         self.dialog.add_action_button("Dismiss",
                                       action=lambda *x: self.dialog.dismiss())
         self.dialog.open()
+
+    def menu_item_handler(self, text):
+        if "YPUB" in text \
+        and self.root.ids.sm.current == "main":
+            self.root.ids.sm.current = "ypub"
+        elif "Settings" in text:
+            self.open_settings()
 
     def do_login(self):
         email = self.root.ids.email_field.text
