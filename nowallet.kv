@@ -103,8 +103,8 @@ BoxLayout:
                                     color_mode: "accent"
                                     write_tab: False
                             MDLabel:
+                                id: send_balance
                                 size_hint: 1, 0.2
-                                text: "Available balance:\n1.20049387 BTC"
                                 theme_text_color: "Primary"
                                 font_style:"Title"
                             BoxLayout:
@@ -163,14 +163,14 @@ BoxLayout:
                                     padding: dp(10)
                                     spacing: 5
                                     MDLabel:
-                                        text: "Current Address (P2SH):\n3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF"
+                                        id: addr_label
                                         theme_text_color: "Primary"
                                         font_style:"Body2"
                                         size_hint_y: None
                                         height: dp(40)
                                     QRCodeWidget:
+                                        id: addr_qrcode
                                         show_border: False
-                                        data: "bitcoin:3N8hwP1WmJrFF5QWABn38y63uYLhnJYJYTF"
 
         WaitScreen:
             name: "wait"
@@ -199,7 +199,7 @@ BoxLayout:
                     padding: dp(10)
                     spacing: 5
                     MDLabel:
-                        text: "Extended Public Key (SegWit):\nypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68"
+                        id: ypub_label
                         theme_text_color: "Primary"
                         font_style:"Body2"
                         size_hint_y: None
@@ -207,7 +207,6 @@ BoxLayout:
                     QRCodeWidget:
                         id: ypub_qrcode
                         show_border: False
-                        data: "ypubDCZN5zNLA9w8y4szDPCyvt4UgjgKAv7uWMrfmNHyaR7jqvoig7KYRLa3Rd8FNp1H8h5vGX683QtybhRAWZhjbXdcMnfZirNd3FvgXXMAC68"
             MDRaisedButton:
                 size_hint: 0.5, 0.07
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
@@ -218,5 +217,6 @@ BoxLayout:
     on_release: app.menu_item_handler(self.text)
 
 <ListItem>:
+    on_release: print("TEST")
     IconLeftSampleWidget:
         icon: "check-circle"

@@ -21,6 +21,7 @@ from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
 
 import nowallet
+from nowallet.exchange_rate import fetch_exchange_rates
 from settings_json import settings_json
 
 __version__ = nowallet.__version__
@@ -53,7 +54,7 @@ class NowalletApp(App):
     theme_cls.accent_palette = "LightGreen"
 
     def __init__(self):
-        self.chain = nowallet.TBTC
+        self.chain = nowallet.BTC
         self.loop = asyncio.get_event_loop()
 
         self.menu_items = [{"viewclass": "MDMenuItem",
@@ -99,32 +100,59 @@ class NowalletApp(App):
 
         self.root.ids.sm.current = "wait"
         self.do_login_tasks(email, passphrase)
-        self.update_balance_screen()
+        self.update_screens()
         self.root.ids.sm.current = "main"
 
     @engine.async
     def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
-        server, port, proto = yield Task(
-            nowallet.get_random_onion, self.loop, self.chain)
+#        server, port, proto = yield Task(
+#            nowallet.get_random_onion, self.loop, self.chain)
+#        connection = yield Task(
+#            nowallet.Connection, self.loop, server, port, proto)
         connection = yield Task(
-            nowallet.Connection, self.loop, server, port, proto)
+            nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
         self.root.ids.wait_text.text = "Deriving Keys.."
         self.wallet = yield Task(
             nowallet.Wallet, email, passphrase,
             connection, self.loop, self.chain)
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
+        self.root.ids.wait_text.text = "Fetching exchange rates.."
+        self.exchange_rates = yield Task(self.loop.run_until_complete,
+            fetch_exchange_rates(self.wallet.chain.chain_1209k))
+
+    def update_screens(self):
+        self.update_balance_screen()
+        self.update_send_screen()
+        self.update_recieve_screen()
+        self.update_ypub_screen()
+
+    def balance_str(self):
+        return "{} {}".format(
+            self.wallet.balance, self.wallet.chain.chain_1209k.upper())
 
     def update_balance_screen(self):
-        balance_str = "{} {}".format(
-            self.wallet.balance, self.wallet.chain.chain_1209k.upper())
-        self.root.ids.balance_label.text = balance_str
+        self.root.ids.balance_label.text = self.balance_str()
         for hist in self.wallet.get_tx_history():
             verb = "Sent" if hist.is_spend else "Recieved"
             hist_str = "{} {} {}".format(
                 verb, hist.value, self.wallet.chain.chain_1209k.upper())
             self.add_list_item(hist_str)
+
+    def update_send_screen(self):
+        self.root.ids.send_balance.text = \
+            "Available balance:\n" + self.balance_str()
+
+    def update_recieve_screen(self):
+        address = self.wallet.get_address(self.wallet.get_next_unused_key())
+        self.root.ids.addr_label.text = "Current Address (P2SH):\n" + address
+        self.root.ids.addr_qrcode.data = "bitcoin:" + address
+
+    def update_ypub_screen(self):
+        ypub = self.wallet.ypub
+        self.root.ids.ypub_label.text = "Extended Public Key (SegWit):\n" + ypub
+        self.root.ids.ypub_qrcode.data = ypub
 
     def build(self):
         self.icon = "icons/brain.png"
