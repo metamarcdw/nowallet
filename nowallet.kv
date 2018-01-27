@@ -94,11 +94,11 @@ BoxLayout:
                             BoxLayout:
                                 size_hint: 1, 0.2
                                 spacing: 5
-                                MDTextField:
+                                FloatInput:
                                     hint_text: "BTC"
                                     color_mode: "accent"
                                     write_tab: False
-                                MDTextField:
+                                FloatInput:
                                     hint_text: "USD"
                                     color_mode: "accent"
                                     write_tab: False
@@ -110,15 +110,19 @@ BoxLayout:
                             BoxLayout:
                                 size_hint: 1, 0.4
                                 spacing: 5
-                                MDTextField:
+                                FloatInput:
+                                    id: fee_input
                                     helper_text: "Miner Fee: sat/byte"
                                     helper_text_mode: "persistent"
                                     color_mode: "accent"
                                     write_tab: False
+                                    disabled: True
+                                    on_text: app.fee_input_handler()
                                 MDRaisedButton:
+                                    id: fee_button
                                     size_hint: 0.5, 1
-                                    text: "Custom Fee"
-                                    on_release: root.ids.sm.current = "wait"
+                                    text: "Normal Fee"
+                                    on_release: app.fee_button_handler()
                             BoxLayout:
                                 size_hint: 1, 0.4
                                 spacing: 5
@@ -146,11 +150,11 @@ BoxLayout:
                             BoxLayout:
                                 size_hint: 1, 0.2
                                 spacing: 5
-                                MDTextField:
+                                FloatInput:
                                     hint_text: "BTC"
                                     color_mode: "accent"
                                     write_tab: False
-                                MDTextField:
+                                FloatInput:
                                     hint_text: "USD"
                                     color_mode: "accent"
                                     write_tab: False

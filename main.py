@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 import asyncio
+import re
+
 from async_gui.engine import Task
 from async_gui.toolkits.kivy import KivyEngine
 engine = KivyEngine()
@@ -11,6 +13,7 @@ from kivy.utils import platform
 from kivy.core.window import Window
 from kivy.app import App
 from kivy.metrics import dp
+from kivy.properties import NumericProperty, DictProperty
 from kivy.uix.screenmanager import Screen
 
 from kivymd.theming import ThemeManager
@@ -19,6 +22,7 @@ from kivymd.list import ILeftBodyTouch
 from kivymd.button import MDIconButton
 from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
+from kivymd.textfields import MDTextField
 
 import nowallet
 from nowallet.exchange_rate import fetch_exchange_rates
@@ -47,11 +51,24 @@ class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
 class ListItem(OneLineIconListItem):
     pass
 
+class FloatInput(MDTextField):
+    pat = re.compile('[^0-9]')
+    def insert_text(self, substring, from_undo=False):
+        pat = self.pat
+        if '.' in self.text:
+            s = re.sub(pat, '', substring)
+        else:
+            s = '.'.join([re.sub(pat, '', s) for s in substring.split('.', 1)])
+        return super(FloatInput, self).insert_text(s, from_undo=from_undo)
+
 class NowalletApp(App):
     theme_cls = ThemeManager()
     theme_cls.theme_style = "Dark"
     theme_cls.primary_palette = "Grey"
     theme_cls.accent_palette = "LightGreen"
+
+    current_fee = NumericProperty()
+    exchange_rates = DictProperty()
 
     def __init__(self):
         self.chain = nowallet.BTC
@@ -87,6 +104,22 @@ class NowalletApp(App):
         elif "Settings" in text:
             self.open_settings()
 
+    def fee_button_handler(self):
+        fee_input = self.root.ids.fee_input
+        fee_button = self.root.ids.fee_button
+        fee_input.disabled = not fee_input.disabled
+        if not fee_input.disabled:
+            fee_button.text = "Custom Fee"
+        else:
+            fee_button.text = "Normal Fee"
+            fee_input.text = str(self.estimated_fee)
+            self.current_fee = self.estimated_fee
+
+    def fee_input_handler(self):
+        text = self.root.ids.fee_input.text
+        if text:
+            self.current_fee = int(float(text))
+
     def do_login(self):
         email = self.root.ids.email_field.text
         passphrase = self.root.ids.pass_field.text
@@ -121,6 +154,10 @@ class NowalletApp(App):
         self.root.ids.wait_text.text = "Fetching exchange rates.."
         self.exchange_rates = yield Task(self.loop.run_until_complete,
             fetch_exchange_rates(self.wallet.chain.chain_1209k))
+        self.root.ids.wait_text.text = "Getting fee estimate.."
+        coinkb_fee = yield Task(self.wallet.get_fee_estimation)
+        self.current_fee = self.estimated_fee = \
+            nowallet.Wallet.coinkb_to_satb(coinkb_fee)
 
     def update_screens(self):
         self.update_balance_screen()
@@ -143,6 +180,7 @@ class NowalletApp(App):
     def update_send_screen(self):
         self.root.ids.send_balance.text = \
             "Available balance:\n" + self.balance_str()
+        self.root.ids.fee_input.text = str(self.current_fee)
 
     def update_recieve_screen(self):
         address = self.wallet.get_address(self.wallet.get_next_unused_key())
