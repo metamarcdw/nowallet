@@ -13,6 +13,7 @@ kivy.require("1.10.0")
 from kivy.utils import platform
 from kivy.core.window import Window
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.properties import NumericProperty, DictProperty, StringProperty
 from kivy.uix.screenmanager import Screen
@@ -125,6 +126,11 @@ class NowalletApp(App):
         if text:
             self.current_fee = int(float(text))
 
+    def check_new_history(self, dt):
+        if self.wallet.new_history:
+            self.update_screens()
+            self.wallet.new_history = False
+
     def do_login(self):
         email = self.root.ids.email_field.text
         passphrase = self.root.ids.pass_field.text
@@ -140,6 +146,7 @@ class NowalletApp(App):
         self.do_login_tasks(email, passphrase)
         self.update_screens()
         self.root.ids.sm.current = "main"
+        Clock.schedule_interval(self.check_new_history, 1)
 
     @engine.async
     def do_login_tasks(self, email, passphrase):
