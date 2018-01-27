@@ -1,7 +1,8 @@
 import json
 from nowallet.exchange_rate import CURRENCIES
 
-settings_json = json.dumps([
+def settings_json(coin="BTC"):
+    return json.dumps([
     {"type": "bool",
      "title": "RBF",
      "desc": "Use opt in replace by fee?",
@@ -13,11 +14,11 @@ settings_json = json.dumps([
      "section": "nowallet",
      "key": "bech32"},
     {"type": "options",
-     "title": "Bitcoin Units",
+     "title": "Coin Units",
      "desc": "Preferred Bitcoin denomination",
      "section": "nowallet",
      "key": "units",
-     "options": ["BTC", "mBTC", "uBTC"]},
+     "options": [coin, "m{}".format(coin), "u{}".format(coin)]},
     {"type": "options",
      "title": "Currency",
      "desc": "Fiat currency for exchange rates",

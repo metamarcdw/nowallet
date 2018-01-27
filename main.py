@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
-import asyncio
 import re
+import asyncio
+from decimal import Decimal
 
 from async_gui.engine import Task
 from async_gui.toolkits.kivy import KivyEngine
@@ -13,7 +14,7 @@ from kivy.utils import platform
 from kivy.core.window import Window
 from kivy.app import App
 from kivy.metrics import dp
-from kivy.properties import NumericProperty, DictProperty
+from kivy.properties import NumericProperty, DictProperty, StringProperty
 from kivy.uix.screenmanager import Screen
 
 from kivymd.theming import ThemeManager
@@ -67,6 +68,10 @@ class NowalletApp(App):
     theme_cls.primary_palette = "Grey"
     theme_cls.accent_palette = "LightGreen"
 
+    units = StringProperty()
+    currency = StringProperty()
+    current_coin = StringProperty("0")
+    current_fiat = StringProperty("0")
     current_fee = NumericProperty()
     exchange_rates = DictProperty()
 
@@ -98,11 +103,11 @@ class NowalletApp(App):
         self.dialog.open()
 
     def menu_item_handler(self, text):
-        if "YPUB" in text \
-        and self.root.ids.sm.current == "main":
-            self.root.ids.sm.current = "ypub"
-        elif "Settings" in text:
-            self.open_settings()
+        if self.root.ids.sm.current == "main":
+            if "YPUB" in text:
+                self.root.ids.sm.current = "ypub"
+            elif "Settings" in text:
+                self.open_settings()
 
     def fee_button_handler(self):
         fee_input = self.root.ids.fee_input
@@ -153,7 +158,7 @@ class NowalletApp(App):
         yield Task(self.wallet.discover_all_keys)
         self.root.ids.wait_text.text = "Fetching exchange rates.."
         self.exchange_rates = yield Task(self.loop.run_until_complete,
-            fetch_exchange_rates(self.wallet.chain.chain_1209k))
+            fetch_exchange_rates(self.chain.chain_1209k))
         self.root.ids.wait_text.text = "Getting fee estimate.."
         coinkb_fee = yield Task(self.wallet.get_fee_estimation)
         self.current_fee = self.estimated_fee = \
@@ -167,14 +172,14 @@ class NowalletApp(App):
 
     def balance_str(self):
         return "{} {}".format(
-            self.wallet.balance, self.wallet.chain.chain_1209k.upper())
+            self.wallet.balance * self.unit_factor, self.units)
 
     def update_balance_screen(self):
         self.root.ids.balance_label.text = self.balance_str()
         for hist in self.wallet.get_tx_history():
             verb = "Sent" if hist.is_spend else "Recieved"
             hist_str = "{} {} {}".format(
-                verb, hist.value, self.wallet.chain.chain_1209k.upper())
+                verb, hist.value, self.units)
             self.add_list_item(hist_str)
 
     def update_send_screen(self):
@@ -192,12 +197,38 @@ class NowalletApp(App):
         self.root.ids.ypub_label.text = "Extended Public Key (SegWit):\n" + ypub
         self.root.ids.ypub_qrcode.data = ypub
 
+    def update_unit_factor(self):
+        self.unit_factor = 1
+        if self.units[0] == "m":
+            self.unit_factor = 1000
+        elif self.units[0] == "u":
+            self.unit_factor = 1000000
+        self.current_coin = str( Decimal(self.current_coin) / self.unit_factor )
+        self.current_fiat = str( Decimal(self.current_fiat) / self.unit_factor )
+
+    def update_amounts(self, text=None, type="coin"):
+        amount = Decimal(text) if text else Decimal("0")
+        rate = self.exchange_rates[self.currency] if self.exchange_rates else 1
+        rate = Decimal(str(rate)) / self.unit_factor
+        new_amount = None
+        if type == "coin":
+            new_amount = amount * rate
+            self.update_amount_fields(amount, new_amount)
+        elif type == "fiat":
+            new_amount = amount / rate
+            self.update_amount_fields(new_amount, amount)
+
+    def update_amount_fields(self, coin, fiat):
+        self.current_coin = "{:.8f}".format(coin)
+        self.current_fiat = "{:.2f}".format(fiat)
+
     def build(self):
         self.icon = "icons/brain.png"
         self.use_kivy_settings = False
         self.rbf = self.config.get("nowallet", "rbf")
         self.bech32 = self.config.get("nowallet", "bech32")
         self.units = self.config.get("nowallet", "units")
+        self.update_unit_factor()
         self.currency = self.config.get("nowallet", "currency")
 
     def build_config(self, config):
@@ -209,9 +240,10 @@ class NowalletApp(App):
         Window.bind(on_keyboard=self.key_input)
 
     def build_settings(self, settings):
+        coin = self.chain.chain_1209k.upper()
         settings.add_json_panel("Nowallet Settings",
                                 self.config,
-                                data=settings_json)
+                                data=settings_json(coin))
 
     def on_config_change(self, config, section, key, value):
         if key == "rbf":
@@ -220,8 +252,13 @@ class NowalletApp(App):
             self.bech32 = value
         elif key == "units":
             self.units = value
+            self.update_unit_factor()
+            self.update_amounts()
+            self.update_balance_screen()
+            self.update_send_screen()
         elif key == "currency":
             self.currency = value
+            self.update_amounts()
 
     def key_input(self, window, key, scancode, codepoint, modifier):
         if key == 27:   # the back button / ESC

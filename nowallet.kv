@@ -95,13 +95,17 @@ BoxLayout:
                                 size_hint: 1, 0.2
                                 spacing: 5
                                 FloatInput:
-                                    hint_text: "BTC"
+                                    text: app.current_coin
+                                    hint_text: app.units
                                     color_mode: "accent"
                                     write_tab: False
+                                    on_text: app.update_amounts(self.text, "coin")
                                 FloatInput:
-                                    hint_text: "USD"
+                                    text: app.current_fiat
+                                    hint_text: app.currency
                                     color_mode: "accent"
                                     write_tab: False
+                                    on_text: app.update_amounts(self.text, "fiat")
                             MDLabel:
                                 id: send_balance
                                 size_hint: 1, 0.2
@@ -151,13 +155,17 @@ BoxLayout:
                                 size_hint: 1, 0.2
                                 spacing: 5
                                 FloatInput:
-                                    hint_text: "BTC"
+                                    text: app.current_coin
+                                    hint_text: app.units
                                     color_mode: "accent"
                                     write_tab: False
+                                    on_text: app.update_amounts(self.text, "coin")
                                 FloatInput:
-                                    hint_text: "USD"
+                                    text: app.current_fiat
+                                    hint_text: app.currency
                                     color_mode: "accent"
                                     write_tab: False
+                                    on_text: app.update_amounts(self.text, "fiat")
                             MDCard:
                                 size_hint: None, None
                                 size: dp(300), dp(320)
