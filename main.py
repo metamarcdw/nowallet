@@ -77,7 +77,6 @@ class NowalletApp(App):
     current_coin = StringProperty("0")
     current_fiat = StringProperty("0")
     current_fee = NumericProperty()
-    exchange_rates = DictProperty()
 
     def __init__(self):
         self.chain = nowallet.BTC
@@ -150,6 +149,7 @@ class NowalletApp(App):
             self.show_dialog("Error", "Passwords did not match.")
             return
         bech32 = self.root.ids.bech32_checkbox.active
+        if bech32: self.menu_items[0]["text"] = "View ZPUB"
 
         self.root.ids.sm.current = "wait"
         self.do_login_tasks(email, passphrase, bech32)
@@ -209,7 +209,9 @@ class NowalletApp(App):
 
     def update_recieve_screen(self):
         address = self.update_recieve_qrcode()
-        self.root.ids.addr_label.text = "Current Address (P2SH):\n" + address
+        encoding = "bech32" if self.wallet.bech32 else "P2SH"
+        self.root.ids.addr_label.text = \
+            "Current Address ({}):\n{}".format(encoding, address)
 
     def update_recieve_qrcode(self):
         address = self.wallet.get_address(self.wallet.get_next_unused_key())
@@ -220,6 +222,7 @@ class NowalletApp(App):
 
     def update_ypub_screen(self):
         ypub = self.wallet.ypub
+        if self.wallet.bech32: ypub[0] = "z"
         self.root.ids.ypub_label.text = "Extended Public Key (SegWit):\n" + ypub
         self.root.ids.ypub_qrcode.data = ypub
 
