@@ -15,8 +15,7 @@ from kivy.core.window import Window
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.properties import (NumericProperty, DictProperty,
-                             StringProperty, ObjectProperty)
+from kivy.properties import NumericProperty, StringProperty, ObjectProperty
 from kivy.uix.screenmanager import Screen
 
 from kivymd.theming import ThemeManager
@@ -28,7 +27,7 @@ from kivymd.label import MDLabel
 from kivymd.textfields import MDTextField
 
 import nowallet
-from nowallet.exchange_rate import fetch_exchange_rates
+#from nowallet.exchange_rate import fetch_exchange_rates
 from settings_json import settings_json
 
 __version__ = nowallet.__version__
@@ -54,7 +53,11 @@ class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
 class ListItem(TwoLineIconListItem):
     history = ObjectProperty(object())
     def on_release(self):
-        print(self.history.tx_obj.id())
+        txid = self.history.tx_obj.id()
+        chain = app.chain.chain_1209k
+        chain = "btc-testnet" if chain == "tbtc" else chain
+        url = "https://live.blockcypher.com/{}/tx/{}/".format(chain, txid)
+        open_url(url)
 
 class FloatInput(MDTextField):
     pat = re.compile('[^0-9]')
@@ -79,7 +82,7 @@ class NowalletApp(App):
     current_fee = NumericProperty()
 
     def __init__(self):
-        self.chain = nowallet.BTC
+        self.chain = nowallet.TBTC
         self.loop = asyncio.get_event_loop()
         self.is_amount_inputs_locked = False
 
@@ -160,12 +163,12 @@ class NowalletApp(App):
     @engine.async
     def do_login_tasks(self, email, passphrase, bech32):
         self.root.ids.wait_text.text = "Connecting.."
-#        server, port, proto = yield Task(
-#            nowallet.get_random_onion, self.loop, self.chain)
-#        connection = yield Task(
-#            nowallet.Connection, self.loop, server, port, proto)
+        server, port, proto = yield Task(
+            nowallet.get_random_onion, self.loop, self.chain)
         connection = yield Task(
-            nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
+            nowallet.Connection, self.loop, server, port, proto)
+#        connection = yield Task(
+#            nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
         self.root.ids.wait_text.text = "Deriving Keys.."
         self.wallet = yield Task(
             nowallet.Wallet, email, passphrase,
@@ -174,9 +177,9 @@ class NowalletApp(App):
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
         self.root.ids.wait_text.text = "Fetching exchange rates.."
-#        self.exchange_rates = {"USD": 12000.0}
-        self.exchange_rates = yield Task(self.loop.run_until_complete,
-            fetch_exchange_rates(self.chain.chain_1209k))
+        self.exchange_rates = {"USD": 12000.0}
+#        self.exchange_rates = yield Task(self.loop.run_until_complete,
+#            fetch_exchange_rates(self.chain.chain_1209k))
         self.root.ids.wait_text.text = "Getting fee estimate.."
         coinkb_fee = yield Task(self.wallet.get_fee_estimation)
         self.current_fee = self.estimated_fee = \
@@ -309,6 +312,24 @@ class NowalletApp(App):
         data.insert(0, {"text": text,
                         "secondary_text": history.tx_obj.id(),
                         "history": history})
+
+if platform == "android":
+    from jnius import autoclass, cast
+    context = autoclass('org.renpy.android.PythonActivity').mActivity
+    Uri = autoclass('android.net.Uri')
+    Intent = autoclass('android.content.Intent')
+
+def open_url(url):
+    if platform == "android":
+        ''' Open a webpage in the default Android browser.  '''
+        intent = Intent()
+        intent.setAction(Intent.ACTION_VIEW)
+        intent.setData(Uri.parse(url))
+        currentActivity = cast('android.app.Activity', context)
+        currentActivity.startActivity(intent)
+    else:
+        import webbrowser
+        webbrowser.open(url)
 
 if __name__ == "__main__":
     app = NowalletApp()
