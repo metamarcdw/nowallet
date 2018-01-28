@@ -15,11 +15,12 @@ from kivy.core.window import Window
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.properties import NumericProperty, DictProperty, StringProperty
+from kivy.properties import (NumericProperty, DictProperty,
+                             StringProperty, ObjectProperty)
 from kivy.uix.screenmanager import Screen
 
 from kivymd.theming import ThemeManager
-from kivymd.list import OneLineIconListItem
+from kivymd.list import TwoLineIconListItem
 from kivymd.list import ILeftBodyTouch
 from kivymd.button import MDIconButton
 from kivymd.dialog import MDDialog
@@ -50,8 +51,10 @@ class YPUBScreen(Screen):
 class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
     pass
 
-class ListItem(OneLineIconListItem):
-    pass
+class ListItem(TwoLineIconListItem):
+    history = ObjectProperty(object())
+    def on_release(self):
+        print(self.history.tx_obj.id())
 
 class FloatInput(MDTextField):
     pat = re.compile('[^0-9]')
@@ -79,9 +82,12 @@ class NowalletApp(App):
     def __init__(self):
         self.chain = nowallet.BTC
         self.loop = asyncio.get_event_loop()
+        self.is_amount_inputs_locked = False
 
         self.menu_items = [{"viewclass": "MDMenuItem",
                             "text": "View YPUB"},
+#                           {"viewclass": "MDMenuItem",
+#                            "text": "Lock with PIN"},
                            {"viewclass": "MDMenuItem",
                             "text": "Settings"}]
         super().__init__()
@@ -107,6 +113,8 @@ class NowalletApp(App):
         if self.root.ids.sm.current == "main":
             if "YPUB" in text:
                 self.root.ids.sm.current = "ypub"
+#            elif "PIN" in text:
+#                pass
             elif "Settings" in text:
                 self.open_settings()
 
@@ -164,6 +172,7 @@ class NowalletApp(App):
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
         self.root.ids.wait_text.text = "Fetching exchange rates.."
+#        self.exchange_rates = {"USD": 12000.0}
         self.exchange_rates = yield Task(self.loop.run_until_complete,
             fetch_exchange_rates(self.chain.chain_1209k))
         self.root.ids.wait_text.text = "Getting fee estimate.."
@@ -178,16 +187,19 @@ class NowalletApp(App):
         self.update_ypub_screen()
 
     def balance_str(self):
-        return "{} {}".format(
-            self.wallet.balance * self.unit_factor, self.units)
+        balance = self.unit_precision.format(
+            self.wallet.balance * self.unit_factor)
+        return "{} {}".format(balance.rstrip("0").rstrip("."), self.units)
+
 
     def update_balance_screen(self):
         self.root.ids.balance_label.text = self.balance_str()
+        self.root.ids.recycleView.data_model.data = []
         for hist in self.wallet.get_tx_history():
             verb = "Sent" if hist.is_spend else "Recieved"
             hist_str = "{} {} {}".format(
-                verb, hist.value, self.units)
-            self.add_list_item(hist_str)
+                verb, hist.value * self.unit_factor, self.units)
+            self.add_list_item(hist_str, hist)
 
     def update_send_screen(self):
         self.root.ids.send_balance.text = \
@@ -195,25 +207,37 @@ class NowalletApp(App):
         self.root.ids.fee_input.text = str(self.current_fee)
 
     def update_recieve_screen(self):
-        address = self.wallet.get_address(self.wallet.get_next_unused_key())
+        address = self.update_recieve_qrcode()
         self.root.ids.addr_label.text = "Current Address (P2SH):\n" + address
-        self.root.ids.addr_qrcode.data = "bitcoin:" + address
+
+
+    def update_recieve_qrcode(self):
+        address = self.wallet.get_address(self.wallet.get_next_unused_key())
+        amount = Decimal(self.current_coin) / self.unit_factor
+        self.root.ids.addr_qrcode.data = \
+            "bitcoin:{}?amount={}".format(address, amount)
+        return address
 
     def update_ypub_screen(self):
         ypub = self.wallet.ypub
         self.root.ids.ypub_label.text = "Extended Public Key (SegWit):\n" + ypub
         self.root.ids.ypub_qrcode.data = ypub
 
-    def update_unit_factor(self):
+    def update_unit(self):
         self.unit_factor = 1
+        self.unit_precision = "{:.8f}"
         if self.units[0] == "m":
             self.unit_factor = 1000
+            self.unit_precision = "{:.5f}"
         elif self.units[0] == "u":
             self.unit_factor = 1000000
+            self.unit_precision = "{:.2f}"
+
         self.current_coin = str( Decimal(self.current_coin) / self.unit_factor )
         self.current_fiat = str( Decimal(self.current_fiat) / self.unit_factor )
 
     def update_amounts(self, text=None, type="coin"):
+        if self.is_amount_inputs_locked: return
         amount = Decimal(text) if text else Decimal("0")
         rate = self.exchange_rates[self.currency] if self.exchange_rates else 1
         rate = Decimal(str(rate)) / self.unit_factor
@@ -224,10 +248,15 @@ class NowalletApp(App):
         elif type == "fiat":
             new_amount = amount / rate
             self.update_amount_fields(new_amount, amount)
+        self.update_recieve_qrcode()
 
     def update_amount_fields(self, coin, fiat):
-        self.current_coin = "{:.8f}".format(coin)
-        self.current_fiat = "{:.2f}".format(fiat)
+        self.is_amount_inputs_locked = True
+        _coin = self.unit_precision.format(coin)
+        self.current_coin = _coin.rstrip("0").rstrip(".")
+        _fiat = "{:.2f}".format(fiat)
+        self.current_fiat = _fiat.rstrip("0").rstrip(".")
+        self.is_amount_inputs_locked = False
 
     def build(self):
         self.icon = "icons/brain.png"
@@ -235,14 +264,14 @@ class NowalletApp(App):
         self.rbf = self.config.get("nowallet", "rbf")
         self.bech32 = self.config.get("nowallet", "bech32")
         self.units = self.config.get("nowallet", "units")
-        self.update_unit_factor()
+        self.update_unit()
         self.currency = self.config.get("nowallet", "currency")
 
     def build_config(self, config):
         config.setdefaults("nowallet", {
             "bech32": False,
             "rbf": False,
-            "units": "BTC",
+            "units": self.chain.chain_1209k.upper(),
             "currency": "USD"})
         Window.bind(on_keyboard=self.key_input)
 
@@ -259,7 +288,7 @@ class NowalletApp(App):
             self.bech32 = value
         elif key == "units":
             self.units = value
-            self.update_unit_factor()
+            self.update_unit()
             self.update_amounts()
             self.update_balance_screen()
             self.update_send_screen()
@@ -276,9 +305,11 @@ class NowalletApp(App):
     def on_pause(self):
         return True
 
-    def add_list_item(self, text):
+    def add_list_item(self, text, history):
         data = self.root.ids.recycleView.data_model.data
-        data.insert(0, {"text": text})
+        data.insert(0, {"text": text,
+                        "secondary_text": history.tx_obj.id(),
+                        "history": history})
 
 if __name__ == "__main__":
     app = NowalletApp()

@@ -138,7 +138,6 @@ BoxLayout:
                                 MDRaisedButton:
                                     size_hint: 0.5, 1
                                     text: "Send TX"
-                                    on_release: app.add_list_item("NEW DATA")
                     #        ZbarQrcodeDetector:
                             Label:
 
@@ -229,6 +228,5 @@ BoxLayout:
     on_release: app.menu_item_handler(self.text)
 
 <ListItem>:
-    on_release: print("TEST")
     IconLeftSampleWidget:
         icon: "check-circle"
