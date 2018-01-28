@@ -149,15 +149,16 @@ class NowalletApp(App):
         if passphrase != confirm:
             self.show_dialog("Error", "Passwords did not match.")
             return
+        bech32 = self.root.ids.bech32_checkbox.active
 
         self.root.ids.sm.current = "wait"
-        self.do_login_tasks(email, passphrase)
+        self.do_login_tasks(email, passphrase, bech32)
         self.update_screens()
         self.root.ids.sm.current = "main"
         Clock.schedule_interval(self.check_new_history, 1)
 
     @engine.async
-    def do_login_tasks(self, email, passphrase):
+    def do_login_tasks(self, email, passphrase, bech32):
         self.root.ids.wait_text.text = "Connecting.."
 #        server, port, proto = yield Task(
 #            nowallet.get_random_onion, self.loop, self.chain)
@@ -169,6 +170,7 @@ class NowalletApp(App):
         self.wallet = yield Task(
             nowallet.Wallet, email, passphrase,
             connection, self.loop, self.chain)
+        self.wallet.bech32 = bech32
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
         self.root.ids.wait_text.text = "Fetching exchange rates.."
@@ -191,7 +193,6 @@ class NowalletApp(App):
             self.wallet.balance * self.unit_factor)
         return "{} {}".format(balance.rstrip("0").rstrip("."), self.units)
 
-
     def update_balance_screen(self):
         self.root.ids.balance_label.text = self.balance_str()
         self.root.ids.recycleView.data_model.data = []
@@ -209,7 +210,6 @@ class NowalletApp(App):
     def update_recieve_screen(self):
         address = self.update_recieve_qrcode()
         self.root.ids.addr_label.text = "Current Address (P2SH):\n" + address
-
 
     def update_recieve_qrcode(self):
         address = self.wallet.get_address(self.wallet.get_next_unused_key())
@@ -262,14 +262,12 @@ class NowalletApp(App):
         self.icon = "icons/brain.png"
         self.use_kivy_settings = False
         self.rbf = self.config.get("nowallet", "rbf")
-        self.bech32 = self.config.get("nowallet", "bech32")
         self.units = self.config.get("nowallet", "units")
         self.update_unit()
         self.currency = self.config.get("nowallet", "currency")
 
     def build_config(self, config):
         config.setdefaults("nowallet", {
-            "bech32": False,
             "rbf": False,
             "units": self.chain.chain_1209k.upper(),
             "currency": "USD"})
@@ -284,8 +282,6 @@ class NowalletApp(App):
     def on_config_change(self, config, section, key, value):
         if key == "rbf":
             self.rbf = value
-        elif key == "bech32":
-            self.bech32 = value
         elif key == "units":
             self.units = value
             self.update_unit()
