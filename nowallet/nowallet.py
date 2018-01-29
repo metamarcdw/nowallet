@@ -21,6 +21,7 @@ from typing import (Tuple, List, Set, Dict, KeysView, Any,
                     Union, Callable, Awaitable)
 
 from connectrum.client import StratumClient
+from connectrum.svr_info import ServerInfo
 from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
@@ -28,7 +29,7 @@ from pycoin.tx.TxIn import TxIn
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 
-from .subclasses import MyServerInfo, LexSpendable, LexTxOut, SegwitBIP32Node
+from .subclasses import LexSpendable, LexTxOut, SegwitBIP32Node
 from .keys import derive_key
 from .scrape import scrape_onion_servers
 #import exchange_rate
@@ -53,7 +54,7 @@ class Connection:
         """
         logging.info("Connecting...")
 
-        self.server_info = MyServerInfo(
+        self.server_info = ServerInfo(
             server, hostname=server, ports=port)  # type: MyServerInfo
         logging.info(str(self.server_info.get_port(proto)))
         self.client = StratumClient(loop)  # type: StratumClient
@@ -73,6 +74,9 @@ class Connection:
         """
         try:
             await self.connection
+            reply = await self.listen_rpc(
+                "server.version", ["connectrum", "1.1"])
+            logging.debug(reply)
         except Exception:
             logging.error("Unable to connect to server:", exc_info=True)
             sys.exit(1)

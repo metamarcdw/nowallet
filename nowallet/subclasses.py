@@ -1,8 +1,6 @@
 from functools import total_ordering
 from typing import Type, TypeVar, Tuple, List, Dict, Any
-
-from connectrum.svr_info import ServerInfo
-from connectrum.constants import DEFAULT_PORTS
+from Crypto.Hash import SHA256
 
 from pycoin.tx.Tx import Tx
 from pycoin.tx.TxOut import TxOut
@@ -10,29 +8,9 @@ from pycoin.tx.Spendable import Spendable
 from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.ui import address_for_pay_to_script
-from pycoin.encoding import hash160
 from pycoin.networks import bech32_hrp_for_netcode
 from pycoin.contrib import segwit_addr
-
-from pycoin.serialize import b2h
-
-class MyServerInfo(ServerInfo):
-    def get_port(self, for_protocol: str) -> Tuple[str, int, bool]:
-        '''
-            Return (hostname, port number, ssl) pair for the protocol.
-            Assuming only one port per host.
-        '''
-        assert len(for_protocol) == 1, "expect single letter code"
-        rv = [i for i in self['ports'] if i[0] == for_protocol]
-        port = None
-        if len(rv) < 2:
-            try:
-                port = int(rv[0][1:])
-            except Exception:
-                pass
-        port = port or DEFAULT_PORTS[for_protocol]
-        use_ssl = for_protocol in ('s', 'g')
-        return self['hostname'], port, use_ssl
+from pycoin.serialize import b2h, b2h_rev
 
 @total_ordering
 class LexTxOut(TxOut):
@@ -79,20 +57,17 @@ class SegwitBIP32Node(BIP32Node):
         p2aw_script = self.p2wpkh_script()  # type: bytes
         return address_for_pay_to_script(p2aw_script, netcode=self.netcode())
 
-    def p2wpkh_script_hash(self) -> bytes:
+    def p2wpkh_script_hash(self) -> str:
         p2aw_script = self.p2wpkh_script()  # type: bytes
-        return hash160(p2aw_script)
+        h = SHA256.new()
+        h.update(p2aw_script)
+        return b2h_rev(h.digest())
 
     def p2wpkh_script(self) -> bytes:
         hash160_c = self.hash160(use_uncompressed=False)  # type: bytes
         return ScriptPayToAddressWit(b'\0', hash160_c).script()
 
 def main():
-    svr = MyServerInfo("onion",
-                       hostname="fdkhv2bb7hqel2e7.onion",
-                       ports=12345)  # type: MyServerInfo
-    print(svr.get_port("t"))
-
     hex_ = [
         "01000000014f2eae2eadabe4e807fad4220a931991590ae31f223ba70bf1",
         "8dd16983005441010000006b483045022100ab33f14e1c3387b68942e1ab",
