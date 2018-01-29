@@ -113,7 +113,7 @@ class NowalletApp(App):
 
     def menu_item_handler(self, text):
         if self.root.ids.sm.current == "main":
-            if "YPUB" in text:
+            if "PUB" in text:
                 self.root.ids.sm.current = "ypub"
 #            elif "PIN" in text:
 #                pass
@@ -217,7 +217,7 @@ class NowalletApp(App):
             "Current Address ({}):\n{}".format(encoding, address)
 
     def update_recieve_qrcode(self):
-        address = self.wallet.get_address(self.wallet.get_next_unused_key())
+        address = self.wallet.get_address(self.wallet.get_next_unused_key(), addr=True)
         amount = Decimal(self.current_coin) / self.unit_factor
         self.root.ids.addr_qrcode.data = \
             "bitcoin:{}?amount={}".format(address, amount)
@@ -225,7 +225,8 @@ class NowalletApp(App):
 
     def update_ypub_screen(self):
         ypub = self.wallet.ypub
-        if self.wallet.bech32: ypub[0] = "z"
+        ch = "z" if self.wallet.bech32 else "y"
+        ypub = ch + ypub[1:]
         self.root.ids.ypub_label.text = "Extended Public Key (SegWit):\n" + ypub
         self.root.ids.ypub_qrcode.data = ypub
 

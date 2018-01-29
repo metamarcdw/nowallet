@@ -7,7 +7,7 @@ from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
 from pycoin.tx.pay_to.ScriptPayToAddressWit import ScriptPayToAddressWit
 from pycoin.key.BIP32Node import BIP32Node
-from pycoin.ui import address_for_pay_to_script
+from pycoin.ui import address_for_pay_to_script, standard_tx_out_script
 from pycoin.networks import bech32_hrp_for_netcode
 from pycoin.contrib import segwit_addr
 from pycoin.serialize import b2h, b2h_rev
@@ -57,11 +57,15 @@ class SegwitBIP32Node(BIP32Node):
         p2aw_script = self.p2wpkh_script()  # type: bytes
         return address_for_pay_to_script(p2aw_script, netcode=self.netcode())
 
-    def p2wpkh_script_hash(self) -> str:
-        p2aw_script = self.p2wpkh_script()  # type: bytes
+    def p2wpkh_script_hash(self, bech32: bool=False) -> str:
+        addr = self.bech32_p2wpkh_address() if bech32 \
+            else self.p2sh_p2wpkh_address()  # type: str
+        script = standard_tx_out_script(addr)  # type: bytes
         h = SHA256.new()
-        h.update(p2aw_script)
-        return b2h_rev(h.digest())
+        h.update(script)
+        sh = b2h_rev(h.digest())
+        print(addr, sh)
+        return sh
 
     def p2wpkh_script(self) -> bytes:
         hash160_c = self.hash160(use_uncompressed=False)  # type: bytes

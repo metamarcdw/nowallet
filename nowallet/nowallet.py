@@ -74,9 +74,6 @@ class Connection:
         """
         try:
             await self.connection
-            reply = await self.listen_rpc(
-                "server.version", ["connectrum", "1.1"])
-            logging.debug(reply)
         except Exception:
             logging.error("Unable to connect to server:", exc_info=True)
             sys.exit(1)
@@ -231,11 +228,11 @@ class Wallet:
 
     methods = {
         "get": "blockchain.transaction.get",
-        "get_balance": "blockchain.address.get_balance",
-        "listunspent": "blockchain.address.listunspent",
-        "get_history": "blockchain.address.get_history",
+        "get_balance": "blockchain.scripthash.get_balance",
+        "listunspent": "blockchain.scripthash.listunspent",
+        "get_history": "blockchain.scripthash.get_history",
         "get_header": "blockchain.block.get_header",
-        "subscribe": "blockchain.address.subscribe",
+        "subscribe": "blockchain.scripthash.subscribe",
         "estimatefee": "blockchain.estimatefee",
         "broadcast": "blockchain.transaction.broadcast"
     }  # type: Dict[str, str]
@@ -291,7 +288,7 @@ class Wallet:
         self.connection = connection  # type: Connection
         self.loop = loop  # type: asyncio.AbstractEventLoop
         self.chain = chain
-        self.bech32 = False
+        self.bech32 = True
 
         self.mpk = None  # type: SegwitBIP32Node
         self.account_master = None  # type: SegwitBIP32Node
@@ -351,15 +348,18 @@ class Wallet:
                 return self.get_key(i, change)
         return None
 
-    def get_address(self, key: SegwitBIP32Node) -> str:
+    def get_address(self, key: SegwitBIP32Node, addr=False) -> str:
         """
         Returns the segwit address for a given key.
 
         :param key: any given SegwitBIP32Node key
         :returns: A segwit (P2WPKH) address, either P2SH or bech32.
         """
-        return key.p2sh_p2wpkh_address() if not self.bech32 \
-            else key.bech32_p2wpkh_address()
+        if not addr:
+            return key.p2wpkh_script_hash(bech32=self.bech32)
+        else:
+            return key.p2sh_p2wpkh_address() if not self.bech32 \
+                else key.bech32_p2wpkh_address()
 
     def get_all_known_addresses(self, change: bool = False) -> List[str]:
         """
@@ -998,7 +998,7 @@ class Wallet:
             float(self.balance), float(self.zeroconf_balance),
             self.chain.chain_1209k.upper()))
         str_.append("\nYour current address: {}".format(
-            self.get_address(self.get_next_unused_key())))
+            self.get_address(self.get_next_unused_key(), addr=True)))
         return "".join(str_)
 
 def get_random_onion(loop: asyncio.AbstractEventLoop,
