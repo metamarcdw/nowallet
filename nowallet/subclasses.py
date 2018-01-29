@@ -63,9 +63,7 @@ class SegwitBIP32Node(BIP32Node):
         script = standard_tx_out_script(addr)  # type: bytes
         h = SHA256.new()
         h.update(script)
-        sh = b2h_rev(h.digest())
-        print(addr, sh)
-        return sh
+        return b2h_rev(h.digest())
 
     def p2wpkh_script(self) -> bytes:
         hash160_c = self.hash160(use_uncompressed=False)  # type: bytes

@@ -288,7 +288,7 @@ class Wallet:
         self.connection = connection  # type: Connection
         self.loop = loop  # type: asyncio.AbstractEventLoop
         self.chain = chain
-        self.bech32 = True
+        self.bech32 = False
 
         self.mpk = None  # type: SegwitBIP32Node
         self.account_master = None  # type: SegwitBIP32Node
