@@ -40,18 +40,21 @@ BoxLayout:
                         hint_text: "Email/Salt"
                         color_mode: "accent"
                         write_tab: False
+                        required: True
                     MDTextField:
                         id: pass_field
                         hint_text: "Passphrase"
                         color_mode: "accent"
                         write_tab: False
                         password: True
+                        required: True
                     MDTextField:
                         id: confirm_field
                         hint_text: "Confirm Passphrase"
                         color_mode: "accent"
                         write_tab: False
                         password: True
+                        required: True
                     BoxLayout:
                         MDCheckbox:
                             id: bech32_checkbox
