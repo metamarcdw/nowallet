@@ -13,16 +13,16 @@ package.domain = org.nowallet
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py,png,kv
 
 # (list) List of inclusions using pattern matching
 #source.include_patterns = assets/*,images/*.png
 
 # (list) Source files to exclude (let empty to not exclude anything)
-#source.exclude_exts = spec
+source.exclude_exts = spec
 
 # (list) List of directory to exclude (let empty to not exclude anything)
-#source.exclude_dirs = tests, bin
+source.exclude_dirs = tests, bin
 
 # (list) List of exclusions using pattern matching
 #source.exclude_patterns = license,images/*/*.jpg
@@ -36,7 +36,7 @@ version.filename = %(source.dir)s/setup.py
 
 # (list) Application requirements
 # comma seperated e.g. requirements = sqlite3,kivy
-requirements = python3crystax,qrcode,kivy==master
+requirements = python3crystax,kivy==master,git+https://gitlab.com/kivymd/KivyMD.git,qrcode
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -94,7 +94,7 @@ android.api = 19
 android.minapi = 9
 
 # (int) Android SDK version to use
-android.sdk = 20
+android.sdk = 23
 
 # (str) Android NDK version to use
 android.ndk = 10c
@@ -147,7 +147,7 @@ android.ndk_path = ~/Documents/crystax-ndk-10.3.2
 #android.gradle_dependencies =
 
 # (str) python-for-android branch to use, defaults to master
-#p4a.branch = stable
+p4a.branch = master
 
 # (str) OUYA Console category. Should be one of GAME or APP
 # If you leave this blank, OUYA support will not be enabled
