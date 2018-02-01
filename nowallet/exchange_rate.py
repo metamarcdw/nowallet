@@ -8,9 +8,10 @@ from .socks_http import urlopen
 CURRENCIES = ["USD", "EUR", "GBP", "AUD",
               "CAD", "JPY", "CNY"]  # type: List[str]
 async def fetch_exchange_rates(chain_1209k: str = "btc") -> Dict[str, float]:
+    fiats = ",".join(CURRENCIES)
     scrape_page = ("https://apiv2.bitcoinaverage.com/indices/" +
-                   "global/ticker/short?crypto={}")  # type: str
-    url = scrape_page.format(chain_1209k.upper())  # type: str
+                   "global/ticker/short?crypto={}&fiat={}")  # type: str
+    url = scrape_page.format(chain_1209k.upper(), fiats)  # type: str
     logging.info("Fetching rates from URL: %s", url)
 
     json_ = json.loads(await urlopen(url))  # type: Dict[str, Dict]
