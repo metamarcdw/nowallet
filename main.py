@@ -141,6 +141,13 @@ class NowalletApp(App):
             self.update_screens()
             self.wallet.new_history = False
 
+    @property
+    def pub_char(self):
+        if self.chain == nowallet.BTC:
+            return "z" if self.bech32 else "y"
+        elif self.chain == nowallet.TBTC:
+            return "v" if self.bech32 else "u"
+
     def do_login(self):
         email = self.root.ids.email_field.text
         passphrase = self.root.ids.pass_field.text
@@ -151,17 +158,17 @@ class NowalletApp(App):
         if passphrase != confirm:
             self.show_dialog("Error", "Passwords did not match.")
             return
-        bech32 = self.root.ids.bech32_checkbox.active
-        if bech32: self.menu_items[0]["text"] = "View ZPUB"
+        self.bech32 = self.root.ids.bech32_checkbox.active
+        self.menu_items[0]["text"] = "View {}PUB".format(self.pub_char.upper())
 
         self.root.ids.sm.current = "wait"
-        self.do_login_tasks(email, passphrase, bech32)
+        self.do_login_tasks(email, passphrase)
         self.update_screens()
         self.root.ids.sm.current = "main"
         Clock.schedule_interval(self.check_new_history, 1)
 
     @engine.async
-    def do_login_tasks(self, email, passphrase, bech32):
+    def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
         server, port, proto = yield Task(
             nowallet.get_random_onion, self.loop, self.chain)
@@ -173,7 +180,7 @@ class NowalletApp(App):
         self.wallet = yield Task(
             nowallet.Wallet, email, passphrase,
             connection, self.loop, self.chain)
-        self.wallet.bech32 = bech32
+        self.wallet.bech32 = self.bech32
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
         self.root.ids.wait_text.text = "Fetching exchange rates.."
@@ -225,8 +232,7 @@ class NowalletApp(App):
 
     def update_ypub_screen(self):
         ypub = self.wallet.ypub
-        ch = "z" if self.wallet.bech32 else "y"
-        ypub = ch + ypub[1:]
+        ypub = self.pub_char + ypub[1:]
         self.root.ids.ypub_label.text = "Extended Public Key (SegWit):\n" + ypub
         self.root.ids.ypub_qrcode.data = ypub
 
