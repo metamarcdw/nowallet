@@ -19,5 +19,17 @@ def settings_json(coin="BTC"):
      "desc": "Fiat currency for exchange rates",
      "section": "nowallet",
      "key": "currency",
-     "options": CURRENCIES}
+     "options": CURRENCIES},
+    {"type": "options",
+     "title": "Block Explorer",
+     "desc": "Preferred block explorer",
+     "section": "nowallet",
+     "key": "explorer",
+     "options": ["blockcypher", "smartbit"]},
+    {"type": "options",
+     "title": "Price Provider",
+     "desc": "Preferred price provider",
+     "section": "nowallet",
+     "key": "price_api",
+     "options": ["BitcoinAverage", "CryptoCompare"]}
 ])

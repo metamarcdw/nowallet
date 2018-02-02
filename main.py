@@ -53,10 +53,16 @@ class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
 class ListItem(TwoLineIconListItem):
     history = ObjectProperty(object())
     def on_release(self):
+        base_url, chain = None, app.chain.chain_1209k
         txid = self.history.tx_obj.id()
-        chain = app.chain.chain_1209k
-        chain = "btc-testnet" if chain == "tbtc" else chain
-        url = "https://live.blockcypher.com/{}/tx/{}/".format(chain, txid)
+        if app.explorer == "blockcypher":
+            base_url = "https://live.blockcypher.com/{}/tx/{}/"
+            if app.chain == nowallet.TBTC: chain = "btc-testnet"
+        elif app.explorer == "smartbit":
+            base_url = "https://{}.smartbit.com.au/tx/{}/"
+            if app.chain == nowallet.BTC: chain = "www"
+            elif app.chain == nowallet.TBTC: chain = "testnet"
+        url = base_url.format(chain, txid)
         open_url(url)
 
 class FloatInput(MDTextField):
@@ -184,7 +190,7 @@ class NowalletApp(App):
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
         self.root.ids.wait_text.text = "Fetching exchange rates.."
-        self.exchange_rates = {"USD": 12000.0}
+        self.exchange_rates = {"btcav": {"USD": 12000.0}}
 #        self.exchange_rates = yield Task(self.loop.run_until_complete,
 #            fetch_exchange_rates(self.chain.chain_1209k))
         self.root.ids.wait_text.text = "Getting fee estimate.."
@@ -246,13 +252,15 @@ class NowalletApp(App):
             self.unit_factor = 1000000
             self.unit_precision = "{:.2f}"
 
-        self.current_coin = str( Decimal(self.current_coin) / self.unit_factor )
-        self.current_fiat = str( Decimal(self.current_fiat) / self.unit_factor )
+        coin = Decimal(self.current_coin) / self.unit_factor
+        fiat = Decimal(self.current_fiat) / self.unit_factor
+        self.update_amount_fields(coin, fiat)
 
     def update_amounts(self, text=None, type="coin"):
         if self.is_amount_inputs_locked: return
         amount = Decimal(text) if text else Decimal("0")
-        rate = self.exchange_rates[self.currency] if self.exchange_rates else 1
+        rate = self.exchange_rates[self.price_api][self.currency] \
+            if self.exchange_rates else 1
         rate = Decimal(str(rate)) / self.unit_factor
         new_amount = None
         if type == "coin":
@@ -278,12 +286,16 @@ class NowalletApp(App):
         self.units = self.config.get("nowallet", "units")
         self.update_unit()
         self.currency = self.config.get("nowallet", "currency")
+        self.explorer = self.config.get("nowallet", "explorer")
+        self.set_price_api(self.config.get("nowallet", "price_api"))
 
     def build_config(self, config):
         config.setdefaults("nowallet", {
             "rbf": False,
             "units": self.chain.chain_1209k.upper(),
-            "currency": "USD"})
+            "currency": "USD",
+            "explorer": "blockcypher",
+            "price_api": "BitcoinAverage"})
         Window.bind(on_keyboard=self.key_input)
 
     def build_settings(self, settings):
@@ -304,6 +316,17 @@ class NowalletApp(App):
         elif key == "currency":
             self.currency = value
             self.update_amounts()
+        elif key == "explorer":
+            self.explorer = value
+        elif key == "price_api":
+            self.set_price_api(value)
+            self.update_amounts()
+
+    def set_price_api(self, val):
+        if val == "BitcoinAverage":
+            self.price_api = "btcav"
+        elif val == "CryptoCompare":
+            self.price_api = "ccomp"
 
     def key_input(self, window, key, scancode, codepoint, modifier):
         if key == 27:   # the back button / ESC
