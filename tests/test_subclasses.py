@@ -3,17 +3,18 @@ import random
 
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
+from connectrum.svr_info import ServerInfo
 
 from nowallet import subclasses
 
 @pytest.fixture
 def server():
-    return subclasses.MyServerInfo("onion",
-                                   hostname="fdkhv2bb7hqel2e7.onion",
-                                   ports=12345)
+    return ServerInfo("onion",
+                      hostname="fdkhv2bb7hqel2e7.onion",
+                      ports=12345)
 
-def test_myserverinfo_class(server):
-    assert isinstance(server, subclasses.MyServerInfo)
+def test_serverinfo_class(server):
+    assert isinstance(server, ServerInfo)
     assert server.get_port("t") == ("fdkhv2bb7hqel2e7.onion", 12345, False)
 
 @pytest.fixture
@@ -107,9 +108,9 @@ def test_segwitkey_script(segwitbip32node_from_chbs):
 
 def test_segwitkey_script_hash(segwitbip32node_from_chbs):
     script_hash = segwitbip32node_from_chbs.p2wpkh_script_hash()
-    assert isinstance(script_hash, bytes)
-    assert script_hash == (b"H\x12\xe21\x90\x00:\xc2\xd2\xd7" + \
-                           b"\xe3\x15\x99<\x96\x08\xaea\xac%")
+    assert isinstance(script_hash, str)
+    assert script_hash == ("41d8dc340e750287f1ef920956e1f9ae" + \
+                           "8a724efa9bb3772352118fe26372be97")
 
 def test_segwitkey_address(segwitbip32node_from_chbs):
     address = segwitbip32node_from_chbs.p2sh_p2wpkh_address()

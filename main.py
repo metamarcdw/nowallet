@@ -99,8 +99,8 @@ class NowalletApp(App):
 
         self.menu_items = [{"viewclass": "MDMenuItem",
                             "text": "View YPUB"},
-#                           {"viewclass": "MDMenuItem",
-#                            "text": "Lock with PIN"},
+                           {"viewclass": "MDMenuItem",
+                            "text": "Lock with PIN"},
                            {"viewclass": "MDMenuItem",
                             "text": "Settings"}]
         super().__init__()
@@ -126,8 +126,8 @@ class NowalletApp(App):
         if self.root.ids.sm.current == "main":
             if "PUB" in text:
                 self.root.ids.sm.current = "ypub"
-#            elif "PIN" in text:
-#                pass
+            elif "PIN" in text:
+                pass
             elif "Settings" in text:
                 self.open_settings()
 
