@@ -81,13 +81,14 @@ BoxLayout:
                     icon: "bank"
                     BoxLayout:
                         orientation: "vertical"
-                        MDLabel:
+                        BalanceLabel:
                             id: balance_label
                             font_style: "Display1"
                             theme_text_color: "Primary"
                             halign: "center"
                             size_hint_y: None
                             height: self.texture_size[1] + dp(45)
+                            on_release: app.toggle_balance_label()
                         RecycleView:
                             id: recycleView
                             viewclass: "ListItem"
@@ -104,7 +105,7 @@ BoxLayout:
                     icon: "debug-step-out"
                     AnchorLayout:
                         BoxLayout:
-                            size_hint: 0.9, 0.84
+                            size_hint: 0.9, 0.75
                             orientation: "vertical"
                             spacing: 9
                             BoxLayout:
@@ -128,7 +129,7 @@ BoxLayout:
                                 theme_text_color: "Primary"
                                 font_style:"Title"
                             BoxLayout:
-                                size_hint: 1, 0.4
+                                size_hint: 1, 0.6
                                 spacing: 5
                                 FloatInput:
                                     id: fee_input
@@ -144,7 +145,7 @@ BoxLayout:
                                     text: "Normal Fee"
                                     on_release: app.fee_button_handler()
                             BoxLayout:
-                                size_hint: 1, 0.4
+                                size_hint: 1, 0.6
                                 spacing: 5
                                 MDTextField:
                                     helper_text: "Enter Address"

@@ -17,6 +17,7 @@ from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.properties import NumericProperty, StringProperty, ObjectProperty
 from kivy.uix.screenmanager import Screen
+from kivy.uix.behaviors import ButtonBehavior
 
 from kivymd.theming import ThemeManager
 from kivymd.list import TwoLineIconListItem
@@ -48,6 +49,9 @@ class YPUBScreen(Screen):
     pass
 
 class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
+    pass
+
+class BalanceLabel(ButtonBehavior, MDLabel):
     pass
 
 class ListItem(TwoLineIconListItem):
@@ -91,6 +95,7 @@ class NowalletApp(App):
         self.chain = nowallet.TBTC
         self.loop = asyncio.get_event_loop()
         self.is_amount_inputs_locked = False
+        self.fiat_balance = False
 
         self.menu_items = [{"viewclass": "MDMenuItem",
                             "text": "View YPUB"},
@@ -204,13 +209,24 @@ class NowalletApp(App):
         self.update_recieve_screen()
         self.update_ypub_screen()
 
-    def balance_str(self):
-        balance = self.unit_precision.format(
-            self.wallet.balance * self.unit_factor)
-        return "{} {}".format(balance.rstrip("0").rstrip("."), self.units)
+    def toggle_balance_label(self):
+        self.fiat_balance = not self.fiat_balance
+        self.update_balance_screen()
+
+    def balance_str(self, fiat=False):
+        balance, units = None, None
+        if not fiat:
+            balance = self.unit_precision.format(
+                self.wallet.balance * self.unit_factor)
+            units = self.units
+        else:
+            balance = "{:.2f}".format(self.wallet.balance * self.get_rate())
+            units = self.currency
+        return "{} {}".format(balance.rstrip("0").rstrip("."), units)
 
     def update_balance_screen(self):
-        self.root.ids.balance_label.text = self.balance_str()
+        self.root.ids.balance_label.text = self.balance_str(
+            fiat=self.fiat_balance)
         self.root.ids.recycleView.data_model.data = []
         for hist in self.wallet.get_tx_history():
             verb = "Sent" if hist.is_spend else "Recieved"
@@ -256,12 +272,15 @@ class NowalletApp(App):
         fiat = Decimal(self.current_fiat) / self.unit_factor
         self.update_amount_fields(coin, fiat)
 
+    def get_rate(self):
+        rate = self.exchange_rates[self.price_api][self.currency] \
+            if self.exchange_rates else 1
+        return Decimal(str(rate))
+
     def update_amounts(self, text=None, type="coin"):
         if self.is_amount_inputs_locked: return
         amount = Decimal(text) if text else Decimal("0")
-        rate = self.exchange_rates[self.price_api][self.currency] \
-            if self.exchange_rates else 1
-        rate = Decimal(str(rate)) / self.unit_factor
+        rate = self.get_rate() / self.unit_factor
         new_amount = None
         if type == "coin":
             new_amount = amount * rate
