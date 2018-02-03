@@ -5,8 +5,8 @@
 
 #:import MDLabel kivymd.label.MDLabel
 #:import Toolbar kivymd.toolbar.Toolbar
-#:import MDBottomNavigation kivymd.tabs.MDBottomNavigation
-#:import MDBottomNavigationItem kivymd.tabs.MDBottomNavigationItem
+#:import MDTabbedPanel kivymd.tabs.MDTabbedPanel
+#:import MDTab kivymd.tabs.MDTab
 #:import MDDropdownMenu kivymd.menu.MDDropdownMenu
 #:import MDMenuItem kivymd.menu.MDMenuItem
 #:import MDCard kivymd.card.MDCard
@@ -73,8 +73,9 @@ BoxLayout:
 
         MainScreen:
             name: "main"
-            MDBottomNavigation:
-                MDBottomNavigationItem:
+            MDTabbedPanel:
+                tab_display_mode: "icons"
+                MDTab:
                     name: "balance"
                     text: "Balance"
                     icon: "bank"
@@ -97,7 +98,7 @@ BoxLayout:
                                 height: self.minimum_height
                                 orientation: "vertical"
 
-                MDBottomNavigationItem:
+                MDTab:
                     name: "send"
                     text: "Sending"
                     icon: "debug-step-out"
@@ -155,8 +156,13 @@ BoxLayout:
                                     text: "Send TX"
                     #        ZbarQrcodeDetector:
                             Label:
+                            MDFloatingActionButton:
+                                icon: "camera"
+                                opposite_colors: True
+                                elevation_normal: 8
+                                pos_hint: {"center_x": 0.5, "center_y": 0.2}
 
-                MDBottomNavigationItem:
+                MDTab:
                     name: "recieve"
                     text: "Recieving"
                     icon: "debug-step-into"
