@@ -55,7 +55,8 @@ class BalanceLabel(ButtonBehavior, MDLabel):
     pass
 
 class ListItem(TwoLineIconListItem):
-    history = ObjectProperty(object())
+    icon = StringProperty("check-circle")
+    history = ObjectProperty()
     def on_release(self):
         base_url, chain = None, app.chain.chain_1209k
         txid = self.history.tx_obj.id()
@@ -358,9 +359,11 @@ class NowalletApp(App):
 
     def add_list_item(self, text, history):
         data = self.root.ids.recycleView.data_model.data
+        icon = "check-circle" if history.height > 0 else "timer-sand"
         data.insert(0, {"text": text,
                         "secondary_text": history.tx_obj.id(),
-                        "history": history})
+                        "history": history, 
+                        "icon": icon})
 
 def open_url(url):
     if platform == 'android': 
