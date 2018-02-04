@@ -246,6 +246,59 @@ BoxLayout:
                 text: "Go Back"
                 on_release: root.ids.sm.current = "main"
 
+        PINScreen:
+            name: "pin"
+            AnchorLayout:
+                size_hint: 0.8, 0.8
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                BoxLayout:
+                    spacing: 5
+                    orientation: "vertical"
+                    FloatInput:
+                        id: pin_input
+                        helper_text: "Enter a PIN"
+                        helper_text_mode: "persistent"
+                        password: True
+                    GridLayout:
+                        cols: 3
+                        spacing: 5
+                        PINButton:
+                            char: "1"
+                        PINButton:
+                            char: "2"
+                        PINButton:
+                            char: "3"
+                        PINButton:
+                            char: "4"
+                        PINButton:
+                            char: "5"
+                        PINButton:
+                            char: "6"
+                        PINButton:
+                            char: "7"
+                        PINButton:
+                            char: "8"
+                        PINButton:
+                            char: "9"
+                        PINButton:
+                            char: "clear"
+                        PINButton:
+                            char: "0"
+                        PINButton:
+                            id: lock_button
+                            char: "lock"
+            MDRaisedButton:
+                id: pin_back_button
+                size_hint: 0.5, 0.07
+                pos_hint: {"center_x": 0.5, "center_y": 0.13}
+                text: "Go Back"
+                on_release: root.ids.sm.current = "main"
+
+<PINButton>:
+    height: dp(50)
+    text: self.char
+    on_release: app.update_pin_input(self.char)
+
 <MDMenuItem>:
     on_release: app.menu_item_handler(self.text)
 

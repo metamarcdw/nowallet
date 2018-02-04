@@ -22,7 +22,7 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivymd.theming import ThemeManager
 from kivymd.list import TwoLineIconListItem
 from kivymd.list import ILeftBodyTouch
-from kivymd.button import MDIconButton
+from kivymd.button import MDIconButton, MDRaisedButton
 from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
 from kivymd.textfields import MDTextField
@@ -48,11 +48,17 @@ class WaitScreen(Screen):
 class YPUBScreen(Screen):
     pass
 
+class PINScreen(Screen):
+    pass
+
 class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
     pass
 
 class BalanceLabel(ButtonBehavior, MDLabel):
     pass
+
+class PINButton(MDRaisedButton):
+    char = StringProperty()
 
 class ListItem(TwoLineIconListItem):
     icon = StringProperty("check-circle")
@@ -128,7 +134,7 @@ class NowalletApp(App):
             if "PUB" in text:
                 self.root.ids.sm.current = "ypub"
             elif "PIN" in text:
-                pass
+                self.root.ids.sm.current = "pin"
             elif "Settings" in text:
                 self.open_settings()
 
@@ -259,6 +265,34 @@ class NowalletApp(App):
         self.root.ids.ypub_label.text = "Extended Public Key (SegWit):\n" + ypub
         self.root.ids.ypub_qrcode.data = ypub
 
+    def lock_UI(self, pin):
+        if not pin:
+            self.show_dialog("Error", "PIN field is empty.")
+            return
+        self.pin = pin
+        self.root.ids.pin_back_button.disabled = True
+        self.root.ids.lock_button.char = "unlock"
+
+    def unlock_UI(self, attempt):
+        if not attempt or attempt != self.pin:
+            self.show_dialog("Error", "Bad PIN entered.")
+            return
+        self.root.ids.pin_back_button.disabled = False
+        self.root.ids.lock_button.char = "lock"
+
+    def update_pin_input(self, char):
+        pin_input = self.root.ids.pin_input
+        if char == "clear":
+            pin_input.text = ""
+        elif char == "lock":
+            self.lock_UI(pin_input.text)
+            pin_input.text = ""
+        elif char == "unlock":
+            self.unlock_UI(pin_input.text)
+            pin_input.text = ""
+        else:
+            pin_input.text += char
+
     def update_unit(self):
         self.unit_factor = 1
         self.unit_precision = "{:.8f}"
@@ -362,14 +396,14 @@ class NowalletApp(App):
         icon = "check-circle" if history.height > 0 else "timer-sand"
         data.insert(0, {"text": text,
                         "secondary_text": history.tx_obj.id(),
-                        "history": history, 
+                        "history": history,
                         "icon": icon})
 
 def open_url(url):
-    if platform == 'android': 
+    if platform == 'android':
         ''' Open a webpage in the default Android browser.  '''
         from jnius import autoclass, cast
-        context = autoclass('org.renpy.android.PythonActivity').mActivity    
+        context = autoclass('org.renpy.android.PythonActivity').mActivity
         Uri = autoclass('android.net.Uri')
         Intent = autoclass('android.content.Intent')
 
