@@ -1,7 +1,7 @@
 #:import SlideTransition kivy.uix.screenmanager.SlideTransition
 #:import RecycleView kivy.uix.recycleview
 #:import QRCodeWidget kivy.garden.qrcode
-# import ZbarQrcodeDetector android-zbar-qrcode.main
+#:import ZbarQrcodeDetector android-zbar-qrcode.main
 
 #:import MDLabel kivymd.label.MDLabel
 #:import Toolbar kivymd.toolbar.Toolbar
@@ -112,11 +112,15 @@ BoxLayout:
                                 size_hint: 1, 0.2
                                 spacing: 5
                                 FloatInput:
+                                    id: spend_amount_input
                                     text: app.current_coin
                                     hint_text: app.units
                                     color_mode: "accent"
                                     write_tab: False
                                     on_text: app.update_amounts(self.text, "coin")
+                                    on_text: app.set_amount_error(self.text)
+                                    on_text_validate: app.set_amount_error(self.text)
+                                    on_focus: app.set_amount_error(self.text)
                                 FloatInput:
                                     text: app.current_fiat
                                     hint_text: app.currency
@@ -148,20 +152,25 @@ BoxLayout:
                                 size_hint: 1, 0.6
                                 spacing: 5
                                 MDTextField:
+                                    id: address_input
                                     helper_text: "Enter Address"
                                     helper_text_mode: "persistent"
                                     color_mode: "accent"
                                     write_tab: False
+                                    on_text: app.set_address_error(self.text)
+                                    on_text_validate: app.set_address_error(self.text)
+                                    on_focus: app.set_address_error(self.text)
                                 MDRaisedButton:
                                     size_hint: 0.5, 1
                                     text: "Send TX"
-                    #        ZbarQrcodeDetector:
+                                    on_release: app.send_button_handler()
                             Label:
                             MDFloatingActionButton:
                                 icon: "camera"
                                 opposite_colors: True
                                 elevation_normal: 8
                                 pos_hint: {"center_x": 0.5, "center_y": 0.2}
+                                on_release: app.start_zbar()
 
                 MDTab:
                     name: "recieve"
@@ -204,6 +213,12 @@ BoxLayout:
                                     QRCodeWidget:
                                         id: addr_qrcode
                                         show_border: False
+
+        ZbarScreen:
+            name: "zbar"
+            ZbarQrcodeDetector:
+                id: detector
+                on_symbols: app.qrcode_handler(self.symbols)
 
         WaitScreen:
             name: "wait"

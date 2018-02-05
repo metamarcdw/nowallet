@@ -27,6 +27,8 @@ from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
 from kivymd.textfields import MDTextField
 
+from pycoin.key import validate
+
 import nowallet
 #from nowallet.exchange_rate import fetch_exchange_rates
 from settings_json import settings_json
@@ -49,6 +51,9 @@ class YPUBScreen(Screen):
     pass
 
 class PINScreen(Screen):
+    pass
+
+class ZbarScreen(Screen):
     pass
 
 class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
@@ -129,6 +134,15 @@ class NowalletApp(App):
                                       action=lambda *x: self.dialog.dismiss())
         self.dialog.open()
 
+    def start_zbar(self):
+        if platform != "android": return
+        self.root.ids.sm.current = "zbar"
+        self.root.ids.detector.start()
+
+    def qrcode_handler(self, symbols):
+        self.root.ids.address_input.text = symbols[0]
+        self.root.ids.detector.stop()
+
     def menu_item_handler(self, text):
         if self.root.ids.sm.current == "main":
             if "PUB" in text:
@@ -153,6 +167,42 @@ class NowalletApp(App):
         text = self.root.ids.fee_input.text
         if text:
             self.current_fee = int(float(text))
+
+    def set_address_error(self, addr):
+        netcode = self.chain.netcode
+        is_valid = addr.strip() and validate.is_address_valid(
+            addr.strip(), ["address", "pay_to_script"], [netcode]) == netcode
+        self.root.ids.address_input.error = not is_valid
+
+    def set_amount_error(self, amount):
+        _amount = Decimal(amount)
+        is_valid = _amount <= self.wallet.balance
+        self.root.ids.spend_amount_input.error = not is_valid
+
+    def send_button_handler(self):
+        addr_input = self.root.ids.address_input
+        address = addr_input.text.strip()
+        amount = Decimal(self.root.ids.spend_amount_input.text)
+
+        if addr_input.error or not address:
+            self.show_dialog("Error", "Invalid address.")
+            return
+        elif amount > self.wallet.balance:
+            self.show_dialog("Error", "Insufficient funds.")
+            return
+        elif not amount:
+            self.show_dialog("Error", "Amount cannot be zero.")
+            return
+
+        fee_rate_sat = int(Decimal(self.current_fee))
+        fee_rate = nowallet.Wallet.satb_to_coinkb(fee_rate_sat)
+        t = self.wallet.spend(address, amount, fee_rate, rbf=self.rbf)
+        txid, decimal_fee = t[:2]
+
+        message = "Added a miner fee of: {} {}".format(
+            decimal_fee, self.chain.chain_1209k.upper())
+        message += "\nTxID: {}...{}".format(txid[:13], txid[-13:])
+        self.show_dialog("Transaction sent!", message)
 
     def check_new_history(self, dt):
         if self.wallet.new_history:

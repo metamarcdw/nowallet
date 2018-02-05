@@ -356,12 +356,14 @@ class Wallet:
         :returns: A segwit (P2WPKH) address, either P2SH or bech32.
         """
         if not addr:
-            return key.p2wpkh_script_hash(bech32=self.bech32)
+            return key.electrumx_script_hash(bech32=self.bech32)
         else:
             return key.p2sh_p2wpkh_address() if not self.bech32 \
                 else key.bech32_p2wpkh_address()
 
-    def get_all_known_addresses(self, change: bool = False) -> List[str]:
+    def get_all_known_addresses(self,
+                                change: bool = False,
+                                addr: bool=False) -> List[str]:
         """
         Returns a list of all addresses currently known to us.
 
@@ -371,7 +373,7 @@ class Wallet:
         """
         indicies = self.change_indicies if change \
             else self.spend_indicies  # type: List[bool]
-        addrs = [self.get_address(self.get_key(i, change))
+        addrs = [self.get_address(self.get_key(i, change=change), addr=addr)
                  for i in range(len(indicies))]  # type: List[str]
         return addrs
 
@@ -800,7 +802,7 @@ class Wallet:
         # Get change address, mark index as used, and create payables list
         change_key = self.get_next_unused_key(
             change=True, using=True)  # type: SegwitBIP32Node
-        change_addr = self.get_address(change_key)  # type: str
+        change_addr = self.get_address(change_key, addr=True)  # type: str
         payables = list()  # type: List[Tuple[str, int]]
         payables.append((out_addr, amount))
         payables.append((change_addr, 0))
@@ -861,7 +863,8 @@ class Wallet:
         # Search our indicies for keys used, given in in_addrs list
         # Populate lists with our privkeys and redeemscripts
         for change in (True, False):
-            for i, addr in enumerate(self.get_all_known_addresses(change)):
+            addresses = self.get_all_known_addresses(change, addr=True)
+            for i, addr in enumerate(addresses):
                 key = self.get_key(i, change)  # type: SegwitBIP32Node
                 if addr in in_addrs:
                     p2aw_script = key.p2wpkh_script()  # type: bytes
