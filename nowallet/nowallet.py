@@ -1014,8 +1014,9 @@ def get_random_onion(loop: asyncio.AbstractEventLoop,
     :returns: A server info tuple for a random .onion Electrum server
     :raise: Raises s base Exception if there are no servers up on 1209k
     """
-    servers = loop.run_until_complete(scrape_onion_servers(
-        chain_1209k=chain.chain_1209k))  # type: List[Tuple[str, int]]
+    servers = loop.run_until_complete(
+        scrape_onion_servers(chain_1209k=chain.chain_1209k,
+                             loop=loop))  # type: List[Tuple[str, int]]
     if not servers:
         raise Exception("No electrum servers found!")
     return random.choice(servers)

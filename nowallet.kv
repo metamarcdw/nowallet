@@ -1,7 +1,7 @@
 #:import SlideTransition kivy.uix.screenmanager.SlideTransition
 #:import RecycleView kivy.uix.recycleview
 #:import QRCodeWidget kivy.garden.qrcode
-#:import ZbarQrcodeDetector android-zbar-qrcode.main
+# import ZbarQrcodeDetector android-zbar-qrcode.main
 
 #:import MDLabel kivymd.label.MDLabel
 #:import Toolbar kivymd.toolbar.Toolbar
@@ -214,11 +214,11 @@ BoxLayout:
                                         id: addr_qrcode
                                         show_border: False
 
-        ZbarScreen:
-            name: "zbar"
-            ZbarQrcodeDetector:
-                id: detector
-                on_symbols: app.qrcode_handler(self.symbols)
+#        ZbarScreen:
+#            name: "zbar"
+#            ZbarQrcodeDetector:
+#                id: detector
+#                on_symbols: app.qrcode_handler(self.symbols)
 
         WaitScreen:
             name: "wait"

@@ -5,13 +5,13 @@ from typing import List, Tuple
 from bs4 import BeautifulSoup
 from .socks_http import urlopen
 
-async def scrape_onion_servers(chain_1209k: str = "tbtc") -> \
-    List[Tuple[str, int, str]]:
+async def scrape_onion_servers(chain_1209k: str = "tbtc",
+                               loop=None) -> List[Tuple[str, int, str]]:
     scrape_page = "https://1209k.com/bitcoin-eye/ele.php?chain={}"  # type: str
     url = scrape_page.format(chain_1209k)  # type: str
     logging.info("Scraping URL: %s", url)
 
-    page = await urlopen(url)  # type: str
+    page = await urlopen(url, loop=loop)  # type: str
     soup = BeautifulSoup(page, "html.parser")  # type: BeautifulSoup
     table_data = soup.find_all("td")  # type: List
 

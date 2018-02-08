@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 import re
 import asyncio
+from aiohttp.client_exceptions import ClientConnectorError
 from decimal import Decimal
 
 from async_gui.engine import Task
@@ -117,7 +118,7 @@ class NowalletApp(App):
                             "text": "Settings"}]
         super().__init__()
 
-    def show_dialog(self, title, message):
+    def show_dialog(self, title, message, cb=None):
         content = MDLabel(font_style='Body1',
                           theme_text_color='Secondary',
                           text=message,
@@ -131,7 +132,7 @@ class NowalletApp(App):
                                auto_dismiss=False)
 
         self.dialog.add_action_button("Dismiss",
-                                      action=lambda *x: self.dialog.dismiss())
+                                      action=cb if cb else lambda *x: self.dialog.dismiss())
         self.dialog.open()
 
     def start_zbar(self):
@@ -230,7 +231,14 @@ class NowalletApp(App):
         self.menu_items[0]["text"] = "View {}PUB".format(self.pub_char.upper())
 
         self.root.ids.sm.current = "wait"
-        self.do_login_tasks(email, passphrase)
+        try:
+            self.do_login_tasks(email, passphrase)
+        except ClientConnectorError:
+            import sys
+            self.show_dialog("Error",
+                             "Make sure Tor/Orbot is installed and running before using Nowallet.",
+                             cb=lambda x: sys.exit(1))
+            return
         self.update_screens()
         self.root.ids.sm.current = "main"
         Clock.schedule_interval(self.check_new_history, 1)
