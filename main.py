@@ -242,6 +242,13 @@ class NowalletApp(App):
         self.update_screens()
         self.root.ids.sm.current = "main"
         Clock.schedule_interval(self.check_new_history, 1)
+        self.do_listen_task()
+
+    @engine.async
+    def do_listen_task(self):
+        yield Task(self.listen_task)
+    def listen_task(self):
+        self.loop.run_until_complete(self.wallet.listen_to_addresses())
 
     @engine.async
     def do_login_tasks(self, email, passphrase):
