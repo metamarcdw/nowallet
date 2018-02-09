@@ -1,6 +1,6 @@
 clean:
 	rm -rf __pycache__/ .cache/ .mypy_cache/
-	rm -f lint.txt type.txt nowallet.log nowallet.ini
+	rm -f lint.txt type.txt nowallet.log nowallet.ini servers.json
 	rm -rf nowallet/__pycache__/ nowallet/.mypy_cache/
 
 init:
@@ -23,6 +23,9 @@ go-spend:
 
 go-kivy:
 	python3 main.py
+
+go-server:
+	python3 server.py tbtc
 
 lint:
 	pylint nowallet/*.py > lint.txt

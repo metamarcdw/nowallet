@@ -31,7 +31,7 @@ from pycoin.tx.Spendable import Spendable
 
 from .subclasses import LexSpendable, LexTxOut, SegwitBIP32Node
 from .keys import derive_key
-from .scrape import scrape_onion_servers
+from .scrape import scrape_electrum_servers
 #import exchange_rate
 
 class Connection:
@@ -1015,7 +1015,7 @@ def get_random_onion(loop: asyncio.AbstractEventLoop,
     :raise: Raises s base Exception if there are no servers up on 1209k
     """
     servers = loop.run_until_complete(
-        scrape_onion_servers(chain_1209k=chain.chain_1209k,
+        scrape_electrum_servers(chain_1209k=chain.chain_1209k,
                              loop=loop))  # type: List[Tuple[str, int]]
     if not servers:
         raise Exception("No electrum servers found!")

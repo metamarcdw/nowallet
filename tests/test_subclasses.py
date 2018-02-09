@@ -108,6 +108,12 @@ def test_segwitkey_script(segwitbip32node_from_chbs):
 
 def test_segwitkey_script_hash(segwitbip32node_from_chbs):
     script_hash = segwitbip32node_from_chbs.p2wpkh_script_hash()
+    assert isinstance(script_hash, bytes)
+    assert script_hash == (b"H\x12\xe21\x90\x00:\xc2\xd2\xd7" + \
+                           b"\xe3\x15\x99<\x96\x08\xaea\xac%")
+
+def test_segwitkey_electrumx_spkhash(segwitbip32node_from_chbs):
+    script_hash = segwitbip32node_from_chbs.electrumx_script_hash()
     assert isinstance(script_hash, str)
     assert script_hash == ("41d8dc340e750287f1ef920956e1f9ae" + \
                            "8a724efa9bb3772352118fe26372be97")

@@ -5,7 +5,7 @@ from typing import List, Tuple
 from bs4 import BeautifulSoup
 from .socks_http import urlopen
 
-async def scrape_onion_servers(chain_1209k: str = "tbtc",
+async def scrape_electrum_servers(chain_1209k: str = "tbtc",
                                loop=None) -> List[Tuple[str, int, str]]:
     scrape_page = "https://1209k.com/bitcoin-eye/ele.php?chain={}"  # type: str
     url = scrape_page.format(chain_1209k)  # type: str
@@ -36,7 +36,7 @@ async def scrape_onion_servers(chain_1209k: str = "tbtc",
 def main():
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
     result = loop.run_until_complete(
-        scrape_onion_servers())  # type: List[Tuple[str, int, str]]
+        scrape_electrum_servers())  # type: List[Tuple[str, int, str]]
     print(result)
     loop.close()
 
