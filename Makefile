@@ -1,6 +1,6 @@
 clean:
 	rm -rf __pycache__/ .cache/ .mypy_cache/
-	rm -f lint.txt type.txt nowallet.log nowallet.ini servers.json
+	rm -f lint.txt type.txt nowallet.log nowallet.ini
 	rm -rf nowallet/__pycache__/ nowallet/.mypy_cache/
 
 init:
