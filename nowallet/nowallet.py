@@ -1016,11 +1016,23 @@ def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
     result = loop.run_until_complete(
         urlopen("http://mdw.ddns.net:3000/servers", loop=loop))  # type: str
     if not result:
-        raise Exception("Cannot get data from REST api.")
+        logging.info("Cannot get data from REST api.")
+        result = json.dumps({"servers": []})
     servers = json.loads(result)["servers"]  # type: List[List[Any]]
     if not servers:
-        raise Exception("No electrum servers found!")
+        logging.info("No electrum servers found!")
+        servers = load_servers_json()
     return random.choice(servers)
+
+def load_servers_json() -> List[List[Any]]:
+    """
+    Loads a list of Electrum servers from a local json file.
+
+    :returns: A list of server info lists for all default Electrum servers
+    """
+    logging.info("Reading server list from file..")
+    with open("servers.json", "r") as infile:
+        return json.load(infile)
 
 def get_payable_from_BIP21URI(uri: str,
                               proto: str="bitcoin") -> Tuple[str, Decimal]:
