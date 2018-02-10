@@ -13,7 +13,7 @@ file_hdlr.setLevel(logging.DEBUG)
 logging.basicConfig(level=logging.DEBUG,
                     handlers=[stdout_hdlr, file_hdlr])
 
-import asyncio, io, random, collections, pprint, time
+import asyncio, io, random, collections, pprint, time, json
 from decimal import Decimal
 from functools import total_ordering
 from urllib import parse
@@ -31,7 +31,7 @@ from pycoin.tx.Spendable import Spendable
 
 from .subclasses import LexSpendable, LexTxOut, SegwitBIP32Node
 from .keys import derive_key
-from .scrape import scrape_electrum_servers
+from .socks_http import urlopen
 #import exchange_rate
 
 class Connection:
@@ -1004,19 +1004,20 @@ class Wallet:
             self.get_address(self.get_next_unused_key(), addr=True)))
         return "".join(str_)
 
-def get_random_onion(loop: asyncio.AbstractEventLoop,
-                     chain) -> Tuple[str, int, str]:
+def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
     """
-    Grabs a random onion server from a list that it gets from our
-    scrape_onion_servers function.
+    Grabs a random Electrum server from a list that it gets from our
+    REST api.
 
     :param chain: Our current chain info
-    :returns: A server info tuple for a random .onion Electrum server
-    :raise: Raises s base Exception if there are no servers up on 1209k
+    :returns: A server info list for a random Electrum server
+    :raise: Raises a base Exception if there are no servers up on 1209k
     """
-    servers = loop.run_until_complete(
-        scrape_electrum_servers(chain_1209k=chain.chain_1209k,
-                             loop=loop))  # type: List[Tuple[str, int]]
+    result = loop.run_until_complete(
+        urlopen("http://mdw.ddns.net:3000/servers", loop=loop))  # type: str
+    if not result:
+        raise Exception("Cannot get data from REST api.")
+    servers = json.loads(result)["servers"]  # type: List[List[Any]]
     if not servers:
         raise Exception("No electrum servers found!")
     return random.choice(servers)

@@ -16,7 +16,7 @@ async def print_loop(wallet: nowallet.Wallet) -> None:
             print(wallet)
             wallet.new_history = False
 
-def main():
+def main() -> None:
     """
     Builds a wallet object, discovers keys and listens to addresses.
     Also handles all user IO with help from the print_loop() coroutine function.
@@ -32,7 +32,7 @@ def main():
     chain = nowallet.TBTC
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
 
-    t = nowallet.get_random_onion(loop, chain)  # type: Tuple[str, int, str]
+    t = nowallet.get_random_server(loop)  # type: List[Any]
     server, port, proto = t
     connection = nowallet.Connection(
         loop, server, port, proto)  # type: nowallet.Connection
