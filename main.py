@@ -141,7 +141,13 @@ class NowalletApp(App):
         self.root.ids.detector.start()
 
     def qrcode_handler(self, symbols):
-        self.root.ids.address_input.text = symbols[0]
+        try:
+            address, amount = nowallet.get_payable_from_BIP21URI(symbols[0])
+        except ValueError as ve:
+            self.show_dialog("Error", str(ve))
+            return
+        self.root.ids.address_input.text = address
+        self.update_amounts(text=str(amount))
         self.root.ids.detector.stop()
 
     def menu_item_handler(self, text):

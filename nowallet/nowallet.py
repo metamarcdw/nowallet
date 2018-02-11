@@ -1013,14 +1013,15 @@ def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
     :returns: A server info list for a random Electrum server
     :raise: Raises a base Exception if there are no servers up on 1209k
     """
+    logging.info("Fetching server list from REST api.")
     result = loop.run_until_complete(
         urlopen("http://mdw.ddns.net:3000/servers", loop=loop))  # type: str
     if not result:
-        logging.info("Cannot get data from REST api.")
+        logging.warn("Cannot get data from REST api.")
         result = json.dumps({"servers": []})
     servers = json.loads(result)["servers"]  # type: List[List[Any]]
     if not servers:
-        logging.info("No electrum servers found!")
+        logging.warn("No electrum servers found!")
         servers = load_servers_json()
     return random.choice(servers)
 
