@@ -62,7 +62,7 @@ class Connection:
             self.server_info,
             proto_code=proto,
             use_tor=True,
-            disable_cert_verify=True)  # type: asyncio.Future
+            disable_cert_verify=(proto != "s"))  # type: asyncio.Future
 
         loop.run_until_complete(self._do_connect())
         self.queue = None  # type: asyncio.Queue
