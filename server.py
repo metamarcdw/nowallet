@@ -27,7 +27,7 @@ class Server:
 
     async def connect(self):
         server_info = ServerInfo(
-            "127.0.0.1", hostname="localhost", ports=8000)
+            "127.0.0.1", hostname="localhost", ports=50001)
         self.client = StratumClient(self.app.loop)
         self.connection = self.client.connect(
             server_info,
@@ -56,7 +56,6 @@ class Server:
         else:
             self.server_list = await scrape_electrum_servers(
                 self.chain, loop=self.app.loop)
-        print(self.server_list)
         with open("servers.json", "w") as outfile:
             json.dump(self.server_list, outfile)
 
