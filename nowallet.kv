@@ -236,6 +236,23 @@ BoxLayout:
                 halign: "center"
                 pos_hint: {"center_x": 0.5, "center_y": 0.66}
 
+        UTXOScreen:
+            name: "utxo"
+            RecycleView:
+                id: utxoRecycleView
+                viewclass: "UTXOListItem"
+                RecycleBoxLayout:
+                    default_size: None, dp(56)
+                    default_size_hint: 1, None
+                    size_hint_y: None
+                    height: self.minimum_height
+                    orientation: "vertical"
+            MDRaisedButton:
+                size_hint: 0.5, 0.07
+                pos_hint: {"center_x": 0.5, "center_y": 0.13}
+                text: "Go Back"
+                on_release: root.ids.sm.current = "main"
+
         YPUBScreen:
             name: "ypub"
             MDCard:
@@ -320,3 +337,7 @@ BoxLayout:
 <ListItem>:
     IconLeftSampleWidget:
         icon: self.parent.parent.icon
+
+<UTXOListItem>:
+    on_release:
+        MDDropdownMenu(items=app.utxo_menu_items, width_mult=4).open(self)

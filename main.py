@@ -21,8 +21,7 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.behaviors import ButtonBehavior
 
 from kivymd.theming import ThemeManager
-from kivymd.list import TwoLineIconListItem
-from kivymd.list import ILeftBodyTouch
+from kivymd.list import TwoLineListItem, TwoLineIconListItem, ILeftBodyTouch
 from kivymd.button import MDIconButton, MDRaisedButton
 from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
@@ -48,6 +47,9 @@ class MainScreen(Screen):
 class WaitScreen(Screen):
     pass
 
+class UTXOScreen(Screen):
+    pass
+
 class YPUBScreen(Screen):
     pass
 
@@ -65,6 +67,9 @@ class BalanceLabel(ButtonBehavior, MDLabel):
 
 class PINButton(MDRaisedButton):
     char = StringProperty()
+
+class UTXOListItem(TwoLineListItem):
+    utxo = ObjectProperty()
 
 class ListItem(TwoLineIconListItem):
     icon = StringProperty("check-circle")
@@ -115,7 +120,11 @@ class NowalletApp(App):
                            {"viewclass": "MDMenuItem",
                             "text": "Lock with PIN"},
                            {"viewclass": "MDMenuItem",
+                            "text": "Manage UTXOs"},
+                           {"viewclass": "MDMenuItem",
                             "text": "Settings"}]
+        self.utxo_menu_items = [{"viewclass": "MDMenuItem",
+                                 "text": "TESTING"}]
         super().__init__()
 
     def show_dialog(self, title, message, cb=None):
@@ -151,13 +160,20 @@ class NowalletApp(App):
         self.root.ids.detector.stop()
 
     def menu_item_handler(self, text):
+        # Main menu items
         if self.root.ids.sm.current == "main":
             if "PUB" in text:
                 self.root.ids.sm.current = "ypub"
             elif "PIN" in text:
                 self.root.ids.sm.current = "pin"
+            elif "UTXO" in text:
+                self.root.ids.sm.current = "utxo"
             elif "Settings" in text:
                 self.open_settings()
+        # UTXO menu items
+        elif self.root.ids.sm.current == "utxo":
+            if "TESTING" in text:
+                print(text)
 
     def fee_button_handler(self):
         fee_input = self.root.ids.fee_input
@@ -286,6 +302,7 @@ class NowalletApp(App):
         self.update_send_screen()
         self.update_recieve_screen()
         self.update_ypub_screen()
+        self.update_utxo_screen()
 
     def toggle_balance_label(self):
         self.fiat_balance = not self.fiat_balance
@@ -311,6 +328,14 @@ class NowalletApp(App):
             hist_str = "{} {} {}".format(
                 verb, hist.value * self.unit_factor, self.units)
             self.add_list_item(hist_str, hist)
+
+    def update_utxo_screen(self):
+        self.root.ids.utxoRecycleView.data_model.data = []
+        for utxo in self.wallet.utxos:
+            value = Decimal(str(utxo.coin_value / nowallet.Wallet.COIN))
+            utxo_str = (self.unit_precision + " {}").format(
+                value * self.unit_factor, self.units)
+            self.add_utxo_list_item(utxo_str, utxo)
 
     def update_send_screen(self):
         self.root.ids.send_balance.text = \
@@ -438,6 +463,7 @@ class NowalletApp(App):
             self.update_amounts()
             self.update_balance_screen()
             self.update_send_screen()
+            self.update_utxo_screen()
         elif key == "currency":
             self.currency = value
             self.update_amounts()
@@ -469,6 +495,12 @@ class NowalletApp(App):
                         "secondary_text": history.tx_obj.id(),
                         "history": history,
                         "icon": icon})
+
+    def add_utxo_list_item(self, text, utxo):
+        data = self.root.ids.utxoRecycleView.data_model.data
+        data.insert(0, {"text": text,
+                        "secondary_text": utxo.as_dict()["tx_hash_hex"],
+                        "utxo": utxo})
 
 def open_url(url):
     if platform == 'android':
