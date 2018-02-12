@@ -59,6 +59,7 @@ class PINScreen(Screen):
 class ZbarScreen(Screen):
     pass
 
+# Declare custom widgets
 class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
     pass
 
@@ -158,6 +159,7 @@ class NowalletApp(App):
         self.root.ids.address_input.text = address
         self.update_amounts(text=str(amount))
         self.root.ids.detector.stop()
+        self.root.ids.sm.current = "main"
 
     def menu_item_handler(self, text):
         # Main menu items
