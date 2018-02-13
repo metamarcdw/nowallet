@@ -26,6 +26,7 @@ from kivymd.button import MDIconButton, MDRaisedButton
 from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
 from kivymd.textfields import MDTextField
+from kivymd.menu import MDDropdownMenu
 
 from pycoin.key import validate
 
@@ -161,17 +162,20 @@ class NowalletApp(App):
         self.root.ids.detector.stop()
         self.root.ids.sm.current = "main"
 
+    def menu_button_handler(self, button):
+        if self.root.ids.sm.current == "main":
+            MDDropdownMenu(items=self.menu_items, width_mult=4).open(button)
+
     def menu_item_handler(self, text):
         # Main menu items
-        if self.root.ids.sm.current == "main":
-            if "PUB" in text:
-                self.root.ids.sm.current = "ypub"
-            elif "PIN" in text:
-                self.root.ids.sm.current = "pin"
-            elif "UTXO" in text:
-                self.root.ids.sm.current = "utxo"
-            elif "Settings" in text:
-                self.open_settings()
+        if "PUB" in text:
+            self.root.ids.sm.current = "ypub"
+        elif "PIN" in text:
+            self.root.ids.sm.current = "pin"
+        elif "UTXO" in text:
+            self.root.ids.sm.current = "utxo"
+        elif "Settings" in text:
+            self.open_settings()
         # UTXO menu items
         elif self.root.ids.sm.current == "utxo":
             if "TESTING" in text:

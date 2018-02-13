@@ -23,7 +23,7 @@ BoxLayout:
         background_palette: "Primary"
         background_hue: "500"
         left_action_items: [["currency-btc", lambda x: None]]
-        right_action_items: [["menu", lambda x: MDDropdownMenu(items=app.menu_items, width_mult=4).open(self)]]
+        right_action_items: [["menu", lambda x: app.menu_button_handler(self)]]
     ScreenManager:
         id: sm
         transition: SlideTransition(direction="up")
