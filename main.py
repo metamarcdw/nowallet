@@ -204,14 +204,15 @@ class NowalletApp(App):
         self.root.ids.address_input.error = not is_valid
 
     def set_amount_error(self, amount):
-        _amount = Decimal(amount)
-        is_valid = _amount <= self.wallet.balance
+        _amount = Decimal(amount) if amount else Decimal("0")
+        is_valid = _amount / self.unit_factor <= self.wallet.balance
         self.root.ids.spend_amount_input.error = not is_valid
 
     def send_button_handler(self):
         addr_input = self.root.ids.address_input
         address = addr_input.text.strip()
-        amount = Decimal(self.root.ids.spend_amount_input.text)
+        amount_str = self.root.ids.spend_amount_input.text
+        amount = Decimal(amount_str) / self.unit_factor
 
         if addr_input.error or not address:
             self.show_dialog("Error", "Invalid address.")
