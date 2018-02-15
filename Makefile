@@ -27,10 +27,13 @@ go-kivy:
 go-server:
 	python3 server.py tbtc
 
+go-gunicorn:
+	gunicorn server:global_app --bind localhost:3000 --worker-class aiohttp.GunicornWebWorker
+
 lint:
 	pylint nowallet/*.py > lint.txt
 
 type:
 	mypy --ignore-missing-imports nowallet/*.py > type.txt
 
-.PHONY: clean init install uninstall test go go-spend go-kivy lint type
+.PHONY: clean init install uninstall test go go-spend go-kivy go-server go-gunicorn lint type

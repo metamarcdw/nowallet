@@ -69,7 +69,7 @@ class Server:
             await asyncio.sleep(600)
 
     async def start_background_tasks(self, app):
-        app['dispatch'] = app.loop.create_task(self.update_loop())
+        app['dispatch'] = asyncio.ensure_future(self.update_loop())
 
     async def cleanup_background_tasks(self, app):
         app['dispatch'].cancel()
@@ -83,3 +83,5 @@ if __name__ == "__main__":
     is_chain_arg = len(sys.argv) > 1 and sys.argv[1] in CHAINS
     chain = sys.argv[1] if is_chain_arg else BTC.chain_1209k
     web.run_app(Server(chain).app, port=3000)
+else:
+    global_app = Server(TBTC.chain_1209k).app
