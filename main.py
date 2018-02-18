@@ -129,17 +129,23 @@ class NowalletApp(App):
                                  "text": "TESTING"}]
         super().__init__()
 
-    def show_dialog(self, title, message, cb=None):
-        content = MDLabel(font_style='Body1',
-                          theme_text_color='Secondary',
-                          text=message,
-                          size_hint_y=None,
-                          valign='top')
-        content.bind(texture_size=content.setter('size'))
+    def show_dialog(self, title, message, qrdata=None, cb=None):
+        if qrdata:
+            from kivy.garden.qrcode import QRCodeWidget
+            content = QRCodeWidget(data=qrdata,
+                                   size=(dp(150), dp(150)),
+                                   size_hint=(None, None))
+        else:
+            content = MDLabel(font_style='Body1',
+                              theme_text_color='Secondary',
+                              text=message,
+                              size_hint_y=None,
+                              valign='top')
+            content.bind(texture_size=content.setter('size'))
         self.dialog = MDDialog(title=title,
                                content=content,
                                size_hint=(.8, None),
-                               height=dp(200),
+                               height=dp(300),
                                auto_dismiss=False)
 
         self.dialog.add_action_button("Dismiss",
