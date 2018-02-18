@@ -28,7 +28,9 @@ async def scrape_electrum_servers(chain_1209k: str = "tbtc",
             is_running = table_data[i+7].text == "open"  # type: bool
             if is_running:
                 if chain_1209k == "tbtc" and \
-                    host in ("electrum.akinbo.org", "testnet.hsmiths.com"):
+                    host in ("electrum.akinbo.org",
+                             "testnet.hsmiths.com",
+                             "testnet.qtornado.com"):
                     continue
                 servers.append((host, port, proto))
     return servers
