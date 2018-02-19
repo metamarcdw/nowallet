@@ -339,5 +339,6 @@ BoxLayout:
         icon: self.parent.parent.icon
 
 <UTXOListItem>:
+    on_release: app.utxo = self.utxo
     on_release:
         MDDropdownMenu(items=app.utxo_menu_items, width_mult=4).open(self)

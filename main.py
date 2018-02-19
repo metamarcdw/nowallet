@@ -27,8 +27,10 @@ from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
 from kivymd.textfields import MDTextField
 from kivymd.menu import MDDropdownMenu
+from kivy.garden.qrcode import QRCodeWidget
 
 from pycoin.key import validate
+from pycoin.serialize import b2h
 
 import nowallet
 #from nowallet.exchange_rate import fetch_exchange_rates
@@ -110,12 +112,14 @@ class NowalletApp(App):
     current_coin = StringProperty("0")
     current_fiat = StringProperty("0")
     current_fee = NumericProperty()
+    current_utxo = ObjectProperty()
 
     def __init__(self):
         self.chain = nowallet.TBTC
         self.loop = asyncio.get_event_loop()
         self.is_amount_inputs_locked = False
         self.fiat_balance = False
+        self.bech32 = False
 
         self.menu_items = [{"viewclass": "MDMenuItem",
                             "text": "View YPUB"},
@@ -126,16 +130,19 @@ class NowalletApp(App):
                            {"viewclass": "MDMenuItem",
                             "text": "Settings"}]
         self.utxo_menu_items = [{"viewclass": "MDMenuItem",
-                                 "text": "TESTING"}]
+                                 "text": "View Private key"},
+                                {"viewclass": "MDMenuItem",
+                                 "text": "View Redeem script"}]
         super().__init__()
 
     def show_dialog(self, title, message, qrdata=None, cb=None):
         if qrdata:
-            from kivy.garden.qrcode import QRCodeWidget
+            dialog_height = 300
             content = QRCodeWidget(data=qrdata,
                                    size=(dp(150), dp(150)),
                                    size_hint=(None, None))
         else:
+            dialog_height = 200
             content = MDLabel(font_style='Body1',
                               theme_text_color='Secondary',
                               text=message,
@@ -145,7 +152,7 @@ class NowalletApp(App):
         self.dialog = MDDialog(title=title,
                                content=content,
                                size_hint=(.8, None),
-                               height=dp(300),
+                               height=dp(dialog_height),
                                auto_dismiss=False)
 
         self.dialog.add_action_button("Dismiss",
@@ -172,6 +179,13 @@ class NowalletApp(App):
         if self.root.ids.sm.current == "main":
             MDDropdownMenu(items=self.menu_items, width_mult=4).open(button)
 
+    def search_for_key(self, search):
+        for change in (True, False):
+            addresses = self.wallet.get_all_known_addresses(change, addr=True)
+            for i, addr in enumerate(addresses):
+                if addr == search:
+                    return self.wallet.get_key(i, change)
+
     def menu_item_handler(self, text):
         # Main menu items
         if "PUB" in text:
@@ -184,8 +198,14 @@ class NowalletApp(App):
             self.open_settings()
         # UTXO menu items
         elif self.root.ids.sm.current == "utxo":
-            if "TESTING" in text:
-                print(text)
+            addr = self.utxo.address(self.chain.netcode)
+            key = self.search_for_key(addr)
+            if "Private" in text:
+                self.show_dialog("Private key", "", qrdata=key.wif())
+            if "Redeem" in text:
+                if self.bech32: return
+                script = b2h(key.p2wpkh_script())
+                self.show_dialog("Redeem script", "", qrdata=script)
 
     def fee_button_handler(self):
         fee_input = self.root.ids.fee_input
