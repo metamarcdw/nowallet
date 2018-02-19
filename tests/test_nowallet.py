@@ -4,8 +4,8 @@ import nowallet
 
 @pytest.fixture
 def dummy_connection(event_loop):
-    server, port = 'mdw.ddns.net', 50002
-    return nowallet.Connection(event_loop, server, port, "s")
+    server, port = "hsmithsxurybd7uh.onion", 53011
+    return nowallet.Connection(event_loop, server, port, "t")
 
 @pytest.fixture
 def dummy_wallet(event_loop, dummy_connection):
