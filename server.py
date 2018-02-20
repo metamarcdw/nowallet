@@ -27,7 +27,7 @@ class Server:
 
     async def connect(self):
         server_info = ServerInfo(
-            "127.0.0.1", hostname="localhost", ports=50001)
+            "", hostname="mdw.ddns.net", ports=50001)
         self.client = StratumClient(self.app.loop)
         self.connection = self.client.connect(
             server_info,
