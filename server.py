@@ -77,7 +77,7 @@ class Server:
 
     async def handle(self, request):
         response_obj = { 'servers' : self.server_list }
-        return web.Response(text=json.dumps(response_obj))
+        return web.json_response(response_obj)
 
 if __name__ == "__main__":
     is_chain_arg = len(sys.argv) > 1 and sys.argv[1] in CHAINS

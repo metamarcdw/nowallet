@@ -28,7 +28,7 @@ go-server:
 	python3 server.py tbtc
 
 go-gunicorn:
-	gunicorn server:global_app --bind localhost:3000 --worker-class aiohttp.GunicornWebWorker
+	gunicorn server:global_app --bind unix:endpoint.sock --worker-class aiohttp.GunicornWebWorker &
 
 lint:
 	pylint nowallet/*.py > lint.txt
