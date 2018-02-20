@@ -1015,7 +1015,8 @@ def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
     """
     logging.info("Fetching server list from REST api.")
     result = loop.run_until_complete(
-        urlopen("http://mdw.ddns.net:3000/servers", loop=loop))  # type: str
+        urlopen("http://y2yrbptubnrlraml.onion/servers",
+                loop=loop))  # type: str
     if not result:
         logging.warn("Cannot get data from REST api.")
         result = json.dumps({"servers": []})
