@@ -1014,9 +1014,13 @@ def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
     :raise: Raises a base Exception if there are no servers up on 1209k
     """
     logging.info("Fetching server list from REST api.")
+    with open("api_password.txt", "r") as infile:
+        api_password = infile.read().strip()
+    bauth = ("nowallet", api_password)
+
     result = loop.run_until_complete(
         urlopen("http://y2yrbptubnrlraml.onion/servers",
-                loop=loop))  # type: str
+                bauth_tuple=bauth, loop=loop))  # type: str
     if not result:
         logging.warn("Cannot get data from REST api.")
         result = json.dumps({"servers": []})
