@@ -1,8 +1,0 @@
-[Unit]
-Description=gunicorn socket
-
-[Socket]
-ListenStream=/home/cypher/nowallet/endpoint.sock
-
-[Install]
-WantedBy=sockets.target

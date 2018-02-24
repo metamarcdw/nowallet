@@ -64,7 +64,7 @@ class Server:
             if self.connected and not self.client.protocol:
                 self.connected = False
             if not self.connected:
-                await self.connect()
+                pass # await self.connect()
             await self.update_server_list()
             await asyncio.sleep(600)
 
