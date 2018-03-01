@@ -51,10 +51,10 @@ If you're interested in testing, you can get some testnet coins here:
 https://testnet.manu.backend.hamburg/faucet
 
 ### SCREENSHOTS:
-[Login](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_login.png)
-[Balance](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_balance.png)
-[Send](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_send.png)
-[Recieve](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_recieve.png)
+![Login](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_login.png)
+![Balance](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_balance.png)
+![Send](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_send.png)
+![Recieve](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_recieve.png)
 
 ### REQUIREMENTS:
 1. Building is currently supported on Linux based systems only. (Ubuntu LTS specifically if using Kivy)
