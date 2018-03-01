@@ -1,5 +1,3 @@
-sudo apt-get install build-essential ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev
-
 # Nowallet
 ### Secure, private, and plausibly deniable
 #### Cross-platform Bitcoin brainwallet
@@ -52,6 +50,11 @@ able to install dependecies and run from the simple command line interface.
 If you're interested in testing, you can get some testnet coins here:
 https://testnet.manu.backend.hamburg/faucet
 
+### SCREENSHOTS:
+[Login](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_login.png)
+[Balance](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_balance.png)
+[Send](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_send.png)
+[Recieve](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_recieve.png)
 
 ### REQUIREMENTS:
 1. Building is currently supported on Linux based systems only. (Ubuntu LTS specifically if using Kivy)
@@ -60,7 +63,7 @@ https://www.torproject.org/docs/debian.html.en
 (Do not use the packages in Ubuntu's universe.)
 
 ### INSTALLATION:
-Install Nowallet dependencies:
+Install Nowallet dependencies:  
 `sudo apt-get install git python3-dev python3-pip libssl-dev`
   
 Install Kivy UI dependencies: (optional)  
@@ -77,10 +80,10 @@ Install required Python libraries:
 `make init`  
 `make install`  
   
-Install required Kivy libraries: (optional)
+Install required Kivy libraries: (optional)  
 `make init-kivy`
 
-Install required development libraries: (optional)
+Install required development libraries: (optional)  
 `make init-dev`
 
 Run nowallet from the command line:  
@@ -91,5 +94,5 @@ OR
 `make go-kivy`  
 
 #### UNIT TESTING:
-Run unit tests:  
+Run unit tests (Must install dev libs):  
 `make test`  
