@@ -6,6 +6,12 @@ clean:
 init:
 	pip3 install -r requirements.txt
 
+init-kivy:
+	pip3 install -r requirements-kivy.txt
+
+init-dev:
+	pip3 install -r requirements-dev.txt
+
 install:
 	pip3 install -e .
 
@@ -36,4 +42,4 @@ lint:
 type:
 	mypy --ignore-missing-imports nowallet/*.py > type.txt
 
-.PHONY: clean init install uninstall test go go-spend go-kivy go-server go-gunicorn lint type
+.PHONY: clean init init-kivy init-dev install uninstall test go go-spend go-kivy go-server go-gunicorn lint type

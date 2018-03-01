@@ -1,3 +1,5 @@
+sudo apt-get install build-essential ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev
+
 # Nowallet
 ### Secure, private, and plausibly deniable
 #### Cross-platform Bitcoin brainwallet
@@ -52,30 +54,42 @@ https://testnet.manu.backend.hamburg/faucet
 
 
 ### REQUIREMENTS:
-1. Building is currently supported on Linux based systems only.
+1. Building is currently supported on Linux based systems only. (Ubuntu LTS specifically if using Kivy)
 2. Install Tor for Linux using the instructions linked below:  
 https://www.torproject.org/docs/debian.html.en  
 (Do not use the packages in Ubuntu's universe.)
 
 ### INSTALLATION:
-Install all dependencies:  
+Install Nowallet dependencies:
 `sudo apt-get install git python3-dev python3-pip libssl-dev`
+  
+Install Kivy UI dependencies: (optional)  
+`sudo apt-get install build-essential ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev`
   
 Clone the Nowallet Github repository:  
 `git clone https://github.com/metamarcdw/nowallet.git`  
+  
+Make sure Pip, Virtualenv and Setuptools are updated:  
+`sudo -H pip3 install --upgrade pip virtualenv setuptools`
   
 Install required Python libraries:  
 `cd nowallet`  
 `make init`  
 `make install`  
   
+Install required Kivy libraries: (optional)
+`make init-kivy`
+
+Install required development libraries: (optional)
+`make init-dev`
+
 Run nowallet from the command line:  
 `make go`  
 OR  
 `make go-spend`  
+OR  
+`make go-kivy`  
 
 #### UNIT TESTING:
-Install the tox package before attempting to run the test suite:  
-`sudo pip3 install tox`  
 Run unit tests:  
-`make test`
+`make test`  
