@@ -1,7 +1,6 @@
 -e git+https://github.com/reclosedev/async_gui@805a3c016055885dc4449a8718fa397547bae2d8#egg=async_gui
 certifi==2018.1.18
 chardet==3.0.4
-Cython==0.24
 docutils==0.14
 idna==2.6
 Kivy==1.10.0

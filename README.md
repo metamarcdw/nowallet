@@ -72,8 +72,14 @@ Install Kivy UI dependencies: (optional)
 Clone the Nowallet Github repository:  
 `git clone https://github.com/metamarcdw/nowallet.git`  
   
+Create a virtualenv (using virtualenvwrapper for example):  
+First install virtualenvwrapper using the instructions linked below:  
+http://railslide.io/virtualenvwrapper-python3.html  
+Create the virtualenv:  
+`mkvirtualenv --no-site-packages -p /usr/bin/python3 nowallet`  
+  
 Make sure Pip, Virtualenv and Setuptools are updated:  
-`sudo -H pip3 install --upgrade pip virtualenv setuptools`
+`pip install --upgrade pip virtualenv setuptools`
   
 Install required Python libraries:  
 `cd nowallet`  
@@ -81,7 +87,9 @@ Install required Python libraries:
 `make install`  
   
 Install required Kivy libraries: (optional)  
-`make init-kivy`
+`pip install Cython==0.24`  
+`make init-kivy`  
+`garden install qrcode`
 
 Install required development libraries: (optional)  
 `make init-dev`
