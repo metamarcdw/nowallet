@@ -1,11 +1,11 @@
--e git+https://github.com/reclosedev/async_gui@805a3c016055885dc4449a8718fa397547bae2d8#egg=async_gui
+-e git+https://github.com/reclosedev/async_gui@master#egg=async_gui
 certifi==2018.1.18
 chardet==3.0.4
 docutils==0.14
 idna==2.6
 Kivy==1.10.0
 Kivy-Garden==0.1.4
--e git+https://gitlab.com/kivymd/KivyMD@19e587e64eede4d80aa13757e2a429c595f96b48#egg=kivymd
+-e git+https://gitlab.com/kivymd/KivyMD@master#egg=kivymd
 Pygments==2.2.0
 qrcode==5.3
 requests==2.18.4
