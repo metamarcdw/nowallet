@@ -55,7 +55,7 @@ class Connection:
         logging.info("Connecting...")
 
         self.server_info = ServerInfo(
-            server, hostname=server, ports=port)  # type: MyServerInfo
+            server, hostname=server, ports=port)  # type: ServerInfo
         logging.info(str(self.server_info.get_port(proto)))
         self.client = StratumClient(loop)  # type: StratumClient
         self.connection = self.client.connect(
@@ -357,13 +357,12 @@ class Wallet:
         """
         if not addr:
             return key.electrumx_script_hash(bech32=self.bech32)
-        else:
-            return key.p2sh_p2wpkh_address() if not self.bech32 \
-                else key.bech32_p2wpkh_address()
+        return key.p2sh_p2wpkh_address() if not self.bech32 \
+            else key.bech32_p2wpkh_address()
 
     def get_all_known_addresses(self,
                                 change: bool = False,
-                                addr: bool=False) -> List[str]:
+                                addr: bool = False) -> List[str]:
         """
         Returns a list of all addresses currently known to us.
 
@@ -748,7 +747,8 @@ class Wallet:
 
         :param tx: a Tx object that we need to estimate a fee for
         :param coin_per_kb: Fee estimation in whole coins per KB
-        :returns: An int representing the appropriate fee in satoshis
+        :returns: An Tuple with two ints representing the appropriate fee
+            in satoshis, and the tx's virtual size
         :raise: Raises a ValueError if given fee rate is over 1000 satoshi/B
         """
         if coin_per_kb > Wallet.satb_to_coinkb(2000):
@@ -934,10 +934,10 @@ class Wallet:
         :returns: The txid of our new tx, given after a successful broadcast
         :raise: Raises a base Exception if we can't afford the fee
         """
-        t = self._mktx(address, amount, rbf=rbf)  # type: Tuple[Tx, Set[str], int]
-        tx, in_addrs, chg_vout = t
-        t = self._get_fee(tx, coin_per_kb)  # type: Tuple[int, int]
-        fee, tx_vsize = t
+        t1 = self._mktx(address, amount, rbf=rbf)  # type: Tuple[Tx, Set[str], int]
+        tx, in_addrs, chg_vout = t1
+        t2 = self._get_fee(tx, coin_per_kb)  # type: Tuple[int, int]
+        fee, tx_vsize = t2
 
         decimal_fee = Decimal(str(fee)) / Wallet.COIN  # type: Decimal
         if not amount + decimal_fee <= self.balance:
@@ -973,7 +973,7 @@ class Wallet:
         """
         t = self._create_replacement_tx(hist_obj)  # type: Tuple[Tx, Set[str], int]
         tx, in_addrs = t[:2]
-        new_fee = self._get_fee(tx, coin_per_kb)  # type: int
+        new_fee = self._get_fee(tx, coin_per_kb)[0]  # type: int
 
         self._signtx(tx, in_addrs, new_fee)
         txid = self.loop.run_until_complete(self.connection.listen_rpc(
@@ -1022,11 +1022,11 @@ def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
         urlopen("http://y2yrbptubnrlraml.onion/servers",
                 bauth_tuple=bauth, loop=loop))  # type: str
     if not result:
-        logging.warn("Cannot get data from REST api.")
+        logging.warning("Cannot get data from REST api.")
         result = json.dumps({"servers": []})
     servers = json.loads(result)["servers"]  # type: List[List[Any]]
     if not servers:
-        logging.warn("No electrum servers found!")
+        logging.warning("No electrum servers found!")
         servers = load_servers_json()
     return random.choice(servers)
 
@@ -1041,7 +1041,7 @@ def load_servers_json() -> List[List[Any]]:
         return json.load(infile)
 
 def get_payable_from_BIP21URI(uri: str,
-                              proto: str="bitcoin") -> Tuple[str, Decimal]:
+                              proto: str = "bitcoin") -> Tuple[str, Decimal]:
     """
     Computes a 'payable' tuple from a given BIP21 encoded URI.
 

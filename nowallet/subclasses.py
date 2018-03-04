@@ -28,9 +28,9 @@ class LexTxOut(TxOut):
         return (self.coin_value, b2h(self.script)) < \
             (other.coin_value, b2h(other.script))
 
+T = TypeVar("T", bound="LexSpendable")
 @total_ordering
 class LexSpendable(Spendable):
-    T = TypeVar("T", bound="LexSpendable")
     @classmethod
     def promote(cls: Type[T], spendable: Spendable) -> T:
         return cls.from_dict(spendable.as_dict())
@@ -62,7 +62,7 @@ class SegwitBIP32Node(BIP32Node):
         p2aw_script = self.p2wpkh_script()  # type: bytes
         return hash160(p2aw_script)
 
-    def electrumx_script_hash(self, bech32: bool=False) -> str:
+    def electrumx_script_hash(self, bech32: bool = False) -> str:
         addr = self.bech32_p2wpkh_address() if bech32 \
             else self.p2sh_p2wpkh_address()  # type: str
         script = standard_tx_out_script(addr)  # type: bytes

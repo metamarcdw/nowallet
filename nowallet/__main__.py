@@ -1,5 +1,6 @@
 import sys, asyncio, getpass
 from decimal import Decimal
+from typing import List, Tuple, Any
 
 from . import nowallet
 
@@ -32,8 +33,8 @@ def main() -> None:
     chain = nowallet.TBTC
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
 
-    t = nowallet.get_random_server(loop)  # type: List[Any]
-    server, port, proto = t
+    t1 = nowallet.get_random_server(loop)  # type: List[Any]
+    server, port, proto = t1
     connection = nowallet.Connection(
         loop, server, port, proto)  # type: nowallet.Connection
 #    connection = nowallet.Connection(
@@ -64,11 +65,11 @@ def main() -> None:
             use_rbf = True
         coin_per_kb = wallet.get_fee_estimation()  # type: float
 
-        t = wallet.spend(spend_addr,
-                         spend_amount,
-                         coin_per_kb,
-                         rbf=use_rbf)  # type: Tuple[str, Decimal, int]
-        txid, decimal_fee, tx_vsize = t
+        t2 = wallet.spend(spend_addr,
+                          spend_amount,
+                          coin_per_kb,
+                          rbf=use_rbf)  # type: Tuple[str, Decimal, int]
+        txid, decimal_fee, tx_vsize = t2
         sat_fee = int(decimal_fee * nowallet.Wallet.COIN)  # type: int
         satb_rate = sat_fee // tx_vsize  # type: int
 

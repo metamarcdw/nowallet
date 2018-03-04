@@ -14,7 +14,7 @@ async def fetch_from_api(base_url: str,
     url = base_url.format(chain_1209k.upper(), fiats)  # type: str
     logging.info("Fetching rates from URL: %s", url)
 
-    return json.loads(await urlopen(url, loop=loop))  # type: Dict[str, Dict]
+    return json.loads(await urlopen(url, loop=loop))
 
 async def fetch_exchange_rates(chain_1209k: str = "btc",
                                loop=None) -> Dict[str, Dict]:
@@ -25,7 +25,7 @@ async def fetch_exchange_rates(chain_1209k: str = "btc",
     all_rates = dict()
 
     btcav_json = await fetch_from_api(
-        btcav_url, chain_1209k, loop=loop)  # type: Dict[Any]
+        btcav_url, chain_1209k, loop=loop)  # type: Dict[str, Any]
     btcav_rates = dict()  # type: Dict[str, float]
     for key, value in btcav_json.items():
         symbol = key.replace(chain_1209k.upper(), "")  # type: str
@@ -34,7 +34,7 @@ async def fetch_exchange_rates(chain_1209k: str = "btc",
     all_rates["btcav"] = btcav_rates
 
     ccomp_json = await fetch_from_api(
-        ccomp_url, chain_1209k, loop=loop)  # type: Dict[Any]
+        ccomp_url, chain_1209k, loop=loop)  # type: Dict[str, Any]
     all_rates["ccomp"] = ccomp_json
     return all_rates
 

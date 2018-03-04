@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from .socks_http import urlopen
 
 async def scrape_electrum_servers(chain_1209k: str = "tbtc",
-                               loop=None) -> List[Tuple[str, int, str]]:
+                                  loop=None) -> List[Tuple[str, int, str]]:
     scrape_page = "https://1209k.com/bitcoin-eye/ele.php?chain={}"  # type: str
     url = scrape_page.format(chain_1209k)  # type: str
     logging.info("Scraping URL: %s", url)
@@ -15,7 +15,7 @@ async def scrape_electrum_servers(chain_1209k: str = "tbtc",
     soup = BeautifulSoup(page, "html.parser")  # type: BeautifulSoup
     table_data = soup.find_all("td")  # type: List
 
-    servers = list()  # type: List[Tuple[str, int]]
+    servers = list()  # type: List[Tuple[str, int, str]]
     for i, data in enumerate(table_data):
         if i % 11 == 0 and "." in data.text:  # Every new URL
             host = data.text  # type: str

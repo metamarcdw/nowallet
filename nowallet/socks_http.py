@@ -7,7 +7,7 @@ class SocksHTTPError(Exception):
     pass
 
 async def urlopen(url: str, bauth_tuple=None, loop=None) -> str:
-    bauth=None
+    bauth = None
     if bauth_tuple:
         login, password = bauth_tuple
         bauth = aiohttp.BasicAuth(login, password=password, encoding='latin1')
