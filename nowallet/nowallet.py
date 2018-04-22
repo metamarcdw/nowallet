@@ -15,19 +15,19 @@ logging.basicConfig(level=logging.DEBUG,
 
 import asyncio, io, random, collections, pprint, time, json
 from decimal import Decimal
-from functools import total_ordering
+from functools import total_ordering, wraps
 from urllib import parse
 from typing import (Tuple, List, Set, Dict, KeysView, Any,
                     Union, Callable, Awaitable)
 
-from connectrum.client import StratumClient
-from connectrum.svr_info import ServerInfo
 from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
 from pycoin.tx.TxIn import TxIn
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
+from connectrum.client import StratumClient
+from connectrum.svr_info import ServerInfo
 
 from .subclasses import LexSpendable, LexTxOut, SegwitBIP32Node
 from .keys import derive_key
@@ -207,6 +207,7 @@ def log_time_elapsed(func: Callable) -> Callable:
     """
     Decorator. Times completion of function and logs at level INFO.
     """
+    @wraps(func)
     def inner(*args, **kwargs) -> None:
         """
         Decorator inner function.
