@@ -6,6 +6,7 @@ nowallet.ini
 .cache
 __pycache__
 .mypy_cache
+.pytest_cache
 bin
 nowallet.e4p
 lint.txt

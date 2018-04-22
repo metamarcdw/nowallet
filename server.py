@@ -1,16 +1,19 @@
-from aiohttp import web
 import json, asyncio, sys
+from aiohttp import web
 
 from connectrum.svr_info import ServerInfo
 from connectrum.client import StratumClient
 
 from nowallet.scrape import scrape_electrum_servers
 from nowallet import BTC, TBTC, LTC
-CHAINS = [chain.chain_1209k for chain in (BTC, TBTC, LTC)]
+CHAINS = [_chain.chain_1209k for _chain in (BTC, TBTC, LTC)]
 
 class Server:
-    def __init__(self, chain):
-        self.chain = chain
+    def __init__(self, _chain):
+        self.chain = _chain
+        self.client = None
+        self.connection = None
+        self.server_list = None
         self.app = web.Application()
         self.app.router.add_get('/servers', self.handle)
         self.app.on_startup.append(self.start_background_tasks)
@@ -42,8 +45,9 @@ class Server:
         server_list = list()
         peers = await self.client.RPC("server.peers.subscribe")
         for peer in peers:
-            ip, host, info = peer
-            if info[0] not in ("v1.1", "v1.2"): continue
+            host, info = peer[1:]
+            if info[0] not in ("v1.1", "v1.2"):
+                continue
             proto_port = info[1]
             proto, port = proto_port[0], int(proto_port[1:])
             server = [host, port, proto]
@@ -76,7 +80,7 @@ class Server:
         await app['dispatch']
 
     async def handle(self, request):
-        response_obj = { 'servers' : self.server_list }
+        response_obj = {'servers' : self.server_list}
         return web.json_response(response_obj)
 
 if __name__ == "__main__":
