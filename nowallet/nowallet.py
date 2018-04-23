@@ -769,6 +769,7 @@ class Wallet:
     def _mktx(self,
               out_addr: str,
               dec_amount: Decimal,
+              is_high_fee,
               rbf: bool = False) -> Tuple[Tx, Set[str], int]:
         """
         Builds a standard Bitcoin transaction - in the most naive way.
@@ -777,6 +778,8 @@ class Wallet:
 
         :param out_addr: an address to send to
         :param amount: a Decimal amount in whole BTC
+        :param is_high_fee: A boolean which tells whether the current fee rate
+            is above a certain threshold
         :param rbf: A boolean that says whether to mark Tx as replaceable
         :returns: A not-fully-formed and unsigned Tx object
         """
@@ -787,6 +790,10 @@ class Wallet:
         spendables = list()  # type: List[LexSpendable]
         in_addrs = set()  # type: Set[str]
         del_indexes = list()  # type: List[int]
+
+        # Sort utxos based on current fee rate before coin selection
+        self.utxos.sort(key=lambda utxo: utxo.coin_value,
+                        reverse=not is_high_fee)
 
         # Collect enough utxos for this spend
         # Add them to spent list and delete them from utxo list
@@ -935,7 +942,10 @@ class Wallet:
         :returns: The txid of our new tx, given after a successful broadcast
         :raise: Raises a base Exception if we can't afford the fee
         """
-        t1 = self._mktx(address, amount, rbf=rbf)  # type: Tuple[Tx, Set[str], int]
+        is_high_fee = Wallet.coinkb_to_satb(coin_per_kb) > 100
+        t1 = self._mktx(address, amount,
+                        is_high_fee,
+                        rbf=rbf)  # type: Tuple[Tx, Set[str], int]
         tx, in_addrs, chg_vout = t1
         t2 = self._get_fee(tx, coin_per_kb)  # type: Tuple[int, int]
         fee, tx_vsize = t2
