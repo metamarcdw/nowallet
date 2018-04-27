@@ -1,5 +1,5 @@
-import pytest
 import decimal
+import pytest
 import nowallet
 
 @pytest.fixture

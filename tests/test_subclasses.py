@@ -1,5 +1,7 @@
-import pytest
+# pylint: disable=W0621
+
 import random
+import pytest
 
 from pycoin.tx.TxOut import TxOut
 from pycoin.tx.Spendable import Spendable
