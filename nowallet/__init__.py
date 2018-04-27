@@ -6,5 +6,5 @@ from . import keys
 from . import socks_http
 from . import scrape
 from . import exchange_rate
-from . import subclasses
+from . import bip49
 from .nowallet import *

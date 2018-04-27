@@ -15,11 +15,12 @@ logging.basicConfig(level=logging.DEBUG,
 
 import asyncio, io, random, collections, pprint, time, json
 from decimal import Decimal
-from functools import total_ordering, wraps
+from functools import wraps
 from urllib import parse
 from typing import (Tuple, List, Set, Dict, KeysView, Any,
                     Union, Callable, Awaitable)
 
+from pycoin.serialize import b2h
 from pycoin.ui import standard_tx_out_script
 from pycoin.tx.tx_utils import distribute_from_split_pool, sign_tx
 from pycoin.tx.Tx import Tx
@@ -29,7 +30,7 @@ from pycoin.tx.Spendable import Spendable
 from connectrum.client import StratumClient
 from connectrum.svr_info import ServerInfo
 
-from .subclasses import LexSpendable, LexTxOut, SegwitBIP32Node
+from .bip49 import SegwitBIP32Node
 from .keys import derive_key
 from .socks_http import urlopen
 #import exchange_rate
@@ -113,7 +114,6 @@ class Connection:
             result = await self.queue.get()  # type: List[str]
             await queue_func(result)
 
-@total_ordering
 class History:
     """
     History object. Holds data relevant to a piece of
@@ -157,21 +157,6 @@ class History:
                           self.height, self.timestamp)
         else:
             self.timestamp = time.asctime(time.localtime())
-
-    def __eq__(self, other) -> bool:
-        """
-        Special method __eq__()
-        Compares two History objects for equality.
-        """
-        return (self.height, str(self.tx_obj)) == \
-            (other.height, str(other.tx_obj))
-
-    def __lt__(self, other) -> bool:
-        """
-        Special method __lt__()
-        Compares two History objects by height.
-        """
-        return self.height < other.height
 
     def __str__(self) -> str:
         """
@@ -396,7 +381,7 @@ class Wallet:
         history = list()  # type: List[History]
         for value in self.history.values():
             history.extend(value)
-        history.sort()
+        history.sort(key=lambda h: h.height)
         return history
 
     async def _get_history(self, txids: List[str]) -> List[Tx]:
@@ -787,7 +772,7 @@ class Wallet:
         fee_highball = 100000  # type: int
         total_out = 0  # type: int
 
-        spendables = list()  # type: List[LexSpendable]
+        spendables = list()  # type: List[Spendable]
         in_addrs = set()  # type: Set[str]
         del_indexes = list()  # type: List[int]
 
@@ -800,7 +785,7 @@ class Wallet:
         for i, utxo in enumerate(self.utxos):
             if total_out < amount + fee_highball:
                 self.spent_utxos.append(utxo)
-                spendables.append(LexSpendable.promote(utxo))
+                spendables.append(utxo)
                 in_addrs.add(utxo.address(self.chain.netcode))
                 del_indexes.append(i)
                 total_out += utxo.coin_value
@@ -828,11 +813,12 @@ class Wallet:
         return tx, in_addrs, chg_vout
 
     @staticmethod
-    def _create_bip69_tx(spendables: List[LexSpendable],
+    def _create_bip69_tx(spendables: List[Spendable],
                          payables: List[Tuple[str, int]],
                          rbf: bool,
                          version: int = 1) -> Tx:
-        spendables.sort()
+        spendables.sort(key=lambda utxo: (utxo.as_dict()["tx_hash_hex"],
+                                          utxo.as_dict()["tx_out_index"]))
 
         # Create input list from utxos
         # Set sequence numbers to zero if using RBF.
@@ -844,14 +830,12 @@ class Wallet:
                 txin.sequence = 0
 
         # Create output list from payables
-        txs_out = list()  # type: List[LexTxOut]
+        txs_out = list()  # type: List[TxOut]
         for payable in payables:
             bitcoin_address, coin_value = payable
             script = standard_tx_out_script(bitcoin_address)  # type: bytes
-            txs_out.append(LexTxOut(coin_value, script))
-        txs_out.sort()
-        txs_out = [LexTxOut.demote(txout)
-                   for txout in txs_out]  # type List[TxOut]
+            txs_out.append(TxOut(coin_value, script))
+        txs_out.sort(key=lambda txo: (txo.coin_value, b2h(txo.script)))
 
         tx = Tx(version=version, txs_in=txs_in, txs_out=txs_out)  # type: Tx
         tx.set_unspents(spendables)
