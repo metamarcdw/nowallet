@@ -25,7 +25,8 @@ async def urlopen(url: str, bauth_tuple=None, loop=None) -> str:
                 if resp.status == 200:
                     return await resp.text()
                 else:
-                    raise SocksHTTPError("HTTP response not OK")
+                    raise SocksHTTPError(
+                        "HTTP response not OK: {}".format(resp.status))
     except aiohttp.ClientProxyConnectionError:
         # connection problem
         pass
