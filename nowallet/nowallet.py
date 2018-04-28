@@ -197,10 +197,10 @@ def log_time_elapsed(func: Callable) -> Callable:
         """
         Decorator inner function.
         """
-        start_derivation = time.time()  # type: float
+        start_time = time.time()  # type: float
         func(*args, **kwargs)
-        end_derivation = time.time()  # type: float
-        seconds = end_derivation - start_derivation  # type: float
+        end_time = time.time()  # type: float
+        seconds = end_time - start_time  # type: float
         logging.info("Operation completed in {0:.3f} seconds".format(seconds))
     return inner
 
