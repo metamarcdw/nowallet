@@ -179,13 +179,6 @@ class NowalletApp(App):
         if self.root.ids.sm.current == "main":
             MDDropdownMenu(items=self.menu_items, width_mult=4).open(button)
 
-    def search_for_key(self, search):
-        for change in (True, False):
-            addresses = self.wallet.get_all_known_addresses(change, addr=True)
-            for i, addr in enumerate(addresses):
-                if addr == search:
-                    return self.wallet.get_key(i, change)
-
     def menu_item_handler(self, text):
         # Main menu items
         if "PUB" in text:
@@ -199,7 +192,7 @@ class NowalletApp(App):
         # UTXO menu items
         elif self.root.ids.sm.current == "utxo":
             addr = self.utxo.address(self.chain.netcode)
-            key = self.search_for_key(addr)
+            key = self.wallet.search_for_key(addr)
             if "Private" in text:
                 self.show_dialog("Private key", "", qrdata=key.wif())
             if "Redeem" in text:
