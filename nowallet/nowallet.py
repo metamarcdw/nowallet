@@ -101,7 +101,9 @@ class Connection:
         """
         t = self.client.subscribe(
             method, *args)  # type: Tuple[asyncio.Future, asyncio.Queue]
-        self.queue = t[1]
+        future, queue = t
+        self.queue = queue
+        return future
 
     async def consume_queue(self, queue_func: \
         Callable[[List[str]], Awaitable[None]]) -> None:
@@ -395,7 +397,7 @@ class Wallet:
         """
         history = list()  # type: List[History]
         for value in self.history.values():
-            history.extend(value)
+            history.extend(value["txns"])
         history.sort(key=lambda h: h.height)
         return history
 
@@ -504,7 +506,7 @@ class Wallet:
         return history_obj
 
     def _interpret_history(self,
-                           histories: List[Dict],
+                           statuses: List[str],
                            change: bool = False) -> bool:
         """
         Populates the wallet's data structures based on a list of tx histories.
@@ -518,11 +520,15 @@ class Wallet:
             else self.spend_indicies  # type: List[bool]
         is_empty = True  # type: bool
         # Each iteration represents one key index
-        for history in histories:
-            if history:
+        for status in statuses:
+            if status:
+                index = len(indicies)
                 # Get key/address for current index
-                key = self.get_key(len(indicies), change)  # type: SegwitBIP32Node
+                key = self.get_key(index, change)  # type: SegwitBIP32Node
                 address = self.get_address(key)  # type: str
+                history = self.loop.run_until_complete(
+                    self.connection.listen_rpc(
+                        self.methods["get_history"], [address]))  # type: List[Any]
                 # Reassign historic info for this index
                 txids = [tx["tx_hash"] for tx in history]  # type: List[str]
                 heights = [tx["height"] for tx in history]  # type: List[int]
@@ -532,24 +538,24 @@ class Wallet:
                     self._get_history(txids))  # type: List[Tx]
 
                 # Process all Txs into our History objects
-                futures = list()  # type: List[Awaitable[History]]
-                for i, hist in enumerate(this_history):
-                    futures.append(self._process_history(
-                        hist, address, heights[i]))
+                futures = [self._process_history(hist, address, heights[i])
+                           for i, hist in enumerate(this_history)]  # type: List[Awaitable[History]]
                 processed_history = self.loop.run_until_complete(
                     asyncio.gather(*futures, loop=self.loop))  # type: List[History]
 
                 # Delete Txs that are just recieving change
                 if change:
-                    del_indexes = list()  # type: List[int]
-                    for i, hist in enumerate(processed_history):
-                        if not hist.is_spend:
-                            del_indexes.append(i)
+                    del_indexes = [i for i, hist
+                                   in enumerate(processed_history)
+                                   if not hist.is_spend]
                     processed_history = [hist for i, hist
                                          in enumerate(processed_history)
                                          if i not in del_indexes]
                 if processed_history:
-                    self.history[address] = processed_history
+                    self.history[index] = {
+                        "status": status,
+                        "txns": processed_history
+                    }
 
                 # Adjust our balances for this index
                 t = self.loop.run_until_complete(self._get_balance(
@@ -639,8 +645,8 @@ class Wallet:
             futures = list()  # type: List[Awaitable]
             for i in range(current_index, current_index + Wallet._GAP_LIMIT):
                 addr = self.get_address(self.get_key(i, change)) # type: str
-                futures.append(self.connection.listen_rpc(
-                    self.methods["get_history"], [addr]))
+                futures.append(self.connection.listen_subscribe(
+                    self.methods["subscribe"], [addr]))
 
             result = self.loop.run_until_complete(
                 asyncio.gather(*futures, loop=self.loop))  # type: List[Dict[str, Any]]
@@ -663,9 +669,6 @@ class Wallet:
         begins consuming the queue so we can recieve new tx histories from
         the server asynchronously.
         """
-        addrs = self.get_all_known_addresses()  # type: List[str]
-        for addr in addrs:
-            self.connection.listen_subscribe(self.methods["subscribe"], [addr])
         logging.debug("Listening for updates involving any known address...")
         await self.connection.consume_queue(self._dispatch_result)
 
