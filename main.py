@@ -310,8 +310,7 @@ class NowalletApp(App):
         self.root.ids.wait_text.text = "Deriving Keys.."
         self.wallet = yield Task(
             nowallet.Wallet, email, passphrase,
-            connection, self.loop, self.chain)
-        self.wallet.bech32 = self.bech32
+            connection, self.loop, self.chain, bech32=self.bech32)
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
         self.root.ids.wait_text.text = "Fetching exchange rates.."

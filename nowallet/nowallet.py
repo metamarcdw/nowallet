@@ -228,7 +228,8 @@ class Wallet:
                  passphrase: str,
                  connection: Connection,
                  loop: asyncio.AbstractEventLoop,
-                 chain) -> None:
+                 chain,
+                 bech32=False) -> None:
         """
         Wallet object constructor. Use discover_keys() and listen_to_addresses()
         coroutine method to construct wallet data, and listen for new data from
@@ -263,7 +264,8 @@ class Wallet:
                 chain_code=chain_code,
                 secret_exponent=secret_exp)  # type: SegwitBIP32Node
 
-            path = "49H/{}H/{}H".format(self.chain.bip44, account)  # type: str
+            bip = 84 if bech32 else 49
+            path = "{}H/{}H/{}H".format(bip, self.chain.bip44, account)  # type: str
             self.account_master = \
                 self.mpk.subkey_for_path(path)  # type: SegwitBIP32Node
             self.root_spend_key = \
@@ -274,7 +276,7 @@ class Wallet:
         self.connection = connection  # type: Connection
         self.loop = loop  # type: asyncio.AbstractEventLoop
         self.chain = chain
-        self.bech32 = False
+        self.bech32 = bech32
 
         self.mpk = None  # type: SegwitBIP32Node
         self.account_master = None  # type: SegwitBIP32Node
