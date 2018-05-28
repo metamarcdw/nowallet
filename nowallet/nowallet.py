@@ -379,7 +379,21 @@ class Wallet:
         """
         return self.history.keys()
 
-    def search_for_key(self, search):
+    def search_for_index(self, search, change=False):
+        """
+        Returns the index associated with a given address
+            if it is currently known to us, otherwise returns None.
+
+        :param search: the address to search for
+        :returns: a key index associated with the given address.
+        """
+        addresses = self.get_all_known_addresses(change, addr=True)
+        for i, addr in enumerate(addresses):
+            if addr == search:
+                return i
+        return None
+
+    def search_for_key(self, search, change=False):
         """
         Returns the key associated with a given address
             if it is currently known to us, otherwise returns None.
@@ -387,11 +401,9 @@ class Wallet:
         :param search: the address to search for
         :returns: a SegWitBIP32Node associated with the given address.
         """
-        for change in (True, False):
-            addresses = self.get_all_known_addresses(change, addr=True)
-            for i, addr in enumerate(addresses):
-                if addr == search:
-                    return self.get_key(i, change)
+        index = self.search_for_index(search, change=change)
+        if index:
+            return self.get_key(index, change=change)
         return None
 
     def _update_wallet_balance(self):
