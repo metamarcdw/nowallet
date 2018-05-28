@@ -293,9 +293,13 @@ class Wallet:
         # All wallet TX info. (Does not persist!)
         self.utxos = list()  # type: List[Spendable]
         self.spent_utxos = list()  # type: List[Spendable]
-        self.history = dict()  # type: Dict[str, List[History]]
+
+        self.history = dict()  # type: Dict[Any]
+        self.change_history = dict()  # type: Dict[Any]
+
         self.balance = Decimal("0")  # type: Decimal
         self.zeroconf_balance = Decimal("0")  # type: Decimal
+
         self.new_history = False  # type: bool
 
     @property
@@ -389,6 +393,17 @@ class Wallet:
                 if addr == search:
                     return self.get_key(i, change)
         return None
+
+    def _update_wallet_balance(self):
+        """
+        Updates main balance numbers in Wallet object,
+            by introspection of history dicts.
+        """
+        balance, zeroconf_balance = Decimal(0), Decimal(0)
+        for hist_dict in (self.history, self.change_history):
+            balance += sum(map(lambda h: h["balance"]["confirmed"], hist_dict.values()))
+            zeroconf_balance += sum(map(lambda h: h["balance"]["zeroconf"], hist_dict.values()))
+        self.balance, self.zeroconf_balance = balance, zeroconf_balance
 
     def get_tx_history(self) -> List[History]:
         """
@@ -520,6 +535,9 @@ class Wallet:
         """
         indicies = self.change_indicies if change \
             else self.spend_indicies  # type: List[bool]
+        history_dict = self.change_history if change \
+            else self.history  # type: Dict[Any]
+
         is_empty = True  # type: bool
         # Each iteration represents one key index
         for status in statuses:
@@ -528,9 +546,11 @@ class Wallet:
                 # Get key/address for current index
                 key = self.get_key(index, change)  # type: SegwitBIP32Node
                 address = self.get_address(key)  # type: str
+                real_address = self.get_address(key, addr=True)  # type: str
                 history = self.loop.run_until_complete(
                     self.connection.listen_rpc(
                         self.methods["get_history"], [address]))  # type: List[Any]
+
                 # Reassign historic info for this index
                 txids = [tx["tx_hash"] for tx in history]  # type: List[str]
                 heights = [tx["height"] for tx in history]  # type: List[int]
@@ -540,31 +560,24 @@ class Wallet:
                     self._get_history(txids))  # type: List[Tx]
 
                 # Process all Txs into our History objects
-                futures = [self._process_history(hist, address, heights[i])
+                futures = [self._process_history(hist, real_address, heights[i])
                            for i, hist in enumerate(this_history)]  # type: List[Awaitable[History]]
                 processed_history = self.loop.run_until_complete(
                     asyncio.gather(*futures, loop=self.loop))  # type: List[History]
 
-                # Delete Txs that are just recieving change
-                if change:
-                    del_indexes = [i for i, hist
-                                   in enumerate(processed_history)
-                                   if not hist.is_spend]
-                    processed_history = [hist for i, hist
-                                         in enumerate(processed_history)
-                                         if i not in del_indexes]
                 if processed_history:
-                    self.history[index] = {
-                        "status": status,
+                    # Get balance information
+                    t = self.loop.run_until_complete(self._get_balance(
+                        address))  # type: Tuple[Decimal, Decimal]
+                    confirmed, zeroconf = t
+
+                    history_dict[index] = {
+                        "balance": {
+                            "confirmed": confirmed,
+                            "zeroconf": zeroconf
+                        },
                         "txns": processed_history
                     }
-
-                # Adjust our balances for this index
-                t = self.loop.run_until_complete(self._get_balance(
-                    address))  # type: Tuple[Decimal, Decimal]
-                confirmed, zeroconf = t
-                self.balance += confirmed
-                self.zeroconf_balance += zeroconf
 
                 # Add utxos to our list
                 self.utxos.extend(self.loop.run_until_complete(
@@ -576,6 +589,10 @@ class Wallet:
             else:
                 # Otherwise mark this index as unused
                 indicies.append(False)
+
+        # Adjust our balances
+        self._update_wallet_balance()
+
         return is_empty
 
     async def _interpret_new_history(self,
