@@ -452,7 +452,7 @@ class Wallet:
         Coroutine. Returns the current balance associated with a given address.
 
         :param address: an address string to retrieve a balance for
-        :returns: Future, a Decimal representing the balance
+        :returns: Future, a tuple of Decimals representing the balances.
         """
         result = await self.connection.listen_rpc(
             self.methods["get_balance"], [address])  # type: Dict[str, Any]
@@ -559,6 +559,7 @@ class Wallet:
                 key = self.get_key(index, change)  # type: SegwitBIP32Node
                 address = self.get_address(key)  # type: str
                 real_address = self.get_address(key, addr=True)  # type: str
+
                 history = self.loop.run_until_complete(
                     self.connection.listen_rpc(
                         self.methods["get_history"], [address]))  # type: List[Any]
@@ -619,9 +620,20 @@ class Wallet:
         :param change: a boolean indicating which key index list to use
         :returns: A boolean that is true if all given histories were empty
         """
+        change = False  # type: bool
         is_empty = True  # type: bool
+
         if history:
-            spend_addrs = self.get_all_known_addresses()
+            index = self.search_for_index(address)  # type: int
+            if index is None:
+                change = True
+                index = self.search_for_index(address, change=change)
+                assert index is not None, "Recieving to unknown address. CRITICAL ERROR"
+
+            indicies = self.change_indicies if change else self.spend_indicies  # type: List[int]
+            hist_dict = self.change_history if change else self.history  # type: Dict[str, Any]
+            scripthash = self.get_address(self.get_key(index))  # type: str
+
             # Reassign historic info for new history
             txid = history["tx_hash"]  # type: str
             height = history["height"]  # type: int
@@ -631,20 +643,20 @@ class Wallet:
             new_history = await self._process_history(
                 tx_list.pop(), address, height)  # type: History
 
-            if address in self.history:
+            # Add History object to our history dict
+            if index in hist_dict:
+                hist_list = hist_dict[index]["txns"]
                 if str(new_history.tx_obj) not in \
-                        [str(hist.tx_obj) for hist in self.history[address]]:
-                    self.history[address].append(new_history)
-                else:
-                    # tx confirming
-                    if not new_history.is_spend:
-                        self.balance += new_history.value
-                        self.zeroconf_balance -= new_history.value
-            else:
-                # recieving coins
-                self.history[address] = [new_history]
-                if not new_history.is_spend and address in spend_addrs:
-                    self.zeroconf_balance += new_history.value
+                        [str(hist.tx_obj) for hist in hist_list]:
+                    hist_list.append(new_history)
+
+            # Get/update balance for this index, then for the wallet
+            conf, zconf = self.loop.run_until_complete(
+                self._get_balance(scripthash))
+            current_balance = hist_dict[index]["balance"]
+            current_balance["confirmed"] = conf
+            current_balance["zeroconf"] = zconf
+            self._update_wallet_balance()
 
             # Add new utxo to our list if not already spent
             new_utxos = await self._get_utxos(address)  # type: List[Spendable]
@@ -652,12 +664,9 @@ class Wallet:
                 if str(utxo) not in [str(spent) for spent in self.spent_utxos]:
                     self.utxos.append(utxo)
 
-            # If address is found to belong to a spend index, mark it as used
-            for i in range(len(self.spend_indicies)):
-                key = self.get_key(i, change=False)  # type: SegwitBIP32Node
-                if self.get_address(key) == address:
-                    self.spend_indicies[i] = True
-                    break
+            # Mark this index as used
+            indicies[index] = True
+
             is_empty = False
         return is_empty
 
