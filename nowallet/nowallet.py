@@ -379,7 +379,7 @@ class Wallet:
         """
         return self.history.keys()
 
-    def search_for_index(self, search, change=False):
+    def search_for_index(self, search, addr=False, change=False):
         """
         Returns the index associated with a given address
             if it is currently known to us, otherwise returns None.
@@ -387,13 +387,13 @@ class Wallet:
         :param search: the address to search for
         :returns: a key index associated with the given address.
         """
-        addresses = self.get_all_known_addresses(change, addr=True)
+        addresses = self.get_all_known_addresses(change, addr=addr)
         for i, addr in enumerate(addresses):
             if addr == search:
                 return i
         return None
 
-    def search_for_key(self, search, change=False):
+    def search_for_key(self, search, addr=True, change=False):
         """
         Returns the key associated with a given address
             if it is currently known to us, otherwise returns None.
@@ -401,7 +401,7 @@ class Wallet:
         :param search: the address to search for
         :returns: a SegWitBIP32Node associated with the given address.
         """
-        index = self.search_for_index(search, change=change)
+        index = self.search_for_index(search, addr=addr, change=change)
         if index:
             return self.get_key(index, change=change)
         return None
@@ -609,7 +609,7 @@ class Wallet:
         return is_empty
 
     async def _interpret_new_history(self,
-                                     address: str,
+                                     scripthash: str,
                                      history: Dict[str, Any]) -> bool:
         """
         Coroutine, Populates the wallet's data structures based on a new
@@ -624,15 +624,15 @@ class Wallet:
         is_empty = True  # type: bool
 
         if history:
-            index = self.search_for_index(address)  # type: int
+            index = self.search_for_index(scripthash)  # type: int
             if index is None:
                 change = True
-                index = self.search_for_index(address, change=change)
+                index = self.search_for_index(scripthash, change=change)
                 assert index is not None, "Recieving to unknown address. CRITICAL ERROR"
 
             indicies = self.change_indicies if change else self.spend_indicies  # type: List[int]
             hist_dict = self.change_history if change else self.history  # type: Dict[str, Any]
-            scripthash = self.get_address(self.get_key(index))  # type: str
+            address = self.get_address(self.get_key(index), addr=True)  # type: str
 
             # Reassign historic info for new history
             txid = history["tx_hash"]  # type: str
@@ -646,20 +646,31 @@ class Wallet:
             # Add History object to our history dict
             if index in hist_dict:
                 hist_list = hist_dict[index]["txns"]
-                if str(new_history.tx_obj) not in \
-                        [str(hist.tx_obj) for hist in hist_list]:
+                did_match = False
+                for i, hist in enumerate(hist_list):
+                    if str(new_history.tx_obj) == str(hist.tx_obj):
+                        hist_list[i] = new_history
+                        did_match = True
+                if not did_match:
                     hist_list.append(new_history)
+            else:
+                hist_dict[index] = {
+                    "balance": {
+                        "confirmed": None,
+                        "zeroconf": None
+                    },
+                    "txns": [new_history]
+                }
 
             # Get/update balance for this index, then for the wallet
-            conf, zconf = self.loop.run_until_complete(
-                self._get_balance(scripthash))
+            conf, zconf = await self._get_balance(scripthash)
             current_balance = hist_dict[index]["balance"]
             current_balance["confirmed"] = conf
             current_balance["zeroconf"] = zconf
             self._update_wallet_balance()
 
             # Add new utxo to our list if not already spent
-            new_utxos = await self._get_utxos(address)  # type: List[Spendable]
+            new_utxos = await self._get_utxos(scripthash)  # type: List[Spendable]
             for utxo in new_utxos:
                 if str(utxo) not in [str(spent) for spent in self.spent_utxos]:
                     self.utxos.append(utxo)
@@ -1010,8 +1021,11 @@ class Wallet:
 
         change_address = change_out.address(
             netcode=self.chain.netcode)  # type:str
+        change_key = self.search_for_key(change_address, change=True)
+        scripthash = self.get_address(change_key)
+
         self.connection.listen_subscribe(
-            self.methods["subscribe"], [change_address])
+            self.methods["subscribe"], [scripthash])
         return txid, decimal_fee, tx_vsize
 
     def replace_by_fee(self, hist_obj: History, coin_per_kb: float) -> str:
