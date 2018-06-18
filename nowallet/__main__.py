@@ -91,7 +91,7 @@ def main() -> None:
         sys.exit(loop.run_until_complete(tasks))
     except KeyboardInterrupt:
         # Optionally show a message if the shutdown may take a while
-        print("\nAttempting graceful shutdown, press Ctrl+C again to exit…",
+        print("\nAttempting graceful shutdown, press Ctrl+C again to exit...",
               flush=True)
 
         # Do not show `asyncio.CancelledError` exceptions during shutdown
