@@ -1004,21 +1004,15 @@ class Wallet:
         fee, tx_vsize = t2
 
         decimal_fee = Decimal(str(fee)) / Wallet.COIN  # type: Decimal
-        if not amount + decimal_fee <= self.balance:
-            raise Exception("Insufficient funds to cover fee")
+        total_out = amount + decimal_fee
+        if total_out > self.balance:
+            raise Exception("Insufficient funds.")
 
         self._signtx(tx, in_addrs, fee)
         txid = self.loop.run_until_complete(self.connection.listen_rpc(
             self.methods["broadcast"], [tx.as_hex()]))  # type: str
 
         change_out = tx.txs_out[chg_vout]  # type: TxOut
-        coin_in = Decimal(str(tx.total_in())) / Wallet.COIN  # type: Decimal
-        change = Decimal(str(change_out.coin_value)) / Wallet.COIN  # type: Decimal
-
-        self.balance -= coin_in
-        self.zeroconf_balance += change
-        self.new_history = True
-
         change_address = change_out.address(
             netcode=self.chain.netcode)  # type:str
         change_key = self.search_for_key(change_address, change=True)
