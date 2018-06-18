@@ -25,7 +25,6 @@ def test_derive_keys():
                      "569659408346598921044976623615331125007")
     chain_code = (b"^I\xa3k\xf3jO\xd3%\xd3\x81\x98\xf9\x1f\xb4" +
                   b"\x01:\xd4T\x14\xdc\r\xe6\x16Pn9\x9f\x16kRW")
-    assert keys.derive_key(salt, passphrase, hd=False) == secret_exp
 
     derived_exp, derived_code = keys.derive_key(salt, passphrase)
     assert isinstance(derived_exp, int)
