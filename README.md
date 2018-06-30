@@ -5,7 +5,7 @@
 ### Introduction:
 This project is a secure Bitcoin brainwallet app that will ultimately be 
 meant for desktop and mobile platforms. It was inspired by reports of 
-incidences of Bitcoin being seized physically at border crossings. 
+incidents of Bitcoin being seized physically at border crossings. 
 People need an option for a brainwallet that is secure and easy to use.
 
 It's written in Python and depends on the pycoin and connectrum 
@@ -45,7 +45,7 @@ losing coins forever.
 We have also implemented a full HD wallet compatible with BIP32/44. The 
 current working title is Nowallet, as in, "I'm sorry officer, I have no 
 wallet!"  We are currently in a pre-alpha state. All testers must be 
-able to install dependecies and run from the simple command line interface.
+able to install dependencies and run from the simple command line interface.
 
 If you're interested in testing, you can get some testnet coins here:
 https://testnet.manu.backend.hamburg/faucet
