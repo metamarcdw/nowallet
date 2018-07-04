@@ -227,6 +227,7 @@ class NowalletApp(App):
         is_valid = _amount / self.unit_factor <= self.wallet.balance
         self.root.ids.spend_amount_input.error = not is_valid
 
+    @engine.async
     def send_button_handler(self):
         addr_input = self.root.ids.address_input
         address = addr_input.text.strip()
@@ -245,7 +246,7 @@ class NowalletApp(App):
 
         fee_rate_sat = int(Decimal(self.current_fee))
         fee_rate = nowallet.Wallet.satb_to_coinkb(fee_rate_sat)
-        t = self.wallet.spend(address, amount, fee_rate, rbf=self.rbf)
+        t = yield Task(self.wallet.spend, address, amount, fee_rate, rbf=self.rbf)
         txid, decimal_fee = t[:2]
 
         message = "Added a miner fee of: {} {}".format(
