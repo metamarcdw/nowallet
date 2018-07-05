@@ -1,7 +1,6 @@
-# Nowallet
 
 <h1 align=center>
-<img src="Logo/horizontal.png" width=60%>
+<img src="Logo/horizontal.png" alt="Nowallet" width=60%>
 </h1>
 
 ### Secure, private, and plausibly deniable
