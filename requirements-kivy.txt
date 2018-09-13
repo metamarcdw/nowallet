@@ -3,7 +3,7 @@ certifi==2018.1.18
 chardet==3.0.4
 docutils==0.14
 idna==2.6
-Kivy==1.10.0
+-e git+https://github.com/kivy/kivy@master#egg=kivy
 Kivy-Garden==0.1.4
 -e git+https://gitlab.com/kivymd/KivyMD@master#egg=kivymd
 Pygments==2.2.0
