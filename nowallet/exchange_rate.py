@@ -7,17 +7,17 @@ from .socks_http import urlopen
 
 CURRENCIES = ["USD", "EUR", "GBP", "AUD",
               "CAD", "JPY", "CNY"]  # type: List[str]
-async def fetch_from_api(base_url: str,
-                         chain_1209k: str,
-                         loop=None) -> Dict[str, Any]:
+
+
+async def fetch_from_api(base_url: str, chain_1209k: str, loop=None) -> Dict[str, Any]:
     fiats = ",".join(CURRENCIES)  # type: str
     url = base_url.format(chain_1209k.upper(), fiats)  # type: str
     logging.info("Fetching rates from URL: %s", url)
 
     return json.loads(await urlopen(url, loop=loop))
 
-async def fetch_exchange_rates(chain_1209k: str = "btc",
-                               loop=None) -> Dict[str, Dict]:
+
+async def fetch_exchange_rates(chain_1209k: str = "btc", loop=None) -> Dict[str, Dict]:
     btcav_url = ("https://apiv2.bitcoinaverage.com/indices/" +
                  "global/ticker/short?crypto={}&fiat={}")  # type: str
     ccomp_url = ("https://min-api.cryptocompare.com/data/" +
@@ -38,12 +38,14 @@ async def fetch_exchange_rates(chain_1209k: str = "btc",
     all_rates["ccomp"] = ccomp_json
     return all_rates
 
+
 def main():
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
     result = loop.run_until_complete(
         fetch_exchange_rates())  # type: Dict[str, float]
     print(result)
     loop.close()
+
 
 if __name__ == "__main__":
     main()

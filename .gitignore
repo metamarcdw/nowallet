@@ -16,3 +16,4 @@ MANIFEST
 android-zbar-qrcode
 src
 api_password.txt
+.vscode/
