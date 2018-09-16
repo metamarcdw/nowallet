@@ -982,6 +982,7 @@ class Wallet:
         logging.info("Subscribing to new change address...")
         self.connection.listen_subscribe(
             self.methods["subscribe"], [scripthash])
+        logging.info("Finished subscribing to new change address...")
         return txid, decimal_fee, tx_vsize
 
     def replace_by_fee(self, hist_obj: History, coin_per_kb: float) -> str:
