@@ -148,7 +148,7 @@ class History:
         :param connection: a Connection object for getting a block header
             from the server
         """
-        if self.height:
+        if self.height > 0:
             block_header = await connection.listen_rpc(
                 Wallet.methods["get_header"],
                 [self.height]
@@ -967,9 +967,11 @@ class Wallet:
             raise Exception("Insufficient funds.")
 
         self._signtx(tx, in_addrs, fee)
-        txid = self.loop.run_until_complete(
+        txid = asyncio.ensure_future(
             self.connection.listen_rpc(
-                self.methods["broadcast"], [tx.as_hex()]))  # type: str
+                self.methods["broadcast"], [tx.as_hex()]),
+            loop=self.loop
+        )  # type: str
 
         change_out = tx.txs_out[chg_vout]  # type: TxOut
         change_address = change_out.address(
@@ -977,6 +979,7 @@ class Wallet:
         change_key = self.search_for_key(change_address, change=True)
         scripthash = self.get_address(change_key)
 
+        logging.info("Subscribing to new change address...")
         self.connection.listen_subscribe(
             self.methods["subscribe"], [scripthash])
         return txid, decimal_fee, tx_vsize
