@@ -33,66 +33,84 @@ from pycoin.key import validate
 from pycoin.serialize import b2h
 
 import nowallet
-#from nowallet.exchange_rate import fetch_exchange_rates
+from nowallet.exchange_rate import fetch_exchange_rates
 from settings_json import settings_json
 
 __version__ = nowallet.__version__
 if platform != "android":
     Window.size = (350, 550)
 
+
 # Declare screens
 class LoginScreen(Screen):
     pass
 
+
 class MainScreen(Screen):
     pass
+
 
 class WaitScreen(Screen):
     pass
 
+
 class UTXOScreen(Screen):
     pass
+
 
 class YPUBScreen(Screen):
     pass
 
+
 class PINScreen(Screen):
     pass
 
+
 class ZbarScreen(Screen):
     pass
+
 
 # Declare custom widgets
 class IconLeftSampleWidget(ILeftBodyTouch, MDIconButton):
     pass
 
+
 class BalanceLabel(ButtonBehavior, MDLabel):
     pass
+
 
 class PINButton(MDRaisedButton):
     char = StringProperty()
 
+
 class UTXOListItem(TwoLineListItem):
     utxo = ObjectProperty()
+
 
 class ListItem(TwoLineIconListItem):
     icon = StringProperty("check-circle")
     history = ObjectProperty()
+
     def on_release(self):
         base_url, chain = None, app.chain.chain_1209k
         txid = self.history.tx_obj.id()
         if app.explorer == "blockcypher":
             base_url = "https://live.blockcypher.com/{}/tx/{}/"
-            if app.chain == nowallet.TBTC: chain = "btc-testnet"
+            if app.chain == nowallet.TBTC:
+                chain = "btc-testnet"
         elif app.explorer == "smartbit":
             base_url = "https://{}.smartbit.com.au/tx/{}/"
-            if app.chain == nowallet.BTC: chain = "www"
-            elif app.chain == nowallet.TBTC: chain = "testnet"
+            if app.chain == nowallet.BTC:
+                chain = "www"
+            elif app.chain == nowallet.TBTC:
+                chain = "testnet"
         url = base_url.format(chain, txid)
         open_url(url)
 
+
 class FloatInput(MDTextField):
     pat = re.compile('[^0-9]')
+
     def insert_text(self, substring, from_undo=False):
         pat = self.pat
         if '.' in self.text:
@@ -100,6 +118,7 @@ class FloatInput(MDTextField):
         else:
             s = '.'.join([re.sub(pat, '', s) for s in substring.split('.', 1)])
         return super(FloatInput, self).insert_text(s, from_undo=from_undo)
+
 
 class NowalletApp(App):
     theme_cls = ThemeManager()
@@ -155,12 +174,13 @@ class NowalletApp(App):
                                height=dp(dialog_height),
                                auto_dismiss=False)
 
-        self.dialog.add_action_button("Dismiss",
-                                      action=cb if cb else lambda *x: self.dialog.dismiss())
+        self.dialog.add_action_button(
+            "Dismiss", action=cb if cb else lambda *x: self.dialog.dismiss())
         self.dialog.open()
 
     def start_zbar(self):
-        if platform != "android": return
+        if platform != "android":
+            return
         self.root.ids.sm.current = "zbar"
         self.root.ids.detector.start()
 
@@ -196,7 +216,8 @@ class NowalletApp(App):
             if "Private" in text:
                 self.show_dialog("Private key", "", qrdata=key.wif())
             if "Redeem" in text:
-                if self.bech32: return
+                if self.bech32:
+                    return
                 script = b2h(key.p2wpkh_script())
                 self.show_dialog("Redeem script", "", qrdata=script)
 
@@ -296,28 +317,41 @@ class NowalletApp(App):
     @engine.async
     def do_listen_task(self):
         yield Task(self.listen_task)
+
     def listen_task(self):
         self.loop.run_until_complete(self.wallet.listen_to_addresses())
 
     @engine.async
+    def do_fetch_rates(self):
+        yield Task(self.fetch_rates)
+
+    def fetch_rates(self):
+        self.exchange_rates = self.loop.run_until_complete(
+            fetch_exchange_rates(nowallet.BTC.chain_1209k))
+            # TODO: Use configured chain: self.chain.chain_1209k
+
+    @engine.async
     def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
+
         server, port, proto = yield Task(
             nowallet.get_random_server, self.loop)
         connection = yield Task(
             nowallet.Connection, self.loop, server, port, proto)
-#        connection = yield Task(
-#            nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
+        # connection = yield Task(
+        #     nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
+
         self.root.ids.wait_text.text = "Deriving Keys.."
         self.wallet = yield Task(
             nowallet.Wallet, email, passphrase,
             connection, self.loop, self.chain, bech32=self.bech32)
+
         self.root.ids.wait_text.text = "Fetching history.."
         yield Task(self.wallet.discover_all_keys)
+
         self.root.ids.wait_text.text = "Fetching exchange rates.."
-        self.exchange_rates = {"btcav": {"USD": 12000.0}}
-#        self.exchange_rates = yield Task(self.loop.run_until_complete,
-#            fetch_exchange_rates(self.chain.chain_1209k))
+        self.do_fetch_rates()
+
         self.root.ids.wait_text.text = "Getting fee estimate.."
         coinkb_fee = yield Task(self.wallet.get_fee_estimation)
         self.current_fee = self.estimated_fee = \
@@ -349,6 +383,7 @@ class NowalletApp(App):
         self.root.ids.balance_label.text = self.balance_str(
             fiat=self.fiat_balance)
         self.root.ids.recycleView.data_model.data = []
+
         for hist in self.wallet.get_tx_history():
             verb = "Sent" if hist.is_spend else "Recieved"
             hist_str = "{} {} {}".format(
@@ -375,7 +410,8 @@ class NowalletApp(App):
             "Current Address ({}):\n{}".format(encoding, address)
 
     def update_recieve_qrcode(self):
-        address = self.wallet.get_address(self.wallet.get_next_unused_key(), addr=True)
+        address = self.wallet.get_address(
+            self.wallet.get_next_unused_key(), addr=True)
         amount = Decimal(self.current_coin) / self.unit_factor
         self.root.ids.addr_qrcode.data = \
             "bitcoin:{}?amount={}".format(address, amount)
@@ -435,7 +471,8 @@ class NowalletApp(App):
         return Decimal(str(rate))
 
     def update_amounts(self, text=None, type="coin"):
-        if self.is_amount_inputs_locked: return
+        if self.is_amount_inputs_locked:
+            return
         amount = Decimal(text) if text else Decimal("0")
         rate = self.get_rate() / self.unit_factor
         new_amount = None
@@ -528,6 +565,7 @@ class NowalletApp(App):
                         "secondary_text": utxo.as_dict()["tx_hash_hex"],
                         "utxo": utxo})
 
+
 def open_url(url):
     if platform == 'android':
         ''' Open a webpage in the default Android browser.  '''
@@ -544,6 +582,7 @@ def open_url(url):
     else:
         import webbrowser
         webbrowser.open(url)
+
 
 if __name__ == "__main__":
     app = NowalletApp()

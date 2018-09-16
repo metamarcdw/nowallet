@@ -9,6 +9,7 @@ from pycoin.contrib import segwit_addr
 from pycoin.serialize import b2h_rev
 from pycoin.encoding import hash160
 
+
 class SegwitBIP32Node(BIP32Node):
     def bech32_p2wpkh_address(self) -> str:
         hrp = bech32_hrp_for_netcode(self.netcode())
@@ -36,12 +37,14 @@ class SegwitBIP32Node(BIP32Node):
         hash160_c = self.hash160(use_uncompressed=False)  # type: bytes
         return ScriptPayToAddressWit(b'\0', hash160_c).script()
 
+
 def main():
     secret = "CORRECT HORSE BATTERY STAPLE"  # type: str
     mpk = SegwitBIP32Node.from_master_secret(
         secret.encode("utf-8"))  # type: SegwitBIP32Node
     print(mpk.p2sh_p2wpkh_address())
     print(mpk.bech32_p2wpkh_address())
+
 
 if __name__ == "__main__":
     main()

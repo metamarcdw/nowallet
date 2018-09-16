@@ -5,8 +5,10 @@ from typing import Dict, List, Any
 
 from .socks_http import urlopen
 
-CURRENCIES = ["USD", "EUR", "GBP", "AUD",
-              "CAD", "JPY", "CNY"]  # type: List[str]
+CURRENCIES = [
+    "USD", "EUR", "GBP", "AUD",
+    "CAD", "JPY", "CNY"
+]  # type: List[str]
 
 
 async def fetch_from_api(base_url: str, chain_1209k: str, loop=None) -> Dict[str, Any]:
@@ -22,11 +24,11 @@ async def fetch_exchange_rates(chain_1209k: str = "btc", loop=None) -> Dict[str,
                  "global/ticker/short?crypto={}&fiat={}")  # type: str
     ccomp_url = ("https://min-api.cryptocompare.com/data/" +
                  "price?fsym={}&tsyms={}")  # type: str
-    all_rates = dict()
+    all_rates = {}  # type: Dict[str, Dict[str, Any]]
 
     btcav_json = await fetch_from_api(
         btcav_url, chain_1209k, loop=loop)  # type: Dict[str, Any]
-    btcav_rates = dict()  # type: Dict[str, float]
+    btcav_rates = {}  # type: Dict[str, float]
     for key, value in btcav_json.items():
         symbol = key.replace(chain_1209k.upper(), "")  # type: str
         if symbol in CURRENCIES:
