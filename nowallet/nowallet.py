@@ -1,10 +1,12 @@
 import logging
 import sys
+import os
 FORMAT = "%(asctime)s %(levelname)s: %(message)s"  # type: str
 
 stdout_hdlr = logging.StreamHandler(sys.stdout)  # type: logging.StreamHandler
 stdout_hdlr.setFormatter(logging.Formatter(FORMAT))
-stdout_hdlr.setLevel(logging.INFO)
+stdout_hdlr.setLevel(
+    logging.ERROR if os.environ.get("NW_LOG") == "ERR" else logging.INFO)
 
 file_hdlr = logging.FileHandler(
     filename="nowallet.log", mode="w")  # type: logging.FileHandler
@@ -48,6 +50,7 @@ class Connection:
     Stratum protocol messages.
     """
 
+    #  pylint: disable=E1111
     def __init__(self,
                  loop: asyncio.AbstractEventLoop,
                  server: str,
@@ -161,6 +164,18 @@ class History:
                           self.height, self.timestamp)
         else:
             self.timestamp = time.asctime(time.localtime())
+
+    def as_dict(self) -> Dict[str, Any]:
+        """ Transforms this History object into a dictionary.
+        :returns: A dictionary representation of this History object
+        """
+        return {
+            "txid": self.tx_obj.id(),
+            "is_spend": self.is_spend,
+            "value": str(self.value),
+            "height": self.height,
+            "timestamp": self.timestamp
+        }
 
     def __str__(self) -> str:
         """ Special method __str__()
