@@ -955,8 +955,8 @@ class Wallet:
         else:
             raise ValueError("This transaction is not replaceable")
 
-    def spend(self, address: str, amount: Decimal,
-              coin_per_kb: float, rbf: bool = False) -> Tuple[str, Decimal, int]:
+    def spend(self, address: str, amount: Decimal, coin_per_kb: float,
+              rbf: bool = False, broadcast: bool = True) -> Tuple[Any]:
         """ Gets a new tx from _mktx() and sends it to the server to be broadcast,
         then inserts the new tx into our tx history and includes our change
         utxo, which is currently assumed to be the last output in the Tx.
@@ -965,7 +965,8 @@ class Wallet:
         :param amount: a Decimal amount in whole BTC
         :param coin_per_kb: a fee rate given in whole coins per KB
         :param rbf: a boolean saying whether to mark the tx as replaceable
-        :returns: The txid of our new tx, the total fee, and the vsize
+        :param broadcast: a boolean saying whether to broadcast the tx
+        :returns: (The txid of) our new tx, the total fee, and the vsize
         :raise: Raises a base Exception if we can't afford the fee
         """
         is_high_fee = Wallet.coinkb_to_satb(coin_per_kb) > 100
@@ -982,14 +983,21 @@ class Wallet:
             raise Exception("Insufficient funds.")
 
         self._signtx(tx, in_addrs, fee)
+        if not broadcast:
+            return tx.as_hex(), chg_vout, decimal_fee, tx_vsize
+
+        chg_out = tx.txs_out[chg_vout]  # type: TxOut
+        txid = self.broadcast(tx.as_hex(), chg_out)  # type: str
+        return txid, decimal_fee, tx_vsize
+
+    def broadcast(self, tx_hex: str, chg_out: TxOut) -> str:
         txid = asyncio.ensure_future(
             self.connection.listen_rpc(
-                self.methods["broadcast"], [tx.as_hex()]),
+                self.methods["broadcast"], [tx_hex]),
             loop=self.loop
         )  # type: str
 
-        change_out = tx.txs_out[chg_vout]  # type: TxOut
-        change_address = change_out.address(
+        change_address = chg_out.address(
             netcode=self.chain.netcode)  # type:str
         change_key = self.search_for_key(change_address, change=True)
         scripthash = self.get_address(change_key)
@@ -998,7 +1006,7 @@ class Wallet:
         self.connection.listen_subscribe(
             self.methods["subscribe"], [scripthash])
         logging.info("Finished subscribing to new change address...")
-        return txid, decimal_fee, tx_vsize
+        return txid
 
     def replace_by_fee(self, hist_obj: History, coin_per_kb: float) -> str:
         """ Gets a replacement tx from _create_replacement_tx() and sends it to

@@ -30,6 +30,9 @@ go-spend:
 go-kivy:
 	python3 main.py
 
+go-daemon:
+	export NW_LOG=ERR && python3 nowalletd.py
+
 go-server:
 	python3 server.py tbtc
 
@@ -42,4 +45,4 @@ lint:
 type:
 	mypy --ignore-missing-imports nowallet/*.py > type.txt
 
-.PHONY: clean init init-kivy init-dev install uninstall test go go-spend go-kivy go-server go-gunicorn lint type
+.PHONY: clean init init-kivy init-dev install uninstall test go go-spend go-kivy go-daemon go-server go-gunicorn lint type
