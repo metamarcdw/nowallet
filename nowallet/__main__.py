@@ -20,7 +20,7 @@ async def print_loop(wallet: nowallet.Wallet) -> None:
             wallet.new_history = False
 
 
-def main() -> None:
+async def main() -> None:
     """ Builds a wallet object, discovers keys and listens to addresses.
     Also handles all user IO with help from the print_loop() coroutine function.
     """
@@ -40,6 +40,7 @@ def main() -> None:
     connection = nowallet.Connection(
         loop, server, port, proto)  # type: nowallet.Connection
 #    connection = nowallet.Connection(loop, "mdw.ddns.net", 50002, "s")  # type: nowallet.Connection
+    await connection.do_connect()
 
     email = input("Enter email: ")  # type: str
     passphrase = getpass.getpass("Enter passphrase: ")  # type: str
@@ -50,7 +51,7 @@ def main() -> None:
 
     # type: nowallet.Wallet
     wallet = nowallet.Wallet(email, passphrase, connection, loop, chain)
-    wallet.discover_all_keys()
+    await wallet.discover_all_keys()
 
     if len(sys.argv) > 1 and sys.argv[1].lower() == "spend":
         print("\nConfirmed balance: {} {}".format(
@@ -65,10 +66,12 @@ def main() -> None:
 
         use_rbf = len(sys.argv) > 2 and sys.argv[2].lower(
         ) == "rbf"  # type: bool
-        coin_per_kb = wallet.get_fee_estimation()  # type: float
+        coin_per_kb = await wallet.get_fee_estimation()  # type: float
 
-        t2 = wallet.spend(spend_addr, spend_amount,
-                          coin_per_kb, rbf=use_rbf)  # type: Tuple[str, Decimal, int]
+        t2 = await wallet.spend(
+            spend_addr, spend_amount,
+            coin_per_kb, rbf=use_rbf
+        )  # type: Tuple[str, Decimal, int]
         txid, decimal_fee, tx_vsize = t2
 
         sat_fee = int(decimal_fee * nowallet.Wallet.COIN)  # type: int
@@ -79,10 +82,13 @@ def main() -> None:
             decimal_fee, chain.chain_1209k.upper(), satb_rate))
         print("Transaction sent!\nID: {}".format(txid))
 
-    tasks = asyncio.gather(
+    return asyncio.gather(
         asyncio.ensure_future(wallet.listen_to_addresses()),
         asyncio.ensure_future(print_loop(wallet))
     )
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
 
     # Graceful shutdown code borrowed from:
     # https://stackoverflow.com/questions/30765606/
@@ -90,7 +96,7 @@ def main() -> None:
     try:
         # Here `amain(loop)` is the core coroutine that may spawn any
         # number of tasks
-        sys.exit(loop.run_until_complete(tasks))
+        sys.exit(loop.run_until_complete(main()))
 
     except KeyboardInterrupt:
         # Optionally show a message if the shutdown may take a while
@@ -118,7 +124,3 @@ def main() -> None:
 
     finally:
         loop.close()
-
-
-if __name__ == "__main__":
-    main()

@@ -78,10 +78,9 @@ class Connection:
             disable_cert_verify=(proto != "s")
         )  # type: asyncio.Future
 
-        loop.run_until_complete(self._do_connect())
         self.queue = None  # type: asyncio.Queue
 
-    async def _do_connect(self) -> None:
+    async def do_connect(self) -> None:
         """ Coroutine. Establishes a persistent connection to an Electrum server.
         Awaits the connection because AFAIK an init method can't be async.
         """
@@ -521,7 +520,7 @@ class Wallet:
         logging.debug("Processed history object: %s", history_obj)
         return history_obj
 
-    def _interpret_history(self, statuses: List[str], change: bool = False) -> bool:
+    async def _interpret_history(self, statuses: List[str], change: bool = False) -> bool:
         """ Populates the wallet's data structures based on a list of tx histories.
         Should only be called by discover_keys(),
 
@@ -547,28 +546,25 @@ class Wallet:
             scripthash = self.get_address(key)  # type: str
             address = self.get_address(key, addr=True)  # type: str
 
-            history = self.loop.run_until_complete(
-                self.connection.listen_rpc(
-                    self.methods["get_history"], [scripthash]))  # type: List[Any]
+            history = await self.connection.listen_rpc(
+                    self.methods["get_history"], [scripthash])  # type: List[Any]
 
             # Reassign historic info for this index
             txids = [tx["tx_hash"] for tx in history]  # type: List[str]
             heights = [tx["height"] for tx in history]  # type: List[int]
 
             # Get Tx objects
-            this_history = self.loop.run_until_complete(
-                self._get_history(txids))  # type: List[Tx]
+            this_history = await self._get_history(txids)  # type: List[Tx]
 
             # Process all Txs into our History objects
             futures = [self._process_history(hist, address, heights[i])
                        for i, hist in enumerate(this_history)]  # type: List[Awaitable[History]]
-            processed_history = self.loop.run_until_complete(
-                asyncio.gather(*futures, loop=self.loop))  # type: List[History]
+            processed_history = await asyncio.gather(
+                *futures, loop=self.loop)  # type: List[History]
 
             if processed_history:
                 # Get balance information
-                t = self.loop.run_until_complete(
-                    self._get_balance(scripthash))  # type: Tuple[Decimal, Decimal]
+                t = await self._get_balance(scripthash)  # type: Tuple[Decimal, Decimal]
                 confirmed, zeroconf = t
 
                 history_dict[index] = {
@@ -580,8 +576,7 @@ class Wallet:
                 }
 
             # Add utxos to our list
-            self.utxos.extend(self.loop.run_until_complete(
-                self._get_utxos(scripthash)))
+            self.utxos.extend(await self._get_utxos(scripthash))
 
             # Mark this index as used since it has a history
             indicies.append(True)
@@ -667,7 +662,7 @@ class Wallet:
             is_empty = False
         return is_empty
 
-    def _discover_keys(self, change: bool = False) -> None:
+    async def _discover_keys(self, change: bool = False) -> None:
         """ Iterates through key indicies (_GAP_LIMIT) at a time and retrieves tx
         histories from the server, then populates our data structures using
         _interpret_history, Should be called once for each key root.
@@ -684,18 +679,18 @@ class Wallet:
                 futures.append(self.connection.listen_subscribe(
                     self.methods["subscribe"], [addr]))
 
-            result = self.loop.run_until_complete(
-                asyncio.gather(*futures, loop=self.loop))  # type: List[Dict[str, Any]]
-            quit_flag = self._interpret_history(result, change)
+            result = await asyncio.gather(
+                *futures, loop=self.loop)  # type: List[Dict[str, Any]]
+            quit_flag = await self._interpret_history(result, change)
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
 
     @log_time_elapsed
-    def discover_all_keys(self) -> None:
+    async def discover_all_keys(self) -> None:
         """ Calls discover_keys for change and spend keys. """
         logging.info("Begin discovering tx history...")
         for change in (False, True):
-            self._discover_keys(change=change)
+            await self._discover_keys(change=change)
 
     async def listen_to_addresses(self) -> None:
         """ Coroutine, adds all known addresses to the subscription queue, and
@@ -759,15 +754,14 @@ class Wallet:
         """
         return int((coinkb / 1000) * Wallet.COIN)
 
-    def get_fee_estimation(self):
+    async def get_fee_estimation(self):
         """ Gets a fee estimate from the server.
 
         :returns: A float representing the appropriate fee in coins per KB
         :raise: Raises a base Exception when the server returns -1
         """
-        coin_per_kb = self.loop.run_until_complete(
-            self.connection.listen_rpc(
-                self.methods["estimatefee"], [6]))  # type: float
+        coin_per_kb = await self.connection.listen_rpc(
+            self.methods["estimatefee"], [6])  # type: float
         if coin_per_kb < 0:
             raise Exception("Cannot get a fee estimate")
         logging.info("Fee estimate from server is %f %s/KB",
@@ -955,8 +949,8 @@ class Wallet:
         else:
             raise ValueError("This transaction is not replaceable")
 
-    def spend(self, address: str, amount: Decimal, coin_per_kb: float,
-              rbf: bool = False, broadcast: bool = True) -> Tuple[Any]:
+    async def spend(self, address: str, amount: Decimal, coin_per_kb: float,
+                    rbf: bool = False, broadcast: bool = True) -> Tuple[Any]:
         """ Gets a new tx from _mktx() and sends it to the server to be broadcast,
         then inserts the new tx into our tx history and includes our change
         utxo, which is currently assumed to be the last output in the Tx.
@@ -987,15 +981,12 @@ class Wallet:
             return tx.as_hex(), chg_vout, decimal_fee, tx_vsize
 
         chg_out = tx.txs_out[chg_vout]  # type: TxOut
-        txid = self.broadcast(tx.as_hex(), chg_out)  # type: str
+        txid = await self.broadcast(tx.as_hex(), chg_out)  # type: str
         return txid, decimal_fee, tx_vsize
 
-    def broadcast(self, tx_hex: str, chg_out: TxOut) -> str:
-        txid = asyncio.ensure_future(
-            self.connection.listen_rpc(
-                self.methods["broadcast"], [tx_hex]),
-            loop=self.loop
-        )  # type: str
+    async def broadcast(self, tx_hex: str, chg_out: TxOut) -> str:
+        txid = await self.connection.listen_rpc(
+            self.methods["broadcast"], [tx_hex])  # type: str
 
         change_address = chg_out.address(
             netcode=self.chain.netcode)  # type:str
@@ -1008,7 +999,7 @@ class Wallet:
         logging.info("Finished subscribing to new change address...")
         return txid
 
-    def replace_by_fee(self, hist_obj: History, coin_per_kb: float) -> str:
+    async def replace_by_fee(self, hist_obj: History, coin_per_kb: float) -> str:
         """ Gets a replacement tx from _create_replacement_tx() and sends it to
         the server to be broadcast, then replaces the tx in our tx history and
         subtracts the difference in fees from our balance.
@@ -1023,9 +1014,8 @@ class Wallet:
         new_fee = self._get_fee(tx, coin_per_kb)[0]  # type: int
 
         self._signtx(tx, in_addrs, new_fee)
-        txid = self.loop.run_until_complete(
-            self.connection.listen_rpc(
-                self.methods["broadcast"], [tx.as_hex()]))  # type: str
+        txid = await self.connection.listen_rpc(
+                self.methods["broadcast"], [tx.as_hex()])  # type: str
 
         fee_diff = new_fee - hist_obj.tx_obj.fee()  # type: int
         self.balance -= fee_diff
@@ -1066,7 +1056,7 @@ def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
     #     api_password = infile.read().strip()
     # bauth = ("nowallet", api_password)
 
-    # result = loop.run_until_complete(
+    # result = loop.run_until_complete( TODO: <-- change to await
     #     urlopen("http://y2yrbptubnrlraml.onion/servers",
     #             bauth_tuple=bauth, loop=loop))  # type: str
     # if not result:

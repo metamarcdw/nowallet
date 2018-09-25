@@ -39,7 +39,7 @@ class WalletDaemon:
             if input_ == "@end":
                 sys.exit(0)
             obj = json.loads(input_)
-            self.dispatch_input(obj)
+            await self.dispatch_input(obj)
 
     async def new_history_loop(self):
         while True:
@@ -48,12 +48,12 @@ class WalletDaemon:
                 self.print_history(last_only=True)
                 self.wallet.new_history = False
 
-    def dispatch_input(self, obj):
+    async def dispatch_input(self, obj):
         type_ = obj["type"]
         if type_ == "get_address":
             self.do_get_address()
         elif type_ == "get_feerate":
-            self.do_get_feerate()
+            await self.do_get_feerate()
         elif type_ == "get_balance":
             self.do_get_balance()
         elif type_ == "get_ypub":
@@ -69,8 +69,8 @@ class WalletDaemon:
         output = {"address": address}
         print(json.dumps(output))
 
-    def do_get_feerate(self):
-        feerate = self.wallet.get_fee_estimation()
+    async def do_get_feerate(self):
+        feerate = await self.wallet.get_fee_estimation()
         output = {"feerate": feerate}
         print(json.dumps(output))
 
