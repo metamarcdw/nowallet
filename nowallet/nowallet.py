@@ -685,7 +685,7 @@ class Wallet:
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
 
-    @log_time_elapsed
+    # @log_time_elapsed  TODO: Figure out how to use a decorator on a coroutine method
     async def discover_all_keys(self) -> None:
         """ Calls discover_keys for change and spend keys. """
         logging.info("Begin discovering tx history...")

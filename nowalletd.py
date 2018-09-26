@@ -9,16 +9,19 @@ from pycoin.tx.Tx import Tx
 import nowallet
 
 class WalletDaemon:
-    def __init__(self, _loop, _salt, _passphrase):
+    def __init__(self, _loop):
         self.loop = _loop
 
-        chain = nowallet.TBTC
+        self.chain = nowallet.TBTC
         server, port, proto = nowallet.get_random_server(self.loop)
-        connection = nowallet.Connection(self.loop, server, port, proto)
+        self.connection = nowallet.Connection(self.loop, server, port, proto)
 
-        self.wallet = nowallet.Wallet(_salt, _passphrase, connection, self.loop, chain)
+    async def initialize_wallet(self, _salt, _passphrase):
+        self.wallet = nowallet.Wallet(
+            _salt, _passphrase, self.connection, self.loop, self.chain)
+        await self.wallet.connection.do_connect()
+        await self.wallet.discover_all_keys()
         # self.wallet.bech32 = True
-        self.wallet.discover_all_keys()
         self.print_history()
         self.wallet.new_history = False
 
@@ -59,9 +62,9 @@ class WalletDaemon:
         elif type_ == "get_ypub":
             self.do_get_ypub()
         elif type_ == "mktx":
-            self.do_mktx(obj)
+            await self.do_mktx(obj)
         elif type_ == "broadcast":
-            self.do_broadcast(obj)
+            await self.do_broadcast(obj)
 
     def do_get_address(self):
         key = self.wallet.get_next_unused_key()
@@ -86,11 +89,11 @@ class WalletDaemon:
         output = {"ypub": self.wallet.ypub}
         print(json.dumps(output))
 
-    def do_mktx(self, obj):
+    async def do_mktx(self, obj):
         address, amount, coin_per_kb = \
             obj["address"], Decimal(obj["amount"]), obj["feerate"]
         tx_hex, chg_vout, decimal_fee, tx_vsize = \
-            self.wallet.spend(address, amount, coin_per_kb, rbf=True, broadcast=False)
+            await self.wallet.spend(address, amount, coin_per_kb, rbf=True, broadcast=False)
         output = {
             "tx_hex": tx_hex,
             "vout": chg_vout,
@@ -99,17 +102,18 @@ class WalletDaemon:
         }
         print(json.dumps(output))
 
-    def do_broadcast(self, obj):
+    async def do_broadcast(self, obj):
         tx_hex, chg_vout = obj["tx_hex"], obj["vout"]
         chg_out = Tx.from_hex(tx_hex).txs_out[chg_vout]
-        txid = self.wallet.broadcast(tx_hex, chg_out)
+        txid = await self.wallet.broadcast(tx_hex, chg_out)
         output = {"txid": txid}
         print(json.dumps(output))
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     salt, passphrase = "foo1", "bar1"  # TODO: Get from user somehow
-    daemon = WalletDaemon(loop, salt, passphrase)
+    daemon = WalletDaemon(loop)
+    loop.run_until_complete(daemon.initialize_wallet(salt, passphrase))
 
     tasks = asyncio.gather(
         asyncio.ensure_future(daemon.wallet.listen_to_addresses()),

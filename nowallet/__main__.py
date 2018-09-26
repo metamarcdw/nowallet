@@ -82,7 +82,7 @@ async def main() -> None:
             decimal_fee, chain.chain_1209k.upper(), satb_rate))
         print("Transaction sent!\nID: {}".format(txid))
 
-    return asyncio.gather(
+    await asyncio.gather(
         asyncio.ensure_future(wallet.listen_to_addresses()),
         asyncio.ensure_future(print_loop(wallet))
     )
