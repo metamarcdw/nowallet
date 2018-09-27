@@ -44,7 +44,13 @@ class WalletDaemon:
                 continue
             if input_ == "@end":
                 sys.exit(0)
-            obj = json.loads(input_)
+            try:
+                obj = json.loads(input_)
+            except json.JSONDecodeError as err:
+                self.print_json({
+                    "error": "{}: {}".format(type(err).__name__, str(err))
+                })
+                continue
             await self.dispatch_input(obj)
 
     async def new_history_loop(self):
@@ -55,8 +61,10 @@ class WalletDaemon:
                 self.wallet.new_history = False
 
     async def dispatch_input(self, obj):
-        type_ = obj["type"]
-        if type_ == "get_address":
+        type_ = obj.get("type")
+        if not type_:
+            self.print_json({"error": "Command type was not specified"})
+        elif type_ == "get_address":
             self.do_get_address()
         elif type_ == "get_feerate":
             await self.do_get_feerate()
@@ -68,6 +76,8 @@ class WalletDaemon:
             await self.do_mktx(obj)
         elif type_ == "broadcast":
             await self.do_broadcast(obj)
+        else:
+            self.print_json({"error": "Command type is not supported"})
 
     def do_get_address(self):
         key = self.wallet.get_next_unused_key()
@@ -90,7 +100,11 @@ class WalletDaemon:
 
     async def do_mktx(self, obj):
         address, amount, coin_per_kb = \
-            obj["address"], Decimal(obj["amount"]), obj["feerate"]
+            obj.get("address"), Decimal(obj.get("amount")), obj.get("feerate")
+        if not address or not amount or not coin_per_kb:
+            self.print_json({"error": "Command parameters are not correct"})
+            return
+
         tx_hex, chg_vout, decimal_fee, tx_vsize = \
             await self.wallet.spend(address, amount, coin_per_kb, rbf=True, broadcast=False)
         tx_info = {
@@ -102,7 +116,11 @@ class WalletDaemon:
         self.print_json({"tx_info": tx_info})
 
     async def do_broadcast(self, obj):
-        tx_hex, chg_vout = obj["tx_hex"], obj["vout"]
+        tx_hex, chg_vout = obj.get("tx_hex"), obj.get("vout")
+        if not tx_hex or not chg_vout:
+            self.print_json({"error": "Command parameters are not correct"})
+            return
+
         chg_out = Tx.from_hex(tx_hex).txs_out[chg_vout]
         txid = await self.wallet.broadcast(tx_hex, chg_out)
         self.print_json({"txid": txid})
