@@ -25,14 +25,17 @@ class WalletDaemon:
         self.print_history()
         self.wallet.new_history = False
 
+    def print_json(self, output):
+        print(json.dumps(output))
+
     def print_history(self, last_only=False):
-        history = list(map(lambda h: h.as_dict(), self.wallet.get_tx_history()))
-        utxos = list(map(lambda u: u.as_dict(), self.wallet.utxos))
-        output = {
+        history = [h.as_dict() for h in self.wallet.get_tx_history()]
+        utxos = [u.as_dict() for u in self.wallet.utxos]
+        wallet_info = {
             "tx_history": history[-1] if last_only else history,
             "utxos": utxos
         }
-        print(json.dumps(output))
+        self.print_json({"wallet_info": wallet_info})
 
     async def input_loop(self):
         while True:
@@ -69,45 +72,40 @@ class WalletDaemon:
     def do_get_address(self):
         key = self.wallet.get_next_unused_key()
         address = self.wallet.get_address(key, addr=True)
-        output = {"address": address}
-        print(json.dumps(output))
+        self.print_json({"address": address})
 
     async def do_get_feerate(self):
         feerate = await self.wallet.get_fee_estimation()
-        output = {"feerate": feerate}
-        print(json.dumps(output))
+        self.print_json({"feerate": feerate})
 
     def do_get_balance(self):
         balances = {
             "confirmed": str(self.wallet.balance),
             "zeroconf": str(self.wallet.zeroconf_balance)
         }
-        output = {"balance": balances}
-        print(json.dumps(output))
+        self.print_json({"balance": balances})
 
     def do_get_ypub(self):
-        output = {"ypub": self.wallet.ypub}
-        print(json.dumps(output))
+        self.print_json({"ypub": self.wallet.ypub})
 
     async def do_mktx(self, obj):
         address, amount, coin_per_kb = \
             obj["address"], Decimal(obj["amount"]), obj["feerate"]
         tx_hex, chg_vout, decimal_fee, tx_vsize = \
             await self.wallet.spend(address, amount, coin_per_kb, rbf=True, broadcast=False)
-        output = {
+        tx_info = {
             "tx_hex": tx_hex,
             "vout": chg_vout,
             "fee": str(decimal_fee),
             "vsize": tx_vsize
         }
-        print(json.dumps(output))
+        self.print_json({"tx_info": tx_info})
 
     async def do_broadcast(self, obj):
         tx_hex, chg_vout = obj["tx_hex"], obj["vout"]
         chg_out = Tx.from_hex(tx_hex).txs_out[chg_vout]
         txid = await self.wallet.broadcast(tx_hex, chg_out)
-        output = {"txid": txid}
-        print(json.dumps(output))
+        self.print_json({"txid": txid})
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
