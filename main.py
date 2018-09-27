@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 import re
 import asyncio
+import logging
 from aiohttp.client_exceptions import ClientConnectorError
 from decimal import Decimal
 
@@ -139,6 +140,7 @@ class NowalletApp(App):
         self.is_amount_inputs_locked = False
         self.fiat_balance = False
         self.bech32 = False
+        self.exchange_rates = None
 
         self.menu_items = [{"viewclass": "MDMenuItem",
                             "text": "View YPUB"},
@@ -248,11 +250,7 @@ class NowalletApp(App):
         is_valid = _amount / self.unit_factor <= self.wallet.balance
         self.root.ids.spend_amount_input.error = not is_valid
 
-    @engine.async
     def do_spend(self, address, amount, fee_rate):
-        yield Task(self.spend, address, amount, fee_rate)
-
-    def spend(self, address, amount, fee_rate):
         self.spend_tuple = self.loop.run_until_complete(
             self.wallet.spend(address, amount, fee_rate, rbf=self.rbf))
 
@@ -330,11 +328,7 @@ class NowalletApp(App):
     def listen_task(self):
         self.loop.run_until_complete(self.wallet.listen_to_addresses())
 
-    @engine.async
     def do_fetch_rates(self):
-        yield Task(self.fetch_rates)
-
-    def fetch_rates(self):
         self.exchange_rates = self.loop.run_until_complete(
             fetch_exchange_rates(nowallet.BTC.chain_1209k))
             # TODO: Use configured chain: self.chain.chain_1209k
