@@ -319,30 +319,23 @@ class NowalletApp(App):
         self.update_screens()
         self.root.ids.sm.current = "main"
         Clock.schedule_interval(self.check_new_history, 1)
+        logging.info("Checking for new history.")
         self.do_listen_task()
 
     @engine.async
     def do_listen_task(self):
-        yield Task(self.listen_task)
-
-    def listen_task(self):
-        self.loop.run_until_complete(self.wallet.listen_to_addresses())
-
-    def do_fetch_rates(self):
-        self.exchange_rates = self.loop.run_until_complete(
-            fetch_exchange_rates(nowallet.BTC.chain_1209k))
-            # TODO: Use configured chain: self.chain.chain_1209k
+        yield Task(self.loop.run_until_complete, self.wallet.listen_to_addresses())
+        logging.info("Listening for new transactions.")
 
     @engine.async
     def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
 
-        server, port, proto = yield Task(
-            nowallet.get_random_server, self.loop)
-        connection = yield Task(
-            nowallet.Connection, self.loop, server, port, proto)
+        server, port, proto = yield Task(nowallet.get_random_server, self.loop)
+        connection = nowallet.Connection(self.loop, server, port, proto)
         # connection = yield Task(
         #     nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
+        yield Task(self.loop.run_until_complete, connection.do_connect())
 
         self.root.ids.wait_text.text = "Deriving Keys.."
         self.wallet = yield Task(
@@ -350,15 +343,16 @@ class NowalletApp(App):
             connection, self.loop, self.chain, bech32=self.bech32)
 
         self.root.ids.wait_text.text = "Fetching history.."
-        yield Task(self.wallet.discover_all_keys)
+        yield Task(self.loop.run_until_complete, self.wallet.discover_all_keys())
 
         self.root.ids.wait_text.text = "Fetching exchange rates.."
-        self.do_fetch_rates()
+        self.exchange_rates = yield Task(
+            self.loop.run_until_complete, fetch_exchange_rates(nowallet.BTC.chain_1209k))
 
         self.root.ids.wait_text.text = "Getting fee estimate.."
-        coinkb_fee = yield Task(self.wallet.get_fee_estimation)
-        self.current_fee = self.estimated_fee = \
-            nowallet.Wallet.coinkb_to_satb(coinkb_fee)
+        coinkb_fee = yield Task(self.loop.run_until_complete, self.wallet.get_fee_estimation())
+        self.current_fee = self.estimated_fee = nowallet.Wallet.coinkb_to_satb(coinkb_fee)
+        logging.info("Finished 'doing login tasks'")
 
     def update_screens(self):
         self.update_balance_screen()
