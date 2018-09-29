@@ -2,7 +2,7 @@ import sys
 import asyncio
 import getpass
 from decimal import Decimal
-from aiohttp.client_errors import ClientConnectorError
+from aiohttp.client_exceptions import ClientConnectorError
 from typing import List, Tuple, Any
 
 from . import nowallet

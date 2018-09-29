@@ -4,7 +4,7 @@ import asyncio
 
 from decimal import Decimal
 from aioconsole import ainput
-from aiohttp.client_errors import ClientConnectorError
+from aiohttp.client_exceptions import ClientConnectorError
 from pycoin.tx.Tx import Tx
 
 import nowallet
