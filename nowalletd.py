@@ -4,6 +4,7 @@ import asyncio
 
 from decimal import Decimal
 from aioconsole import ainput
+from aiohttp.client_errors import ClientConnectorError
 from pycoin.tx.Tx import Tx
 
 import nowallet
@@ -19,8 +20,14 @@ class WalletDaemon:
     async def initialize_wallet(self, _salt, _passphrase, bech32, rbf):
         self.wallet = nowallet.Wallet(
             _salt, _passphrase, self.connection, self.loop, self.chain)
-        await self.wallet.connection.do_connect()
-        await self.wallet.discover_all_keys()
+        try:
+            await self.wallet.connection.do_connect()
+            await self.wallet.discover_all_keys()
+        except ClientConnectorError:
+            self.print_json({
+                "error": "Make sure Tor is installed and running before using nowalletd."
+            })
+            sys.exit(1)
         self.wallet.bech32 = bech32
         self.rbf = rbf
         self.print_history()

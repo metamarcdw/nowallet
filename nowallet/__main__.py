@@ -2,6 +2,7 @@ import sys
 import asyncio
 import getpass
 from decimal import Decimal
+from aiohttp.client_errors import ClientConnectorError
 from typing import List, Tuple, Any
 
 from . import nowallet
@@ -35,12 +36,15 @@ async def main() -> None:
     chain = nowallet.TBTC
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
 
-    t1 = nowallet.get_random_server(loop)  # type: List[Any]
-    server, port, proto = t1
-    connection = nowallet.Connection(
-        loop, server, port, proto)  # type: nowallet.Connection
-#    connection = nowallet.Connection(loop, "mdw.ddns.net", 50002, "s")  # type: nowallet.Connection
-    await connection.do_connect()
+    try:
+        t1 = nowallet.get_random_server(loop)  # type: List[Any]
+        server, port, proto = t1
+        connection = nowallet.Connection(
+            loop, server, port, proto)  # type: nowallet.Connection
+        await connection.do_connect()
+    except ClientConnectorError:
+        print("Make sure Tor is installed and running before using Nowallet.")
+        sys.exit(1)
 
     email = input("Enter email: ")  # type: str
     passphrase = getpass.getpass("Enter passphrase: ")  # type: str
