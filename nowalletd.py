@@ -16,12 +16,13 @@ class WalletDaemon:
         server, port, proto = nowallet.get_random_server(self.loop)
         self.connection = nowallet.Connection(self.loop, server, port, proto)
 
-    async def initialize_wallet(self, _salt, _passphrase):
+    async def initialize_wallet(self, _salt, _passphrase, bech32, rbf):
         self.wallet = nowallet.Wallet(
             _salt, _passphrase, self.connection, self.loop, self.chain)
         await self.wallet.connection.do_connect()
         await self.wallet.discover_all_keys()
-        # self.wallet.bech32 = True
+        self.wallet.bech32 = bech32
+        self.rbf = rbf
         self.print_history()
         self.wallet.new_history = False
 
@@ -106,7 +107,7 @@ class WalletDaemon:
             return
 
         tx_hex, chg_vout, decimal_fee, tx_vsize = \
-            await self.wallet.spend(address, amount, coin_per_kb, rbf=True, broadcast=False)
+            await self.wallet.spend(address, amount, coin_per_kb, rbf=self.rbf, broadcast=False)
         tx_info = {
             "tx_hex": tx_hex,
             "vout": chg_vout,
@@ -126,10 +127,18 @@ class WalletDaemon:
         self.print_json({"txid": txid})
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("salt", help="You must supply a salt to create a wallet.")
+    parser.add_argument("passphrase", help="You must supply a passphrase to create a wallet.")
+    parser.add_argument("--bech32", help="Create a Bech32 wallet.", action="store_true")
+    parser.add_argument("--rbf", help="Mark transactions as replaceable.", action="store_true")
+    args = parser.parse_args()
+
     loop = asyncio.get_event_loop()
-    salt, passphrase = "foo1", "bar1"  # TODO: Get from user somehow
     daemon = WalletDaemon(loop)
-    loop.run_until_complete(daemon.initialize_wallet(salt, passphrase))
+    loop.run_until_complete(daemon.initialize_wallet(
+        args.salt, args.passphrase, args.bech32, args.rbf))
 
     tasks = asyncio.gather(
         asyncio.ensure_future(daemon.wallet.listen_to_addresses()),

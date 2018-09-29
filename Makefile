@@ -31,7 +31,7 @@ go-kivy:
 	python3 main.py
 
 go-daemon:
-	export NW_LOG=ERR && python3 nowalletd.py
+	export NW_LOG=ERR && python3 nowalletd.py foo1 bar1
 
 go-server:
 	python3 server.py tbtc
