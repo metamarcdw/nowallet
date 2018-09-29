@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
+import sys
 import re
 import asyncio
 import logging
+from aiosocks import SocksConnectionError
 from aiohttp.client_exceptions import ClientConnectorError
 from decimal import Decimal
 
@@ -310,8 +312,7 @@ class NowalletApp(App):
         self.root.ids.sm.current = "wait"
         try:
             self.do_login_tasks(email, passphrase)
-        except ClientConnectorError:
-            import sys
+        except (SocksConnectionError, ClientConnectorError):
             self.show_dialog("Error",
                              "Make sure Tor/Orbot is installed and running before using Nowallet.",
                              cb=lambda x: sys.exit(1))

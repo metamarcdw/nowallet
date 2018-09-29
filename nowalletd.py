@@ -4,6 +4,7 @@ import asyncio
 
 from decimal import Decimal
 from aioconsole import ainput
+from aiosocks import SocksConnectionError
 from aiohttp.client_exceptions import ClientConnectorError
 from pycoin.tx.Tx import Tx
 
@@ -20,14 +21,9 @@ class WalletDaemon:
     async def initialize_wallet(self, _salt, _passphrase, bech32, rbf):
         self.wallet = nowallet.Wallet(
             _salt, _passphrase, self.connection, self.loop, self.chain)
-        try:
-            await self.wallet.connection.do_connect()
-            await self.wallet.discover_all_keys()
-        except ClientConnectorError:
-            self.print_json({
-                "error": "Make sure Tor is installed and running before using nowalletd."
-            })
-            sys.exit(1)
+        await self.wallet.connection.do_connect()
+        await self.wallet.discover_all_keys()
+
         self.wallet.bech32 = bech32
         self.rbf = rbf
         self.print_history()
@@ -143,9 +139,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     loop = asyncio.get_event_loop()
-    daemon = WalletDaemon(loop)
-    loop.run_until_complete(daemon.initialize_wallet(
-        args.salt, args.passphrase, args.bech32, args.rbf))
+    try:
+        daemon = WalletDaemon(loop)
+        loop.run_until_complete(daemon.initialize_wallet(
+            args.salt, args.passphrase, args.bech32, args.rbf))
+    except (SocksConnectionError, ClientConnectorError):
+        self.print_json({
+            "error": "Make sure Tor is installed and running before using nowalletd."
+        })
+        sys.exit(1)
 
     tasks = asyncio.gather(
         asyncio.ensure_future(daemon.wallet.listen_to_addresses()),

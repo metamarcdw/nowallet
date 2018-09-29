@@ -1,7 +1,9 @@
 import sys
 import asyncio
 import getpass
+
 from decimal import Decimal
+from aiosocks import SocksConnectionError
 from aiohttp.client_exceptions import ClientConnectorError
 from typing import List, Tuple, Any
 
@@ -42,7 +44,7 @@ async def main() -> None:
         connection = nowallet.Connection(
             loop, server, port, proto)  # type: nowallet.Connection
         await connection.do_connect()
-    except ClientConnectorError:
+    except (SocksConnectionError, ClientConnectorError):
         print("Make sure Tor is installed and running before using Nowallet.")
         sys.exit(1)
 
