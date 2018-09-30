@@ -1,6 +1,7 @@
 import sys
 import json
 import asyncio
+import argparse
 
 from decimal import Decimal
 from aioconsole import ainput
@@ -13,17 +14,22 @@ import nowallet
 class WalletDaemon:
     def __init__(self, _loop):
         self.loop = _loop
-
         self.chain = nowallet.TBTC
-        server, port, proto = nowallet.get_random_server(self.loop)
-        self.connection = nowallet.Connection(self.loop, server, port, proto)
 
     async def initialize_wallet(self, _salt, _passphrase, bech32, rbf):
-        self.wallet = nowallet.Wallet(
-            _salt, _passphrase, self.connection, self.loop, self.chain)
-        await self.wallet.connection.do_connect()
-        await self.wallet.discover_all_keys()
+        try:
+            server, port, proto = await nowallet.get_random_server(self.loop)
+            connection = nowallet.Connection(self.loop, server, port, proto)
+            self.wallet = nowallet.Wallet(
+                _salt, _passphrase, connection, self.loop, self.chain)
+            await connection.do_connect()
+        except (SocksConnectionError, ClientConnectorError):
+            self.print_json({
+                "error": "Make sure Tor is installed and running before using nowalletd."
+            })
+            sys.exit(1)
 
+        await self.wallet.discover_all_keys()
         self.wallet.bech32 = bech32
         self.rbf = rbf
         self.print_history()
@@ -130,7 +136,6 @@ class WalletDaemon:
         self.print_json({"txid": txid})
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("salt", help="You must supply a salt to create a wallet.")
     parser.add_argument("passphrase", help="You must supply a passphrase to create a wallet.")
@@ -139,15 +144,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     loop = asyncio.get_event_loop()
-    try:
-        daemon = WalletDaemon(loop)
-        loop.run_until_complete(daemon.initialize_wallet(
-            args.salt, args.passphrase, args.bech32, args.rbf))
-    except (SocksConnectionError, ClientConnectorError):
-        self.print_json({
-            "error": "Make sure Tor is installed and running before using nowalletd."
-        })
-        sys.exit(1)
+    daemon = WalletDaemon(loop)
+
+    loop.run_until_complete(daemon.initialize_wallet(
+        args.salt, args.passphrase, args.bech32, args.rbf))
 
     tasks = asyncio.gather(
         asyncio.ensure_future(daemon.wallet.listen_to_addresses()),
