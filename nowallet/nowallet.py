@@ -84,12 +84,7 @@ class Connection:
         """ Coroutine. Establishes a persistent connection to an Electrum server.
         Awaits the connection because AFAIK an init method can't be async.
         """
-        try:
-            await self.connection
-        except Exception:
-            logging.error("Unable to connect to server:", exc_info=True)
-            sys.exit(1)
-
+        await self.connection
         logging.info("Connected to server")
 
     async def listen_rpc(self, method: str, args: List) -> Any:
@@ -1041,31 +1036,35 @@ class Wallet:
         return "".join(str_)
 
 
-def get_random_server(loop: asyncio.AbstractEventLoop) -> List[Any]:
+async def get_random_server(loop: asyncio.AbstractEventLoop,
+                            use_api: bool = False) -> List[Any]:
     """ Grabs a random Electrum server from a list that it
     gets from our REST api.
 
     :param chain: Our current chain info
+    :param use_api: Should we try using the API to get servers?
     :returns: A server info list for a random Electrum server
     :raise: Raises a base Exception if there are no servers up on 1209k
     """
-    # TODO: Uncomment this section when the REST api is deployed
+    servers = None
+    if use_api:
+        logging.info("Fetching server list from REST api.")
+        with open("api_password_dev.txt", "r") as infile:
+            api_password = infile.read().strip()
+        bauth = ("nowallet", api_password)
 
-    # logging.info("Fetching server list from REST api.")
-    # with open("api_password_dev.txt", "r") as infile:
-    #     api_password = infile.read().strip()
-    # bauth = ("nowallet", api_password)
+        result = await urlopen(
+            "http://y2yrbptubnrlraml.onion/servers",
+            bauth_tuple=bauth, loop=loop
+        )  # type: str
+        if not result:
+            logging.warning("Cannot get data from REST api.")
+            result = json.dumps({"servers": []})
+        servers = json.loads(result)["servers"]  # type: List[List[Any]]
 
-    # result = loop.run_until_complete( TODO: <-- change to await
-    #     urlopen("http://y2yrbptubnrlraml.onion/servers",
-    #             bauth_tuple=bauth, loop=loop))  # type: str
-    # if not result:
-    #     logging.warning("Cannot get data from REST api.")
-    #     result = json.dumps({"servers": []})
-    # servers = json.loads(result)["servers"]  # type: List[List[Any]]
-    # if not servers:
-    #     logging.warning("No electrum servers found!")
-    servers = load_servers_json()
+    if not servers:
+        logging.warning("No electrum servers found!")
+        servers = load_servers_json()
     return random.choice(servers)
 
 
