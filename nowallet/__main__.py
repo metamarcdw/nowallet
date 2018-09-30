@@ -39,7 +39,7 @@ async def main() -> None:
     loop = asyncio.get_event_loop()  # type: asyncio.AbstractEventLoop
 
     try:
-        t1 = nowallet.get_random_server(loop)  # type: List[Any]
+        t1 = await nowallet.get_random_server(loop)  # type: List[Any]
         server, port, proto = t1
         connection = nowallet.Connection(
             loop, server, port, proto)  # type: nowallet.Connection
