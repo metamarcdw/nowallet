@@ -335,8 +335,6 @@ class NowalletApp(App):
         server, port, proto = yield Task(
             self.loop.run_until_complete, nowallet.get_random_server(self.loop))
         connection = nowallet.Connection(self.loop, server, port, proto)
-        # connection = yield Task(
-        #     nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
         yield Task(self.loop.run_until_complete, connection.do_connect())
 
         self.root.ids.wait_text.text = "Deriving Keys.."
