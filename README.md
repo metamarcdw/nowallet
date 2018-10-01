@@ -52,7 +52,7 @@ wallet!"  We are currently in a pre-alpha state. All testers must be
 able to install dependencies and run from the simple command line interface.
 
 If you're interested in testing, you can get some testnet coins here:
-https://testnet.manu.backend.hamburg/faucet
+https://coinfaucet.eu/en/btc-testnet/
 
 ### SCREENSHOTS:
 ![Login](https://github.com/metamarcdw/nowallet/blob/master/screens/Screenshot_login.png)
