@@ -29,9 +29,10 @@ class WalletDaemon:
             })
             sys.exit(1)
 
-        await self.wallet.discover_all_keys()
         self.wallet.bech32 = bech32
         self.rbf = rbf
+
+        await self.wallet.discover_all_keys()
         self.print_history()
         self.wallet.new_history = False
 
