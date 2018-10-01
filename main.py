@@ -332,7 +332,8 @@ class NowalletApp(App):
     def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
 
-        server, port, proto = yield Task(nowallet.get_random_server, self.loop)
+        server, port, proto = yield Task(
+            self.loop.run_until_complete, nowallet.get_random_server(self.loop))
         connection = nowallet.Connection(self.loop, server, port, proto)
         # connection = yield Task(
         #     nowallet.Connection, self.loop, "mdw.ddns.net", 50002, "s")
