@@ -5,7 +5,7 @@ async-timeout==2.0.0
 attrs==17.4.0
 beautifulsoup4==4.6.0
 chardet==3.0.4
--e git+https://github.com/metamarcdw/connectrum@master#egg=connectrum
+-e git+https://github.com/coinkite/connectrum@master#egg=connectrum
 idna==2.6
 multidict==4.1.0
 pbkdf2==1.3
