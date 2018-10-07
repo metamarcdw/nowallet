@@ -116,6 +116,7 @@ class Connection:
         :param queue_func: A function to call when new responses arrive
         """
         while True:
+            logging.info("Awaiting queue..")
             result = await self.queue.get()  # type: List[str]
             await queue_func(result)
 
@@ -152,12 +153,12 @@ class History:
             )  # type: Dict[str, Any]
 
             block_time = block_header["timestamp"]
-            self.timestamp = time.asctime(time.localtime(block_time))
+            self.timestamp = block_time
 
             logging.debug("Got timestamp %d from block at height %s",
                           self.height, self.timestamp)
         else:
-            self.timestamp = time.asctime(time.localtime())
+            self.timestamp = int(time.time())
 
     def as_dict(self) -> Dict[str, Any]:
         """ Transforms this History object into a dictionary.
@@ -179,10 +180,16 @@ class History:
             "<History: TXID:{} is_spend:{} " +
             "value:{} height:{} timestamp:{}>"
         ).format(self.tx_obj.id(), self.is_spend,
-                 self.value, self.height, self.timestamp)
+                 self.value, self.height, time.asctime(time.localtime(self.timestamp)))
 
     def __repr__(self) -> str:
         return str(self)
+
+    def __hash__(self) -> int:
+        return hash(self.tx_obj.id())
+
+    def __eq__(self, other) -> bool:
+        return self.tx_obj.id() == other.tx_obj.id()
 
 
 Chain = collections.namedtuple("Chain", ["netcode", "chain_1209k", "bip44"])
@@ -314,7 +321,7 @@ class Wallet:
         """
         return self.account_master.hwif()
 
-    def get_key(self, index: int, change: bool = False) -> SegwitBIP32Node:
+    def get_key(self, index: int, change: bool) -> SegwitBIP32Node:
         """ Returns a specified pycoin.key object.
 
         :param index: The index of the desired key
@@ -357,7 +364,7 @@ class Wallet:
             for the given root
         """
         indicies = self.change_indicies if change else self.spend_indicies  # type: List[bool]
-        return [self.get_address(self.get_key(i, change=change), addr=addr)
+        return [self.get_address(self.get_key(i, change), addr=addr)
                 for i in range(len(indicies))]  # type: List[str]
 
     def get_all_used_addresses(self) -> List[str]:
@@ -390,7 +397,7 @@ class Wallet:
         """
         index = self.search_for_index(search, addr=addr, change=change)
         if index:
-            return self.get_key(index, change=change)
+            return self.get_key(index, change)
         return None
 
     def _update_wallet_balance(self):
@@ -414,7 +421,10 @@ class Wallet:
         history = []  # type: List[History]
         for value in self.history.values():
             history.extend(value["txns"])
-        history.sort(key=lambda h: h.height)
+        for value in self.change_history.values():
+            history.extend(filter(lambda t: t.is_spend, value["txns"]))
+        history = list(set(history))  # Dedupe
+        history.sort(reverse=True, key=lambda h: h.timestamp)
         return history
 
     async def _get_history(self, txids: List[str]) -> List[Tx]:
@@ -595,18 +605,23 @@ class Wallet:
         is_empty = True  # type: bool
 
         if history:
+            logging.info("Interpreting new history..")
             index = self.search_for_index(scripthash)  # type: int
             if index is None:
                 change = True
                 index = self.search_for_index(scripthash, change=change)
                 assert index is not None, "Recieving to unknown address. CRITICAL ERROR"
+            address = self.get_address(self.get_key(index, change), addr=True)
+
+            logging.info("New history is for address: {}".format(address))
+            logging.info("New history is for change: {}".format(change))
 
             indicies = self.change_indicies if change \
                 else self.spend_indicies  # type: List[int]
             hist_dict = self.change_history if change \
                 else self.history  # type: Dict[str, Any]
             address = self.get_address(
-                self.get_key(index), addr=True)  # type: str
+                self.get_key(index, change), addr=True)  # type: str
 
             # Reassign historic info for new history
             txid = history["tx_hash"]  # type: str
@@ -703,13 +718,13 @@ class Wallet:
         :param result: an address that has some new tx history
         """
         addr = result[0]  # type: str
-        logging.debug("Dispatched a new history for address %s", addr)
         history = await self.connection.listen_rpc(
             self.methods["get_history"], [addr])  # type: List[Dict[str, Any]]
         empty_flag = await self._interpret_new_history(
             addr, history[0])  # type: bool
         if not empty_flag:
             self.new_history = True
+            logging.info("Dispatched a new history for address %s", addr)
 
     @staticmethod
     def _calculate_vsize(tx: Tx) -> int:

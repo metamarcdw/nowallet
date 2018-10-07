@@ -72,7 +72,7 @@ BoxLayout:
                     MDRaisedButton:
                         size_hint_x: 1
                         text: "Create Wallet"
-                        on_release: app.do_login()
+                        id: login_button
 
         MainScreen:
             name: "main"
@@ -91,7 +91,6 @@ BoxLayout:
                             halign: "center"
                             size_hint_y: None
                             height: self.texture_size[1] + dp(45)
-                            on_release: app.toggle_balance_label()
                         RecycleView:
                             id: recycleView
                             viewclass: "ListItem"
@@ -150,7 +149,6 @@ BoxLayout:
                                     id: fee_button
                                     size_hint: 0.5, 1
                                     text: "Normal Fee"
-                                    on_release: app.fee_button_handler()
                             BoxLayout:
                                 size_hint: 1, 0.6
                                 spacing: 5
@@ -164,16 +162,16 @@ BoxLayout:
                                     on_text_validate: app.set_address_error(self.text)
                                     on_focus: app.set_address_error(self.text)
                                 MDRaisedButton:
+                                    id: send_button
                                     size_hint: 0.5, 1
                                     text: "Send TX"
-                                    on_release: app.send_button_handler()
                             Label:
                             MDFloatingActionButton:
                                 icon: "camera"
                                 opposite_colors: True
                                 elevation_normal: 8
                                 pos_hint: {"center_x": 0.5, "center_y": 0.2}
-                                on_release: app.start_zbar()
+                                id: camera_button
 
                 MDTab:
                     name: "recieve"
@@ -254,7 +252,7 @@ BoxLayout:
                 size_hint: 0.5, 0.07
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
-                on_release: root.ids.sm.current = "main"
+                id: utxo_back_button
 
         YPUBScreen:
             name: "ypub"
@@ -279,7 +277,7 @@ BoxLayout:
                 size_hint: 0.5, 0.07
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
-                on_release: root.ids.sm.current = "main"
+                id: ypub_back_button
 
         PINScreen:
             name: "pin"
@@ -298,50 +296,37 @@ BoxLayout:
                         cols: 3
                         spacing: 5
                         PINButton:
-                            char: "1"
+                            text: "1"
                         PINButton:
-                            char: "2"
+                            text: "2"
                         PINButton:
-                            char: "3"
+                            text: "3"
                         PINButton:
-                            char: "4"
+                            text: "4"
                         PINButton:
-                            char: "5"
+                            text: "5"
                         PINButton:
-                            char: "6"
+                            text: "6"
                         PINButton:
-                            char: "7"
+                            text: "7"
                         PINButton:
-                            char: "8"
+                            text: "8"
                         PINButton:
-                            char: "9"
+                            text: "9"
                         PINButton:
-                            char: "clear"
+                            text: "clear"
                         PINButton:
-                            char: "0"
+                            text: "0"
                         PINButton:
                             id: lock_button
-                            char: "lock"
+                            text: "lock"
             MDRaisedButton:
                 id: pin_back_button
                 size_hint: 0.5, 0.07
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
-                on_release: root.ids.sm.current = "main"
-
-<PINButton>:
-    height: dp(50)
-    text: self.char
-    on_release: app.update_pin_input(self.char)
-
-<MDMenuItem>:
-    on_release: app.menu_item_handler(self.text)
 
 <ListItem>:
     IconLeftSampleWidget:
         icon: self.parent.parent.icon
 
-<UTXOListItem>:
-    on_release: app.utxo = self.utxo
-    on_release:
-        MDDropdownMenu(items=app.utxo_menu_items, width_mult=4).open(self)

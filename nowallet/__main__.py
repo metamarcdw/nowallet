@@ -73,6 +73,8 @@ async def main() -> None:
         use_rbf = len(sys.argv) > 2 and sys.argv[2].lower(
         ) == "rbf"  # type: bool
         coin_per_kb = await wallet.get_fee_estimation()  # type: float
+        if chain == nowallet.TBTC and coin_per_kb < 0.0001:
+            coin_per_kb = 0.0001
 
         t2 = await wallet.spend(
             spend_addr, spend_amount,

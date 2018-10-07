@@ -7,10 +7,6 @@ from aiosocks import SocksConnectionError
 from aiohttp.client_exceptions import ClientConnectorError
 from decimal import Decimal
 
-from async_gui.engine import Task
-from async_gui.toolkits.kivy import KivyEngine
-engine = KivyEngine()
-
 import kivy
 kivy.require("1.10.0")
 
@@ -29,7 +25,7 @@ from kivymd.button import MDIconButton, MDRaisedButton
 from kivymd.dialog import MDDialog
 from kivymd.label import MDLabel
 from kivymd.textfields import MDTextField
-from kivymd.menu import MDDropdownMenu
+from kivymd.menu import MDDropdownMenu, MDMenuItem
 from kivy.garden.qrcode import QRCodeWidget
 
 from pycoin.key import validate
@@ -83,18 +79,55 @@ class BalanceLabel(ButtonBehavior, MDLabel):
 
 
 class PINButton(MDRaisedButton):
-    char = StringProperty()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.height = dp(50)
+        asyncio.ensure_future(self.bind_on_release())
+
+    async def bind_on_release(self):
+        async for _ in self.async_bind("on_release"):
+            app = App.get_running_app()
+            app.update_pin_input(self.text)
 
 
 class UTXOListItem(TwoLineListItem):
     utxo = ObjectProperty()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        asyncio.ensure_future(self.bind_on_release())
+
+    async def bind_on_release(self):
+        async for _ in self.async_bind("on_release"):
+            app = App.get_running_app()
+            app.utxo = self.utxo
+            MDDropdownMenu(items=app.utxo_menu_items, width_mult=4).open(self)
+
+class MyMenuItem(MDMenuItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        asyncio.ensure_future(self.bind_on_release())
+
+    async def bind_on_release(self):
+        async for _ in self.async_bind("on_release"):
+            app = App.get_running_app()
+            app.menu_item_handler(self.text)
 
 
 class ListItem(TwoLineIconListItem):
     icon = StringProperty("check-circle")
     history = ObjectProperty()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        asyncio.ensure_future(self.bind_on_release())
+
+    async def bind_on_release(self):
+        async for _ in self.async_bind("on_release"):
+            self.on_release()
+
     def on_release(self):
+        app = App.get_running_app()
         base_url, chain = None, app.chain.chain_1209k
         txid = self.history.tx_obj.id()
         if app.explorer == "blockcypher":
@@ -136,25 +169,25 @@ class NowalletApp(App):
     current_fee = NumericProperty()
     current_utxo = ObjectProperty()
 
-    def __init__(self):
+    def __init__(self, loop):
         self.chain = nowallet.TBTC
-        self.loop = asyncio.get_event_loop()
+        self.loop = loop
         self.is_amount_inputs_locked = False
         self.fiat_balance = False
         self.bech32 = False
         self.exchange_rates = None
 
-        self.menu_items = [{"viewclass": "MDMenuItem",
+        self.menu_items = [{"viewclass": "MyMenuItem",
                             "text": "View YPUB"},
-                           {"viewclass": "MDMenuItem",
+                           {"viewclass": "MyMenuItem",
                             "text": "Lock with PIN"},
-                           {"viewclass": "MDMenuItem",
+                           {"viewclass": "MyMenuItem",
                             "text": "Manage UTXOs"},
-                           {"viewclass": "MDMenuItem",
+                           {"viewclass": "MyMenuItem",
                             "text": "Settings"}]
-        self.utxo_menu_items = [{"viewclass": "MDMenuItem",
+        self.utxo_menu_items = [{"viewclass": "MyMenuItem",
                                  "text": "View Private key"},
-                                {"viewclass": "MDMenuItem",
+                                {"viewclass": "MyMenuItem",
                                  "text": "View Redeem script"}]
         super().__init__()
 
@@ -181,6 +214,22 @@ class NowalletApp(App):
         self.dialog.add_action_button(
             "Dismiss", action=cb if cb else lambda *x: self.dialog.dismiss())
         self.dialog.open()
+
+    async def bind_utxo_back(self):
+        async for _ in self.root.ids.utxo_back_button.async_bind("on_release"):
+            self.root.ids.sm.current = "main"
+
+    async def bind_ypub_back(self):
+        async for _ in self.root.ids.ypub_back_button.async_bind("on_release"):
+            self.root.ids.sm.current = "main"
+
+    async def bind_pin_back(self):
+        async for _ in self.root.ids.pin_back_button.async_bind("on_release"):
+            self.root.ids.sm.current = "main"
+
+    async def bind_start_zbar(self):
+        async for _ in self.root.ids.camera_button.async_bind("on_release"):
+            self.start_zbar()
 
     def start_zbar(self):
         if platform != "android":
@@ -225,6 +274,10 @@ class NowalletApp(App):
                 script = b2h(key.p2wpkh_script())
                 self.show_dialog("Redeem script", "", qrdata=script)
 
+    async def bind_fee_button(self):
+        async for _ in self.root.ids.fee_button.async_bind("on_release"):
+            self.fee_button_handler()
+
     def fee_button_handler(self):
         fee_input = self.root.ids.fee_input
         fee_button = self.root.ids.fee_button
@@ -252,11 +305,15 @@ class NowalletApp(App):
         is_valid = _amount / self.unit_factor <= self.wallet.balance
         self.root.ids.spend_amount_input.error = not is_valid
 
-    def do_spend(self, address, amount, fee_rate):
-        self.spend_tuple = self.loop.run_until_complete(
-            self.wallet.spend(address, amount, fee_rate, rbf=self.rbf))
+    async def do_spend(self, address, amount, fee_rate):
+        self.spend_tuple = await self.wallet.spend(
+            address, amount, fee_rate, rbf=self.rbf)
 
-    def send_button_handler(self):
+    async def bind_send_button(self):
+        async for _ in self.root.ids.send_button.async_bind("on_release"):
+            await self.send_button_handler()
+
+    async def send_button_handler(self):
         addr_input = self.root.ids.address_input
         address = addr_input.text.strip()
         amount_str = self.root.ids.spend_amount_input.text
@@ -274,7 +331,7 @@ class NowalletApp(App):
 
         fee_rate_sat = int(Decimal(self.current_fee))
         fee_rate = nowallet.Wallet.satb_to_coinkb(fee_rate_sat)
-        self.do_spend(address, amount, fee_rate)
+        await self.do_spend(address, amount, fee_rate)
         logging.info("Finished doing spend")
 
         txid, decimal_fee = self.spend_tuple[:2]
@@ -284,7 +341,7 @@ class NowalletApp(App):
         message += "\nTxID: {}...{}".format(txid[:13], txid[-13:])
         self.show_dialog("Transaction sent!", message)
 
-    def check_new_history(self, dt):
+    def check_new_history(self):
         if self.wallet.new_history:
             self.update_screens()
             self.wallet.new_history = False
@@ -296,7 +353,11 @@ class NowalletApp(App):
         elif self.chain == nowallet.TBTC:
             return "v" if self.bech32 else "u"
 
-    def do_login(self):
+    async def bind_login(self):
+        async for _ in self.root.ids.login_button.async_bind("on_release"):
+            await self.do_login()
+
+    async def do_login(self):
         email = self.root.ids.email_field.text
         passphrase = self.root.ids.pass_field.text
         confirm = self.root.ids.confirm_field.text
@@ -311,7 +372,7 @@ class NowalletApp(App):
 
         self.root.ids.sm.current = "wait"
         try:
-            self.do_login_tasks(email, passphrase)
+            await self.do_login_tasks(email, passphrase)
         except (SocksConnectionError, ClientConnectorError):
             self.show_dialog("Error",
                              "Make sure Tor/Orbot is installed and running before using Nowallet.",
@@ -319,38 +380,34 @@ class NowalletApp(App):
             return
         self.update_screens()
         self.root.ids.sm.current = "main"
-        Clock.schedule_interval(self.check_new_history, 1)
-        logging.info("Checking for new history.")
-        self.do_listen_task()
+        await asyncio.gather(
+            self.new_history_loop(),
+            self.do_listen_task()
+        )
 
-    @engine.async
-    def do_listen_task(self):
-        yield Task(self.loop.run_until_complete, self.wallet.listen_to_addresses())
+    async def do_listen_task(self):
         logging.info("Listening for new transactions.")
+        await self.wallet.listen_to_addresses()
 
-    @engine.async
-    def do_login_tasks(self, email, passphrase):
+    async def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
 
-        server, port, proto = yield Task(
-            self.loop.run_until_complete, nowallet.get_random_server(self.loop))
+        server, port, proto = await nowallet.get_random_server(self.loop)
         connection = nowallet.Connection(self.loop, server, port, proto)
-        yield Task(self.loop.run_until_complete, connection.do_connect())
+        await connection.do_connect()
 
         self.root.ids.wait_text.text = "Deriving Keys.."
-        self.wallet = yield Task(
-            nowallet.Wallet, email, passphrase,
-            connection, self.loop, self.chain, bech32=self.bech32)
+        self.wallet = await self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
+            connection, self.loop, self.chain, self.bech32)
 
         self.root.ids.wait_text.text = "Fetching history.."
-        yield Task(self.loop.run_until_complete, self.wallet.discover_all_keys())
+        await self.wallet.discover_all_keys()
 
         self.root.ids.wait_text.text = "Fetching exchange rates.."
-        self.exchange_rates = yield Task(
-            self.loop.run_until_complete, fetch_exchange_rates(nowallet.BTC.chain_1209k))
+        self.exchange_rates = await fetch_exchange_rates(nowallet.BTC.chain_1209k)
 
         self.root.ids.wait_text.text = "Getting fee estimate.."
-        coinkb_fee = yield Task(self.loop.run_until_complete, self.wallet.get_fee_estimation())
+        coinkb_fee = await self.wallet.get_fee_estimation()
         self.current_fee = self.estimated_fee = nowallet.Wallet.coinkb_to_satb(coinkb_fee)
         logging.info("Finished 'doing login tasks'")
 
@@ -360,6 +417,16 @@ class NowalletApp(App):
         self.update_recieve_screen()
         self.update_ypub_screen()
         self.update_utxo_screen()
+
+    async def new_history_loop(self):
+        while True:
+            await asyncio.sleep(1)
+            self.check_new_history()
+
+
+    async def bind_balance_label(self):
+        async for _ in self.root.ids.balance_label.async_bind("on_release"):
+            self.toggle_balance_label()
 
     def toggle_balance_label(self):
         self.fiat_balance = not self.fiat_balance
@@ -382,6 +449,7 @@ class NowalletApp(App):
         self.root.ids.recycleView.data_model.data = []
 
         for hist in self.wallet.get_tx_history():
+            logging.info("Adding history item to balance screen\n{}".format(hist))
             verb = "Sent" if hist.is_spend else "Recieved"
             hist_str = "{} {} {}".format(
                 verb, hist.value * self.unit_factor, self.units)
@@ -409,6 +477,7 @@ class NowalletApp(App):
     def update_recieve_qrcode(self):
         address = self.wallet.get_address(
             self.wallet.get_next_unused_key(), addr=True)
+        logging.info("Current address: {}".format(address))
         amount = Decimal(self.current_coin) / self.unit_factor
         self.root.ids.addr_qrcode.data = \
             "bitcoin:{}?amount={}".format(address, amount)
@@ -426,14 +495,14 @@ class NowalletApp(App):
             return
         self.pin = pin
         self.root.ids.pin_back_button.disabled = True
-        self.root.ids.lock_button.char = "unlock"
+        self.root.ids.lock_button.text = "unlock"
 
     def unlock_UI(self, attempt):
         if not attempt or attempt != self.pin:
             self.show_dialog("Error", "Bad PIN entered.")
             return
         self.root.ids.pin_back_button.disabled = False
-        self.root.ids.lock_button.char = "lock"
+        self.root.ids.lock_button.text = "lock"
 
     def update_pin_input(self, char):
         pin_input = self.root.ids.pin_input
@@ -488,6 +557,16 @@ class NowalletApp(App):
         _fiat = "{:.2f}".format(fiat)
         self.current_fiat = _fiat.rstrip("0").rstrip(".")
         self.is_amount_inputs_locked = False
+
+    def on_start(self):
+        asyncio.ensure_future(self.bind_utxo_back())
+        asyncio.ensure_future(self.bind_ypub_back())
+        asyncio.ensure_future(self.bind_pin_back())
+        asyncio.ensure_future(self.bind_start_zbar())
+        asyncio.ensure_future(self.bind_fee_button())
+        asyncio.ensure_future(self.bind_send_button())
+        asyncio.ensure_future(self.bind_login())
+        asyncio.ensure_future(self.bind_balance_label())
 
     def build(self):
         self.icon = "icons/brain.png"
@@ -551,14 +630,14 @@ class NowalletApp(App):
     def add_list_item(self, text, history):
         data = self.root.ids.recycleView.data_model.data
         icon = "check-circle" if history.height > 0 else "timer-sand"
-        data.insert(0, {"text": text,
+        data.append({"text": text,
                         "secondary_text": history.tx_obj.id(),
                         "history": history,
                         "icon": icon})
 
     def add_utxo_list_item(self, text, utxo):
         data = self.root.ids.utxoRecycleView.data_model.data
-        data.insert(0, {"text": text,
+        data.append({"text": text,
                         "secondary_text": utxo.as_dict()["tx_hash_hex"],
                         "utxo": utxo})
 
@@ -580,8 +659,7 @@ def open_url(url):
         import webbrowser
         webbrowser.open(url)
 
-
 if __name__ == "__main__":
-    app = NowalletApp()
-    engine.main_app = app
-    app.run()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(NowalletApp(loop).async_run())
+
