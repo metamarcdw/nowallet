@@ -266,6 +266,9 @@ class NowalletApp(App):
         elif self.root.ids.sm.current == "utxo":
             addr = self.utxo.address(self.chain.netcode)
             key = self.wallet.search_for_key(addr)
+            if not key:
+                key = self.wallet.search_for_key(addr, change=True)
+
             if "Private" in text:
                 self.show_dialog("Private key", "", qrdata=key.wif())
             if "Redeem" in text:
