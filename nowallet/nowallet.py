@@ -720,11 +720,12 @@ class Wallet:
         addr = result[0]  # type: str
         history = await self.connection.listen_rpc(
             self.methods["get_history"], [addr])  # type: List[Dict[str, Any]]
-        empty_flag = await self._interpret_new_history(
-            addr, history[0])  # type: bool
-        if not empty_flag:
-            self.new_history = True
-            logging.info("Dispatched a new history for address %s", addr)
+        for tx in history:
+            empty_flag = await self._interpret_new_history(
+                addr, tx)  # type: bool
+            if not empty_flag:
+                self.new_history = True
+                logging.info("Dispatched a new history for address %s", addr)
 
     @staticmethod
     def _calculate_vsize(tx: Tx) -> int:
