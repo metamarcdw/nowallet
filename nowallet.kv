@@ -4,21 +4,21 @@
 #:import RecycleView kivy.uix.recycleview
 #:import QRCodeWidget kivy.garden.qrcode
 # import ZbarQrcodeDetector android-zbar-qrcode.main
+#:import ak asynckivy
 
-#:import MDLabel kivymd.label.MDLabel
-#:import Toolbar kivymd.toolbar.Toolbar
-#:import MDTabbedPanel kivymd.tabs.MDTabbedPanel
-#:import MDTab kivymd.tabs.MDTab
-#:import MDDropdownMenu kivymd.menu.MDDropdownMenu
-#:import MDMenuItem kivymd.menu.MDMenuItem
-#:import MDCard kivymd.card.MDCard
-#:import MDSpinner kivymd.spinner.MDSpinner
-#:import MDTextField kivymd.textfields.MDTextField
-#:import MDCheckbox kivymd.selectioncontrols.MDCheckbox
+<Tab>
+    MDLabel:
+        text: root.content_text
+        pos_hint: {"center_x": .5, "center_y": .5}
+
+<UTXOListItem>:
+    on_release:
+        app.utxo = self.utxo
+        MDDropdownMenu(items=app.utxo_menu_items, width_mult=4).open(self)
 
 BoxLayout:
     orientation: "vertical"
-    Toolbar:
+    MDTopAppBar:
         id: toolbar
         title: "NOWALLET"
         md_bg_color: app.theme_cls.primary_color
@@ -73,24 +73,26 @@ BoxLayout:
                         size_hint_x: 1
                         text: "Create Wallet"
                         id: login_button
+                        on_release: ak.start(app.do_login())
 
         MainScreen:
             name: "main"
-            MDTabbedPanel:
+            MDTabs
                 tab_display_mode: "icons"
-                MDTab:
+                Tab:
                     name: "balance"
-                    text: "Balance"
+#                    text: "Balance"
                     icon: "bank"
                     BoxLayout:
                         orientation: "vertical"
                         BalanceLabel:
                             id: balance_label
-                            font_style: "Display1"
+                            font_style: "H3"
                             theme_text_color: "Primary"
                             halign: "center"
                             size_hint_y: None
                             height: self.texture_size[1] + dp(45)
+                            on_release: self.toggle_balance_label()
                         RecycleView:
                             id: recycleView
                             viewclass: "ListItem"
@@ -101,9 +103,9 @@ BoxLayout:
                                 height: self.minimum_height
                                 orientation: "vertical"
 
-                MDTab:
+                Tab:
                     name: "send"
-                    text: "Sending"
+#                    text: "Sending"
                     icon: "debug-step-out"
                     AnchorLayout:
                         BoxLayout:
@@ -133,7 +135,7 @@ BoxLayout:
                                 id: send_balance
                                 size_hint: 1, 0.2
                                 theme_text_color: "Primary"
-                                font_style:"Title"
+                                font_style: "H1"
                             BoxLayout:
                                 size_hint: 1, 0.6
                                 spacing: 5
@@ -149,6 +151,7 @@ BoxLayout:
                                     id: fee_button
                                     size_hint: 0.5, 1
                                     text: "Normal Fee"
+                                    on_release: self.fee_button_handler()
                             BoxLayout:
                                 size_hint: 1, 0.6
                                 spacing: 5
@@ -165,6 +168,7 @@ BoxLayout:
                                     id: send_button
                                     size_hint: 0.5, 1
                                     text: "Send TX"
+                                    on_release: self.send_button_handler()
                             Label:
                             MDFloatingActionButton:
                                 icon: "camera"
@@ -172,10 +176,11 @@ BoxLayout:
                                 elevation_normal: 8
                                 pos_hint: {"center_x": 0.5, "center_y": 0.2}
                                 id: camera_button
+                                on_release: app.start_zbar()
 
-                MDTab:
+                Tab:
                     name: "recieve"
-                    text: "Recieving"
+#                    text: "Recieving"
                     icon: "debug-step-into"
                     AnchorLayout:
                         BoxLayout:
@@ -232,7 +237,7 @@ BoxLayout:
                 id: wait_text
                 text: "Loading.."
                 theme_text_color: "Primary"
-                font_style:"Title"
+                font_style: "H1"
                 size_hint: 0.5, None
                 halign: "center"
                 pos_hint: {"center_x": 0.5, "center_y": 0.66}
@@ -253,6 +258,8 @@ BoxLayout:
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
                 id: utxo_back_button
+                on_release: app.root.ids.sm.current = "main"
+
 
         YPUBScreen:
             name: "ypub"
@@ -278,6 +285,8 @@ BoxLayout:
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
                 id: ypub_back_button
+                on_release: app.root.ids.sm.current = "main"
+
 
         PINScreen:
             name: "pin"
@@ -297,36 +306,50 @@ BoxLayout:
                         spacing: 5
                         PINButton:
                             text: "1"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "2"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "3"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "4"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "5"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "6"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "7"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "8"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "9"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "clear"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             text: "0"
+                            on_release: app.update_pin_input(self.text)
                         PINButton:
                             id: lock_button
                             text: "lock"
+                            on_release: app.update_pin_input(self.text)
             MDRaisedButton:
                 id: pin_back_button
                 size_hint: 0.5, 0.07
                 pos_hint: {"center_x": 0.5, "center_y": 0.13}
                 text: "Go Back"
+                on_release: app.root.ids.sm.current = "main"
 
 <ListItem>:
+    on_release: self.on_release()
     IconLeftSampleWidget:
         icon: self.parent.parent.icon
 
