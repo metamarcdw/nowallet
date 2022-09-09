@@ -51,6 +51,7 @@ from nowallet.exchange_rate import fetch_exchange_rates
 from settings_json import settings_json
 from functools import partial
 from kivy.clock import Clock
+import asynckivy as ak
 
 __version__ = nowallet.__version__
 if platform != "android":
@@ -356,7 +357,8 @@ class NowalletApp(MDApp):
 
         self.root.ids.sm.current = "wait"
         try:
-            await self.do_login_tasks(email, passphrase)
+            task2 = asyncio.create_task(self.do_login_tasks(email, passphrase))
+            # self.loop.call_soon(task2)
         except (SocksConnectionError, ClientConnectorError):
             self.show_dialog("Error",
                              "Make sure Tor/Orbot is installed and running before using Nowallet.",
@@ -364,10 +366,21 @@ class NowalletApp(MDApp):
             return
         self.update_screens()
         self.root.ids.sm.current = "main"
-        await asyncio.gather(
+        task3 = asyncio.create_task(asyncio.gather(
             self.new_history_loop(),
             self.do_listen_task()
-        )
+            ))
+        # self.loop.call_soon(task3)
+
+    def login(self):
+        # asyncio.run(app.do_login)
+        # await app.do_login()
+        # self.loop.create_future()
+        # ak.start(self.do_login())
+        # asyncio.ensure_future(self.login())
+        task1 = asyncio.create_task(self.do_login())
+        # self.loop.call_soon(self.do_login())
+        # pass
 
     async def do_listen_task(self):
         logging.info("Listening for new transactions.")
@@ -377,21 +390,36 @@ class NowalletApp(MDApp):
         self.root.ids.wait_text.text = "Connecting.."
 
         server, port, proto = await nowallet.get_random_server(self.loop)
+        # server, port, proto = self.loop.call_soon(nowallet.get_random_server(self.loop))
         connection = nowallet.Connection(self.loop, server, port, proto)
-        await connection.do_connect()
+        # await connection.do_connect()
+        task = asyncio.create_task(connection.do_connect())
+        # self.loop.call_soon(connection.do_connect())
 
         self.root.ids.wait_text.text = "Deriving Keys.."
-        self.wallet = await self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
-            connection, self.loop, self.chain, self.bech32)
+        # self.wallet = await self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
+            # connection, self.loop, self.chain, self.bech32)
+        try:
+            self.wallet = asyncio.create_task(self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
+                connection, self.loop, self.chain, self.bech32))
+        except:
+            self.show_dialog("Error", "Could not connect to your wallet.")
+            self.root.ids.sm.current = "login"
+            return
 
         self.root.ids.wait_text.text = "Fetching history.."
-        await self.wallet.discover_all_keys()
+        # await self.wallet.discover_all_keys()
+        # self.loop.call_soon(self.wallet.discover_all_keys())
+        task5 = asyncio.create_task(self.wallet.discover_all_keys())
+        # self.loop.call_soon(task5)
 
         self.root.ids.wait_text.text = "Fetching exchange rates.."
-        self.exchange_rates = await fetch_exchange_rates(nowallet.BTC.chain_1209k)
+        # self.exchange_rates = await fetch_exchange_rates(nowallet.BTC.chain_1209k)
+        self.exchange_rates = asyncio.create_task(fetch_exchange_rates(nowallet.BTC.chain_1209k))
 
         self.root.ids.wait_text.text = "Getting fee estimate.."
-        coinkb_fee = await self.wallet.get_fee_estimation()
+        # coinkb_fee = await self.wallet.get_fee_estimation()
+        coinkb_fee = asyncio.create_task(self.wallet.get_fee_estimation())
         self.current_fee = self.estimated_fee = nowallet.Wallet.coinkb_to_satb(coinkb_fee)
         logging.info("Finished 'doing login tasks'")
 
@@ -634,5 +662,7 @@ def open_url(url):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
+    # loop = asyncio.new_event_loop()
     app = NowalletApp(loop)
     loop.run_until_complete(app.async_run())
+    loop.close()

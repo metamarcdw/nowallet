@@ -5,6 +5,7 @@
 #:import QRCodeWidget kivy.garden.qrcode
 # import ZbarQrcodeDetector android-zbar-qrcode.main
 #:import ak asynckivy
+#:import asyncio asyncio
 
 <Tab>
     MDLabel:
@@ -73,7 +74,9 @@ BoxLayout:
                         size_hint_x: 1
                         text: "Create Wallet"
                         id: login_button
-                        on_release: ak.start(app.do_login())
+#                        on_release: asyncio.run(app.do_login())
+#                        on_release: await app.do_login()
+                        on_release: app.login()
 
         MainScreen:
             name: "main"
@@ -135,7 +138,7 @@ BoxLayout:
                                 id: send_balance
                                 size_hint: 1, 0.2
                                 theme_text_color: "Primary"
-                                font_style: "H1"
+                                font_style: "H4"
                             BoxLayout:
                                 size_hint: 1, 0.6
                                 spacing: 5
@@ -237,8 +240,8 @@ BoxLayout:
                 id: wait_text
                 text: "Loading.."
                 theme_text_color: "Primary"
-                font_style: "H1"
-                size_hint: 0.5, None
+                font_style: "H4"
+                size_hint: 0.7, None
                 halign: "center"
                 pos_hint: {"center_x": 0.5, "center_y": 0.66}
 
