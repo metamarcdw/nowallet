@@ -438,7 +438,8 @@ class Wallet:
         """
         futures = [self.connection.listen_rpc(
             self.methods["get"], [txid]) for txid in txids]  # type: str
-        results = await asyncio.gather(*futures, loop=self.loop)
+#        results = await asyncio.gather(*futures, loop=self.loop)
+        results = await asyncio.gather(*futures)
         txs = [Tx.from_hex(tx_hex) for tx_hex in results]  # type: List[Tx]
         logging.debug("Retrieved Txs: %s", txs)
         return txs
@@ -473,8 +474,8 @@ class Wallet:
                    for unspent in result}  # type: Dict[str, int]
         futures = [self.connection.listen_rpc(self.methods["get"], [unspent["tx_hash"]])
                    for unspent in result]  # type: List[asyncio.Future]
-        txs = await asyncio.gather(*futures, loop=self.loop)  # type: List[str]
-
+#         txs = await asyncio.gather(*futures, loop=self.loop)  # type: List[str]
+        txs = await asyncio.gather(*futures)  # type: List[str]
         utxos = []  # type: List[Spendable]
         for tx_hex in txs:
             tx = Tx.from_hex(tx_hex)  # type: Tx
@@ -567,7 +568,8 @@ class Wallet:
             futures = [self._process_history(hist, address, heights[i])
                        for i, hist in enumerate(this_history)]  # type: List[Awaitable[History]]
             processed_history = await asyncio.gather(
-                *futures, loop=self.loop)  # type: List[History]
+#                 *futures, loop=self.loop)  # type: List[History]
+                *futures)  # type: List[History]
 
             if processed_history:
                 # Get balance information
