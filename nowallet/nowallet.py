@@ -44,6 +44,7 @@ from .bip49 import SegwitBIP32Node
 from .keys import derive_key
 from .socks_http import urlopen
 
+from connectrum import ElectrumErrorResponse
 
 class Connection:
     """ Connection object. Connects to an Electrum server, and handles all
@@ -71,14 +72,12 @@ class Connection:
         logging.info(str(self.server_info.get_port(proto)))
 
         self.client = StratumClient(loop)  # type: StratumClient
-        self.connection = asyncio.create_task(
-            self.client.connect(
+        self.connection = self.client.connect(
                 self.server_info,
                 proto_code=proto,
                 use_tor=True,
                 disable_cert_verify=(proto != "s")
             )  # type: asyncio.Future
-        )
 
         self.queue = None  # type: asyncio.Queue
 
@@ -96,6 +95,7 @@ class Connection:
         :param args: Params associated with current method
         :returns: Future. Response from server for this method(args)
         """
+        #return await self.client.RPC(method, *args)
         return await self.client.RPC(method, *args)
 
     def listen_subscribe(self, method: str, args: List) -> None:
@@ -149,10 +149,14 @@ class History:
             from the server
         """
         if self.height > 0:
-            block_header = await connection.listen_rpc(
-                Wallet.methods["get_header"],
-                [self.height]
-            )  # type: Dict[str, Any]
+            try:
+                block_header = await connection.listen_rpc(
+                    Wallet.methods["get_header"],
+                    [self.height]
+                )  # type: Dict[str, Any]
+            except ElectrumErrorResponse as e:
+                print(e)
+                return
 
             block_time = block_header["timestamp"]
             self.timestamp = block_time
@@ -499,7 +503,9 @@ class Wallet:
             address = txout.address(netcode=self.chain.netcode)  # type: str
             if address in change_addrs:
                 chg_vout = i
-        spend_vout = 0 if chg_vout == 1 else 1  # type: int
+        # spend_vout = 0 if chg_vout == 1 else 1  # type: int
+        # for debugging purposes
+        spend_vout = 1 if chg_vout == 1 else 0 # type: int
         return tx.txs_out[spend_vout].coin_value
 
     async def _process_history(self, history: Tx, address: str, height: int) -> History:
@@ -567,6 +573,7 @@ class Wallet:
             # Process all Txs into our History objects
             futures = [self._process_history(hist, address, heights[i])
                        for i, hist in enumerate(this_history)]  # type: List[Awaitable[History]]
+            
             processed_history = await asyncio.gather(
 #                 *futures, loop=self.loop)  # type: List[History]
                 *futures)  # type: List[History]

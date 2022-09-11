@@ -393,6 +393,8 @@ class NowalletApp(MDApp):
             await connection.do_connect()
             logging.info("{} {} {} -&gt; connected".format(server, port, proto))
 
+        await connection.do_connect()
+
         self.root.ids.wait_text.text = "Deriving Keys.."
 
         # make run in a seperate thread
@@ -474,12 +476,12 @@ class NowalletApp(MDApp):
             "Current Address ({}):\n{}".format(encoding, address)
 
     def update_recieve_qrcode(self):
-        # address = self.wallet.get_address(
-            # self.wallet.get_next_unused_key(), addr=True)
         address = self.wallet.get_address(
-                self.wallet.get_key(index=0, change=False),
-                addr=True
-                )
+            self.wallet.get_next_unused_key(), addr=True)
+        # address = self.wallet.get_address(
+        #         self.wallet.get_key(index=0, change=False),
+        #         addr=True
+        #         )
         logging.info("Current address: {}".format(address))
         amount = Decimal(self.current_coin) / self.unit_factor
         self.root.ids.addr_qrcode.data = \
