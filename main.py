@@ -367,7 +367,6 @@ class NowalletApp(MDApp):
             return
         self.update_screens()
         self.root.ids.sm.current = "main"
-        # task3 = asyncio.create_task(asyncio.gather(
         await asyncio.gather(
             self.new_history_loop(),
             self.do_listen_task()
