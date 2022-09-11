@@ -52,6 +52,8 @@ from settings_json import settings_json
 from functools import partial
 from kivy.clock import Clock
 import asynckivy as ak
+import threading
+import concurrent.futures
 
 __version__ = nowallet.__version__
 if platform != "android":
@@ -357,8 +359,7 @@ class NowalletApp(MDApp):
 
         self.root.ids.sm.current = "wait"
         try:
-            task2 = asyncio.create_task(self.do_login_tasks(email, passphrase))
-            # self.loop.call_soon(task2)
+            await self.do_login_tasks(email, passphrase)
         except (SocksConnectionError, ClientConnectorError):
             self.show_dialog("Error",
                              "Make sure Tor/Orbot is installed and running before using Nowallet.",
@@ -366,60 +367,51 @@ class NowalletApp(MDApp):
             return
         self.update_screens()
         self.root.ids.sm.current = "main"
-        task3 = asyncio.create_task(asyncio.gather(
+        # task3 = asyncio.create_task(asyncio.gather(
+        await asyncio.gather(
             self.new_history_loop(),
             self.do_listen_task()
-            ))
-        # self.loop.call_soon(task3)
+            )
 
     def login(self):
-        # asyncio.run(app.do_login)
-        # await app.do_login()
-        # self.loop.create_future()
-        # ak.start(self.do_login())
-        # asyncio.ensure_future(self.login())
         task1 = asyncio.create_task(self.do_login())
-        # self.loop.call_soon(self.do_login())
-        # pass
 
     async def do_listen_task(self):
         logging.info("Listening for new transactions.")
-        await self.wallet.listen_to_addresses()
+        task = asyncio.create_task(self.wallet.listen_to_addresses())
 
     async def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
 
         server, port, proto = await nowallet.get_random_server(self.loop)
-        # server, port, proto = self.loop.call_soon(nowallet.get_random_server(self.loop))
-        connection = nowallet.Connection(self.loop, server, port, proto)
-        # await connection.do_connect()
-        task = asyncio.create_task(connection.do_connect())
-        # self.loop.call_soon(connection.do_connect())
+
+        try:
+            connection = nowallet.Connection(self.loop, server, port, proto)
+        except Exception as ex:
+            print("excepted")
+            logging.error(ex, exc_info=True)
+            logging.info("{} {} {}".format(server, port, proto))
+            await connection.do_connect()
+            logging.info("{} {} {} -&gt; connected".format(server, port, proto))
 
         self.root.ids.wait_text.text = "Deriving Keys.."
-        # self.wallet = await self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
-            # connection, self.loop, self.chain, self.bech32)
-        try:
-            self.wallet = asyncio.create_task(self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
-                connection, self.loop, self.chain, self.bech32))
-        except:
-            self.show_dialog("Error", "Could not connect to your wallet.")
-            self.root.ids.sm.current = "login"
-            return
+
+        # make run in a seperate thread
+        # in executor runs but gets stuck
+        # wallet = await asyncio.gather(self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
+            # connection, self.loop, self.chain, self.bech32))
+        self.wallet = nowallet.Wallet(email, passphrase, connection, self.loop, self.chain, self.bech32)
 
         self.root.ids.wait_text.text = "Fetching history.."
-        # await self.wallet.discover_all_keys()
-        # self.loop.call_soon(self.wallet.discover_all_keys())
-        task5 = asyncio.create_task(self.wallet.discover_all_keys())
-        # self.loop.call_soon(task5)
+        await self.wallet.discover_all_keys()
 
         self.root.ids.wait_text.text = "Fetching exchange rates.."
+        # just await, but since the fetching url ruturns 403 make it anything
         # self.exchange_rates = await fetch_exchange_rates(nowallet.BTC.chain_1209k)
         self.exchange_rates = asyncio.create_task(fetch_exchange_rates(nowallet.BTC.chain_1209k))
 
         self.root.ids.wait_text.text = "Getting fee estimate.."
-        # coinkb_fee = await self.wallet.get_fee_estimation()
-        coinkb_fee = asyncio.create_task(self.wallet.get_fee_estimation())
+        coinkb_fee = await self.wallet.get_fee_estimation()
         self.current_fee = self.estimated_fee = nowallet.Wallet.coinkb_to_satb(coinkb_fee)
         logging.info("Finished 'doing login tasks'")
 
@@ -483,8 +475,12 @@ class NowalletApp(MDApp):
             "Current Address ({}):\n{}".format(encoding, address)
 
     def update_recieve_qrcode(self):
+        # address = self.wallet.get_address(
+            # self.wallet.get_next_unused_key(), addr=True)
         address = self.wallet.get_address(
-            self.wallet.get_next_unused_key(), addr=True)
+                self.wallet.get_key(index=0, change=False),
+                addr=True
+                )
         logging.info("Current address: {}".format(address))
         amount = Decimal(self.current_coin) / self.unit_factor
         self.root.ids.addr_qrcode.data = \

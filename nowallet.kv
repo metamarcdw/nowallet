@@ -138,7 +138,7 @@ BoxLayout:
                                 id: send_balance
                                 size_hint: 1, 0.2
                                 theme_text_color: "Primary"
-                                font_style: "H4"
+                                font_style: "H6"
                             BoxLayout:
                                 size_hint: 1, 0.6
                                 spacing: 5
@@ -154,7 +154,7 @@ BoxLayout:
                                     id: fee_button
                                     size_hint: 0.5, 1
                                     text: "Normal Fee"
-                                    on_release: self.fee_button_handler()
+                                    on_release: app.fee_button_handler()
                             BoxLayout:
                                 size_hint: 1, 0.6
                                 spacing: 5
@@ -171,7 +171,7 @@ BoxLayout:
                                     id: send_button
                                     size_hint: 0.5, 1
                                     text: "Send TX"
-                                    on_release: self.send_button_handler()
+                                    on_release: asyncio.create_task(app.send_button_handler())
                             Label:
                             MDFloatingActionButton:
                                 icon: "camera"

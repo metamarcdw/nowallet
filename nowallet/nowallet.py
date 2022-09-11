@@ -71,12 +71,14 @@ class Connection:
         logging.info(str(self.server_info.get_port(proto)))
 
         self.client = StratumClient(loop)  # type: StratumClient
-        self.connection = self.client.connect(
-            self.server_info,
-            proto_code=proto,
-            use_tor=True,
-            disable_cert_verify=(proto != "s")
-        )  # type: asyncio.Future
+        self.connection = asyncio.create_task(
+            self.client.connect(
+                self.server_info,
+                proto_code=proto,
+                use_tor=True,
+                disable_cert_verify=(proto != "s")
+            )  # type: asyncio.Future
+        )
 
         self.queue = None  # type: asyncio.Queue
 

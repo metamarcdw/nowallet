@@ -19,7 +19,7 @@ async def urlopen(url: str, bauth_tuple=None, loop=None) -> str:
         remote_resolve=True, loop=loop)  # type: ProxyConnector
 
     try:
-        with aiohttp.ClientSession(
+        async with aiohttp.ClientSession(
             connector=conn,
             auth=bauth,
             request_class=ProxyClientRequest
