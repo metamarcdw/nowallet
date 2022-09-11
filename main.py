@@ -407,7 +407,7 @@ class NowalletApp(MDApp):
         self.root.ids.wait_text.text = "Fetching exchange rates.."
         # just await, but since the fetching url ruturns 403 make it anything
         # self.exchange_rates = await fetch_exchange_rates(nowallet.BTC.chain_1209k)
-        self.exchange_rates = asyncio.create_task(fetch_exchange_rates(nowallet.BTC.chain_1209k))
+        self.exchange_rates = False
 
         self.root.ids.wait_text.text = "Getting fee estimate.."
         coinkb_fee = await self.wallet.get_fee_estimation()

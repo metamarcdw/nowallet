@@ -692,7 +692,8 @@ class Wallet:
                     self.methods["subscribe"], [addr]))
 
             result = await asyncio.gather(
-                *futures, loop=self.loop)  # type: List[Dict[str, Any]]
+#                *futures, loop=self.loop)  # type: List[Dict[str, Any]]
+                *futures) # type: List[Dict[str, Any]]
             quit_flag = await self._interpret_history(result, change)
             current_index += Wallet._GAP_LIMIT
         self.new_history = True
