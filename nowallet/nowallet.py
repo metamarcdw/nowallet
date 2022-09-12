@@ -44,6 +44,7 @@ from .bip49 import SegwitBIP32Node
 from .keys import derive_key
 from .socks_http import urlopen
 
+from connectrum import ElectrumErrorResponse
 
 class Connection:
     """ Connection object. Connects to an Electrum server, and handles all
@@ -72,11 +73,11 @@ class Connection:
 
         self.client = StratumClient(loop)  # type: StratumClient
         self.connection = self.client.connect(
-            self.server_info,
-            proto_code=proto,
-            use_tor=True,
-            disable_cert_verify=(proto != "s")
-        )  # type: asyncio.Future
+                self.server_info,
+                proto_code=proto,
+                use_tor=True,
+                disable_cert_verify=(proto != "s")
+            )  # type: asyncio.Future
 
         self.queue = None  # type: asyncio.Queue
 
@@ -94,6 +95,7 @@ class Connection:
         :param args: Params associated with current method
         :returns: Future. Response from server for this method(args)
         """
+        #return await self.client.RPC(method, *args)
         return await self.client.RPC(method, *args)
 
     def listen_subscribe(self, method: str, args: List) -> None:
@@ -147,10 +149,14 @@ class History:
             from the server
         """
         if self.height > 0:
-            block_header = await connection.listen_rpc(
-                Wallet.methods["get_header"],
-                [self.height]
-            )  # type: Dict[str, Any]
+            try:
+                block_header = await connection.listen_rpc(
+                    Wallet.methods["get_header"],
+                    [self.height]
+                )  # type: Dict[str, Any]
+            except ElectrumErrorResponse as e:
+                print(e)
+                return
 
             block_time = block_header["timestamp"]
             self.timestamp = block_time
@@ -436,7 +442,8 @@ class Wallet:
         """
         futures = [self.connection.listen_rpc(
             self.methods["get"], [txid]) for txid in txids]  # type: str
-        results = await asyncio.gather(*futures, loop=self.loop)
+#        results = await asyncio.gather(*futures, loop=self.loop)
+        results = await asyncio.gather(*futures)
         txs = [Tx.from_hex(tx_hex) for tx_hex in results]  # type: List[Tx]
         logging.debug("Retrieved Txs: %s", txs)
         return txs
@@ -471,8 +478,8 @@ class Wallet:
                    for unspent in result}  # type: Dict[str, int]
         futures = [self.connection.listen_rpc(self.methods["get"], [unspent["tx_hash"]])
                    for unspent in result]  # type: List[asyncio.Future]
-        txs = await asyncio.gather(*futures, loop=self.loop)  # type: List[str]
-
+#         txs = await asyncio.gather(*futures, loop=self.loop)  # type: List[str]
+        txs = await asyncio.gather(*futures)  # type: List[str]
         utxos = []  # type: List[Spendable]
         for tx_hex in txs:
             tx = Tx.from_hex(tx_hex)  # type: Tx
@@ -496,7 +503,9 @@ class Wallet:
             address = txout.address(netcode=self.chain.netcode)  # type: str
             if address in change_addrs:
                 chg_vout = i
-        spend_vout = 0 if chg_vout == 1 else 1  # type: int
+        # spend_vout = 0 if chg_vout == 1 else 1  # type: int
+        # for debugging purposes
+        spend_vout = 1 if chg_vout == 1 else 0 # type: int
         return tx.txs_out[spend_vout].coin_value
 
     async def _process_history(self, history: Tx, address: str, height: int) -> History:
@@ -564,8 +573,10 @@ class Wallet:
             # Process all Txs into our History objects
             futures = [self._process_history(hist, address, heights[i])
                        for i, hist in enumerate(this_history)]  # type: List[Awaitable[History]]
+            
             processed_history = await asyncio.gather(
-                *futures, loop=self.loop)  # type: List[History]
+#                 *futures, loop=self.loop)  # type: List[History]
+                *futures)  # type: List[History]
 
             if processed_history:
                 # Get balance information
@@ -690,7 +701,8 @@ class Wallet:
                     self.methods["subscribe"], [addr]))
 
             result = await asyncio.gather(
-                *futures, loop=self.loop)  # type: List[Dict[str, Any]]
+#                *futures, loop=self.loop)  # type: List[Dict[str, Any]]
+                *futures) # type: List[Dict[str, Any]]
             quit_flag = await self._interpret_history(result, change)
             current_index += Wallet._GAP_LIMIT
         self.new_history = True

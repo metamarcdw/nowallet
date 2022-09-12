@@ -2,11 +2,14 @@ certifi==2018.1.18
 chardet==3.0.4
 docutils==0.14
 idna==2.6
--e git+https://github.com/matham/kivy@async-loop#egg=kivy
+#-e git+https://github.com/matham/kivy@async-loop#egg=kivy
 Kivy-Garden==0.1.4
--e git+https://gitlab.com/kivymd/KivyMD@master#egg=kivymd
+#-e git+https://gitlab.com/kivymd/KivyMD@master#egg=kivymd
 Pygments==2.2.0
 qrcode==5.3
 requests==2.20.0
 six==1.11.0
 urllib3>=1.24.2
+KivyMD==1.0.2
+kivy==2.1.0
+asynckivy==0.5.4

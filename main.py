@@ -12,20 +12,35 @@ kivy.require("1.10.0")
 
 from kivy.utils import platform
 from kivy.core.window import Window
-from kivy.app import App
+# from kivy.app import App
 from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.properties import NumericProperty, StringProperty, ObjectProperty
 from kivy.uix.screenmanager import Screen
 from kivy.uix.behaviors import ButtonBehavior
 
+from kivymd.app import MDApp
 from kivymd.theming import ThemeManager
-from kivymd.list import TwoLineListItem, TwoLineIconListItem, ILeftBodyTouch
-from kivymd.button import MDIconButton, MDRaisedButton
-from kivymd.dialog import MDDialog
-from kivymd.label import MDLabel
-from kivymd.textfields import MDTextField
-from kivymd.menu import MDDropdownMenu, MDMenuItem
+from kivymd.uix.list import TwoLineListItem, TwoLineIconListItem, ILeftBodyTouch, OneLineListItem
+from kivymd.uix.button import MDIconButton, MDRaisedButton, MDFlatButton
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.label import MDLabel
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.menu import MDDropdownMenu
+#from kivymd.uix.menu.menu import MDMenuItem
+from kivymd.uix.floatlayout import MDFloatLayout
+from kivymd.uix.tab import MDTabsBase
+
+from kivy.uix.recycleview.views import RecycleDataViewBehavior
+from kivy.uix.button import ButtonBehavior
+from kivy.uix.boxlayout import BoxLayout
+from kivy.properties import StringProperty
+
+
+# class MDMenuItem(RecycleDataViewBehavior, ButtonBehavior, BoxLayout):
+    # text = StringProperty()
+ 
+
 from kivy.garden.qrcode import QRCodeWidget
 
 from pycoin.key import validate
@@ -34,10 +49,21 @@ from pycoin.serialize import b2h
 import nowallet
 from nowallet.exchange_rate import fetch_exchange_rates
 from settings_json import settings_json
+from functools import partial
+from kivy.clock import Clock
+import asynckivy as ak
+import threading
+import concurrent.futures
 
 __version__ = nowallet.__version__
 if platform != "android":
     Window.size = (350, 550)
+
+
+class Tab(MDFloatLayout, MDTabsBase):
+    '''Class implementing content for a tab.'''
+    content_text = StringProperty()
+    pass
 
 
 # Declare screens
@@ -82,49 +108,18 @@ class PINButton(MDRaisedButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.height = dp(50)
-        asyncio.ensure_future(self.bind_on_release())
-
-    async def bind_on_release(self):
-        async for _ in self.async_bind("on_release"):
-            app = App.get_running_app()
-            app.update_pin_input(self.text)
 
 
 class UTXOListItem(TwoLineListItem):
     utxo = ObjectProperty()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        asyncio.ensure_future(self.bind_on_release())
-
-    async def bind_on_release(self):
-        async for _ in self.async_bind("on_release"):
-            app = App.get_running_app()
-            app.utxo = self.utxo
-            MDDropdownMenu(items=app.utxo_menu_items, width_mult=4).open(self)
-
-class MyMenuItem(MDMenuItem):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        asyncio.ensure_future(self.bind_on_release())
-
-    async def bind_on_release(self):
-        async for _ in self.async_bind("on_release"):
-            app = App.get_running_app()
-            app.menu_item_handler(self.text)
-
+# class MyMenuItem(MDMenuItem):
+class MyMenuItem(OneLineListItem):
+    pass
 
 class ListItem(TwoLineIconListItem):
     icon = StringProperty("check-circle")
     history = ObjectProperty()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        asyncio.ensure_future(self.bind_on_release())
-
-    async def bind_on_release(self):
-        async for _ in self.async_bind("on_release"):
-            self.on_release()
 
     def on_release(self):
         app = App.get_running_app()
@@ -156,11 +151,14 @@ class FloatInput(MDTextField):
         return super(FloatInput, self).insert_text(s, from_undo=from_undo)
 
 
-class NowalletApp(App):
+class NowalletApp(MDApp):
+    """
+     ValueError: ThemeManager.primary_palette is set to an invalid option 'Grey'. Must be one of: ['Red', 'Pink', 'Purple', 'DeepPurple', 'Indigo', 'Blue', 'LightBlue', 'Cyan', 'Teal', 'Green', 'LightGreen', 'Lime', 'Yellow', 'Amber', 'Orange', 'DeepOrange', 'Brown', 'Gray', 'BlueGray']
+    """
     theme_cls = ThemeManager()
     theme_cls.theme_style = "Dark"
-    theme_cls.primary_palette = "Grey"
-    theme_cls.accent_palette = "LightGreen"
+    theme_cls.primary_palette = "Gray"
+    theme_cls.accent_palette = "DeepOrange"
 
     units = StringProperty()
     currency = StringProperty()
@@ -178,13 +176,17 @@ class NowalletApp(App):
         self.exchange_rates = None
 
         self.menu_items = [{"viewclass": "MyMenuItem",
-                            "text": "View YPUB"},
+                            "text": "View YPUB",
+                            "on_release": lambda x="View YPUB": app.menu_item_handler(x)},
                            {"viewclass": "MyMenuItem",
-                            "text": "Lock with PIN"},
+                            "text": "Lock with PIN",
+                            "on_release": lambda x="Lock with PIN": app.menu_item_handler(x)},
                            {"viewclass": "MyMenuItem",
-                            "text": "Manage UTXOs"},
+                            "text": "Manage UTXOs",
+                            "on_release": lambda x="Manage UTXOs": app.menu_item_handler(x)},
                            {"viewclass": "MyMenuItem",
-                            "text": "Settings"}]
+                            "text": "Settings",
+                            "on_release": lambda x="Settings": app.menu_item_handler(x)}]
         self.utxo_menu_items = [{"viewclass": "MyMenuItem",
                                  "text": "View Private key"},
                                 {"viewclass": "MyMenuItem",
@@ -199,37 +201,30 @@ class NowalletApp(App):
                                    size_hint=(None, None))
         else:
             dialog_height = 200
-            content = MDLabel(font_style='Body1',
-                              theme_text_color='Secondary',
-                              text=message,
-                              size_hint_y=None,
-                              valign='top')
-            content.bind(texture_size=content.setter('size'))
+            content = ""
+            # content = MDLabel(font_style='Body1',
+            #                   theme_text_color='Secondary',
+            #                   text=message,
+            #                   size_hint_y=None,
+            #                   valign='top')
+            # content.bind(texture_size=content.setter('size'))
         self.dialog = MDDialog(title=title,
-                               content=content,
+                               content_cls=content if content else None,
+                               text=message if not content else None,
                                size_hint=(.8, None),
                                height=dp(dialog_height),
-                               auto_dismiss=False)
+                               auto_dismiss=False,
+                               buttons=[
+                                   MDFlatButton(
+                                       text="Dismiss",
+                                       on_release=partial(self.close_dialog))
+                                   ]
+                               )
 
-        self.dialog.add_action_button(
-            "Dismiss", action=cb if cb else lambda *x: self.dialog.dismiss())
         self.dialog.open()
 
-    async def bind_utxo_back(self):
-        async for _ in self.root.ids.utxo_back_button.async_bind("on_release"):
-            self.root.ids.sm.current = "main"
-
-    async def bind_ypub_back(self):
-        async for _ in self.root.ids.ypub_back_button.async_bind("on_release"):
-            self.root.ids.sm.current = "main"
-
-    async def bind_pin_back(self):
-        async for _ in self.root.ids.pin_back_button.async_bind("on_release"):
-            self.root.ids.sm.current = "main"
-
-    async def bind_start_zbar(self):
-        async for _ in self.root.ids.camera_button.async_bind("on_release"):
-            self.start_zbar()
+    def close_dialog(self, *args):
+        self.dialog.dismiss()
 
     def start_zbar(self):
         if platform != "android":
@@ -250,7 +245,8 @@ class NowalletApp(App):
 
     def menu_button_handler(self, button):
         if self.root.ids.sm.current == "main":
-            MDDropdownMenu(items=self.menu_items, width_mult=4).open(button)
+            # MDDropdownMenu(items=self.menu_items, width_mult=4).open(button)
+            MDDropdownMenu(items=self.menu_items, width_mult=4, caller=button, max_height=dp(200)).open()
 
     def menu_item_handler(self, text):
         # Main menu items
@@ -276,10 +272,6 @@ class NowalletApp(App):
                     return
                 script = b2h(key.p2wpkh_script())
                 self.show_dialog("Redeem script", "", qrdata=script)
-
-    async def bind_fee_button(self):
-        async for _ in self.root.ids.fee_button.async_bind("on_release"):
-            self.fee_button_handler()
 
     def fee_button_handler(self):
         fee_input = self.root.ids.fee_input
@@ -311,10 +303,6 @@ class NowalletApp(App):
     async def do_spend(self, address, amount, fee_rate):
         self.spend_tuple = await self.wallet.spend(
             address, amount, fee_rate, rbf=self.rbf)
-
-    async def bind_send_button(self):
-        async for _ in self.root.ids.send_button.async_bind("on_release"):
-            await self.send_button_handler()
 
     async def send_button_handler(self):
         addr_input = self.root.ids.address_input
@@ -356,10 +344,6 @@ class NowalletApp(App):
         elif self.chain == nowallet.TBTC:
             return "v" if self.bech32 else "u"
 
-    async def bind_login(self):
-        async for _ in self.root.ids.login_button.async_bind("on_release"):
-            await self.do_login()
-
     async def do_login(self):
         email = self.root.ids.email_field.text
         passphrase = self.root.ids.pass_field.text
@@ -386,28 +370,46 @@ class NowalletApp(App):
         await asyncio.gather(
             self.new_history_loop(),
             self.do_listen_task()
-        )
+            )
+
+    def login(self):
+        task1 = asyncio.create_task(self.do_login())
 
     async def do_listen_task(self):
         logging.info("Listening for new transactions.")
-        await self.wallet.listen_to_addresses()
+        task = asyncio.create_task(self.wallet.listen_to_addresses())
 
     async def do_login_tasks(self, email, passphrase):
         self.root.ids.wait_text.text = "Connecting.."
 
         server, port, proto = await nowallet.get_random_server(self.loop)
-        connection = nowallet.Connection(self.loop, server, port, proto)
+
+        try:
+            connection = nowallet.Connection(self.loop, server, port, proto)
+        except Exception as ex:
+            print("excepted")
+            logging.error(ex, exc_info=True)
+            logging.info("{} {} {}".format(server, port, proto))
+            await connection.do_connect()
+            logging.info("{} {} {} -&gt; connected".format(server, port, proto))
+
         await connection.do_connect()
 
         self.root.ids.wait_text.text = "Deriving Keys.."
-        self.wallet = await self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
-            connection, self.loop, self.chain, self.bech32)
+
+        # make run in a seperate thread
+        # in executor runs but gets stuck
+        # wallet = await asyncio.gather(self.loop.run_in_executor(None, nowallet.Wallet, email, passphrase,
+            # connection, self.loop, self.chain, self.bech32))
+        self.wallet = nowallet.Wallet(email, passphrase, connection, self.loop, self.chain, self.bech32)
 
         self.root.ids.wait_text.text = "Fetching history.."
         await self.wallet.discover_all_keys()
 
         self.root.ids.wait_text.text = "Fetching exchange rates.."
-        self.exchange_rates = await fetch_exchange_rates(nowallet.BTC.chain_1209k)
+        # just await, but since the fetching url ruturns 403 make it anything
+        # self.exchange_rates = await fetch_exchange_rates(nowallet.BTC.chain_1209k)
+        self.exchange_rates = False
 
         self.root.ids.wait_text.text = "Getting fee estimate.."
         coinkb_fee = await self.wallet.get_fee_estimation()
@@ -426,10 +428,6 @@ class NowalletApp(App):
             await asyncio.sleep(1)
             self.check_new_history()
 
-
-    async def bind_balance_label(self):
-        async for _ in self.root.ids.balance_label.async_bind("on_release"):
-            self.toggle_balance_label()
 
     def toggle_balance_label(self):
         self.fiat_balance = not self.fiat_balance
@@ -480,6 +478,10 @@ class NowalletApp(App):
     def update_recieve_qrcode(self):
         address = self.wallet.get_address(
             self.wallet.get_next_unused_key(), addr=True)
+        # address = self.wallet.get_address(
+        #         self.wallet.get_key(index=0, change=False),
+        #         addr=True
+        #         )
         logging.info("Current address: {}".format(address))
         amount = Decimal(self.current_coin) / self.unit_factor
         self.root.ids.addr_qrcode.data = \
@@ -562,14 +564,7 @@ class NowalletApp(App):
         self.is_amount_inputs_locked = False
 
     def on_start(self):
-        asyncio.ensure_future(self.bind_utxo_back())
-        asyncio.ensure_future(self.bind_ypub_back())
-        asyncio.ensure_future(self.bind_pin_back())
-        asyncio.ensure_future(self.bind_start_zbar())
-        asyncio.ensure_future(self.bind_fee_button())
-        asyncio.ensure_future(self.bind_send_button())
-        asyncio.ensure_future(self.bind_login())
-        asyncio.ensure_future(self.bind_balance_label())
+        pass
 
     def build(self):
         self.icon = "icons/brain.png"
@@ -664,5 +659,7 @@ def open_url(url):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(NowalletApp(loop).async_run())
-
+    # loop = asyncio.new_event_loop()
+    app = NowalletApp(loop)
+    loop.run_until_complete(app.async_run())
+    loop.close()

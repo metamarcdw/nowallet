@@ -17,3 +17,5 @@ android-zbar-qrcode
 src
 api_password.txt
 .vscode/
+env
+env.old

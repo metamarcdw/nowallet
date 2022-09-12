@@ -92,7 +92,7 @@ async def main() -> None:
 
     await asyncio.gather(
         asyncio.ensure_future(wallet.listen_to_addresses()),
-        asyncio.ensure_future(print_loop(wallet))
+#         asyncio.ensure_future(print_loop(wallet))
     )
 
 if __name__ == "__main__":
@@ -121,7 +121,8 @@ if __name__ == "__main__":
 
         # Handle shutdown gracefully by waiting for all tasks to be cancelled
         tasks = asyncio.gather(*asyncio.Task.all_tasks(loop=loop),
-                               loop=loop, return_exceptions=True)
+#                                loop=loop, return_exceptions=True)
+                               return_exceptions=True)
         tasks.add_done_callback(lambda t: loop.stop())
         tasks.cancel()
 
